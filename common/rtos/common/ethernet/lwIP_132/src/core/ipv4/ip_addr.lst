@@ -1,0 +1,162 @@
+   1              		.code	16
+   2              		.file	"ip_addr.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	ip_addr_isbroadcast
+  13              		.code	16
+  14              		.thumb_func
+  16              	ip_addr_isbroadcast:
+  17              	.LFB2:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * This is the IPv4 address tools implementation.
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * All rights reserved. 
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *    derived from this software without specific prior written permission. 
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #include "lwip/ip_addr.h"
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #include "lwip/inet.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #include "lwip/netif.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #define IP_ADDR_ANY_VALUE 0x00000000UL
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** #define IP_ADDR_BROADCAST_VALUE 0xffffffffUL
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** /* used by IP_ADDR_ANY and IP_ADDR_BROADCAST in ip_addr.h */
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** const struct ip_addr ip_addr_any = { IP_ADDR_ANY_VALUE };
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** const struct ip_addr ip_addr_broadcast = { IP_ADDR_BROADCAST_VALUE };
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** /**
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * Determine if an address is a broadcast address on a network interface 
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * 
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * @param addr address to be checked
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * @param netif the network interface against which the address is checked
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  * @return returns non-zero if the address is a broadcast address
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****  */
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** u8_t ip_addr_isbroadcast(struct ip_addr *addr, struct netif *netif)
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** {
+  19              		.loc 1 59 0
+  20              	.LVL0:
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   u32_t addr2test;
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** 
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   addr2test = addr->addr;
+  21              		.loc 1 62 0
+  22 0000 0068     		ldr	r0, [r0]
+  23              	.LVL1:
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   /* all ones (broadcast) or all zeroes (old skool broadcast) */
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   if ((~addr2test == IP_ADDR_ANY_VALUE) ||
+  24              		.loc 1 64 0
+  25 0002 431E     		sub	r3, r0, #1
+  26 0004 0333     		add	r3, r3, #3
+  27 0006 01D9     		bls	.L2
+  28 0008 0120     		mov	r0, #1
+  29              	.LVL2:
+  30 000a 14E0     		b	.L3
+  31              	.LVL3:
+  32              	.L2:
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****       (addr2test == IP_ADDR_ANY_VALUE))
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     return 1;
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   /* no broadcast support on this network interface? */
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   else if ((netif->flags & NETIF_FLAG_BROADCAST) == 0)
+  33              		.loc 1 68 0
+  34 000c 2D23     		mov	r3, #45
+  35 000e CB5C     		ldrb	r3, [r1, r3]
+  36 0010 9A07     		lsl	r2, r3, #30
+  37 0012 0FD5     		bpl	.L4
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     /* the given address cannot be a broadcast address
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****      * nor can we check against any broadcast addresses */
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     return 0;
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   /* address matches network interface address exactly? => no broadcast */
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   else if (addr2test == netif->ip_addr.addr)
+  38              		.loc 1 73 0
+  39 0014 4B68     		ldr	r3, [r1, #4]
+  40 0016 8342     		cmp	r3, r0
+  41 0018 0CD0     		beq	.L4
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     return 0;
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   /*  on the same (sub) network... */
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   else if (ip_addr_netcmp(addr, &(netif->ip_addr), &(netif->netmask))
+  42              		.loc 1 76 0
+  43 001a 8968     		ldr	r1, [r1, #8]
+  44              	.LVL4:
+  45 001c 4340     		eor	r3, r3, r0
+  46 001e 0B42     		tst	r3, r1
+  47 0020 08D1     		bne	.L4
+  48 0022 CB43     		mvn	r3, r1
+  49 0024 8343     		bic	r3, r3, r0
+  50 0026 5A1E     		sub	r2, r3, #1
+  51 0028 9341     		sbc	r3, r3, r2
+  52 002a 0122     		mov	r2, #1
+  53 002c 5340     		eor	r3, r3, r2
+  54 002e 1B06     		lsl	r3, r3, #24
+  55 0030 180E     		lsr	r0, r3, #24
+  56              	.LVL5:
+  57 0032 00E0     		b	.L3
+  58              	.LVL6:
+  59              	.L4:
+  60 0034 0020     		mov	r0, #0
+  61              	.LVL7:
+  62              	.L3:
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****          /* ...and host identifier bits are all ones? =>... */
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****           && ((addr2test & ~netif->netmask.addr) ==
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****            (IP_ADDR_BROADCAST_VALUE & ~netif->netmask.addr)))
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     /* => network broadcast address */
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     return 1;
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****   else
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c ****     return 0;
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_addr.c **** }
+  63              		.loc 1 84 0
+  64              		@ sp needed for prologue
+  65 0036 7047     		bx	lr
+  66              	.LFE2:
+  68              		.global	ip_addr_any
+  69              		.section	.rodata
+  70              		.align	2
+  73              	ip_addr_any:
+  74 0000 00000000 		.space	4
+  75              		.global	ip_addr_broadcast
+  76              		.align	2
+  79              	ip_addr_broadcast:
+  80 0004 FFFFFFFF 		.word	-1
+ 105              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 ip_addr.c
+     /tmp/ccIcOWqq.s:1      .text:00000000 $t
+     /tmp/ccIcOWqq.s:16     .text:00000000 ip_addr_isbroadcast
+     /tmp/ccIcOWqq.s:73     .rodata:00000000 ip_addr_any
+     /tmp/ccIcOWqq.s:79     .rodata:00000004 ip_addr_broadcast
+     /tmp/ccIcOWqq.s:80     .rodata:00000004 $d
+     /tmp/ccIcOWqq.s:109    .debug_loc:00000000 $d
+
+NO UNDEFINED SYMBOLS

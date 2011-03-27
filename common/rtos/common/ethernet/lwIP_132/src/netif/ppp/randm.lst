@@ -1,0 +1,390 @@
+   1              		.code	16
+   2              		.file	"randm.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	avChurnRand
+  13              		.code	16
+  14              		.thumb_func
+  16              	avChurnRand:
+  17              	.LFB291:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*****************************************************************************
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * randm.c - Random number generator program file.
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * Copyright (c) 2003 by Marc Boucher, Services Informatiques (MBSI) inc.
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * Copyright (c) 1998 by Global Election Systems Inc.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * The authors hereby grant permission to use, copy, modify, distribute,
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * and license this software and its documentation for any purpose, provided
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * that existing copyright notices are retained in all copies and that this
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * notice and the following disclaimer are included verbatim in any 
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * distributions. No written agreement, license, or royalty fee is required
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * for any of the authorized uses.
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * THIS SOFTWARE IS PROVIDED BY THE CONTRIBUTORS *AS IS* AND ANY EXPRESS OR
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** ******************************************************************************
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * REVISION HISTORY
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * 03-01-01 Marc Boucher <marc@mbsi.ca>
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *   Ported to lwIP.
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** * 98-06-03 Guy Lancaster <lancasterg@acm.org>, Global Election Systems Inc.
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *   Extracted from avos.
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** *****************************************************************************/
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include "lwip/opt.h"
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include "md5.h"
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include "randm.h"
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include "ppp.h"
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include "pppdebug.h"
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #include <string.h>
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #if MD5_SUPPORT /* this module depends on MD5 */
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** #define RANDPOOLSZ 16   /* Bytes stored in the pool of randomness. */
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*****************************/
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*** LOCAL DATA STRUCTURES ***/
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*****************************/
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** static char randPool[RANDPOOLSZ];   /* Pool of randomness. */
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** static long randCount = 0;      /* Pseudo-random incrementer */
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /***********************************/
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*** PUBLIC FUNCTION DEFINITIONS ***/
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /***********************************/
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Initialize the random number generator.
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Since this is to be called on power up, we don't have much
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  system randomess to work with.  Here all we use is the
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  real-time clock.  We'll accumulate more randomness as soon
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  as things start happening.
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  */
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** void
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** avRandomInit()
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** {
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   avChurnRand(NULL, 0);
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** }
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Churn the randomness pool on a random event.  Call this early and often
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  on random and semi-random system events to build randomness in time for
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  usage.  For randomly timed events, pass a null pointer and a zero length
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  and this will use the system timer and other sources to add randomness.
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  If new random data is available, pass a pointer to that and it will be
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  included.
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *
+  81:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Ref: Applied Cryptography 2nd Ed. by Bruce Schneier p. 427
+  82:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  */
+  83:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** void
+  84:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** avChurnRand(char *randData, u32_t randLen)
+  85:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** {
+  19              		.loc 1 85 0
+  20 0000 70B5     		push	{r4, r5, r6, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 9BB0     		sub	sp, sp, #108
+  24              	.LCFI1:
+  25 0004 051C     		mov	r5, r0
+  26 0006 0E1C     		mov	r6, r1
+  86:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   MD5_CTX md5;
+  87:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  88:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   /* ppp_trace(LOG_INFO, "churnRand: %u@%P\n", randLen, randData); */
+  89:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   MD5Init(&md5);
+  27              		.loc 1 89 0
+  28 0008 01AC     		add	r4, sp, #4
+  29 000a 201C     		mov	r0, r4
+  30              	.LVL1:
+  31 000c FFF7FEFF 		bl	MD5Init
+  32              	.LVL2:
+  90:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   MD5Update(&md5, (u_char *)randPool, sizeof(randPool));
+  33              		.loc 1 90 0
+  34 0010 0C49     		ldr	r1, .L5
+  35 0012 201C     		mov	r0, r4
+  36 0014 1022     		mov	r2, #16
+  37 0016 FFF7FEFF 		bl	MD5Update
+  91:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   if (randData) {
+  38              		.loc 1 91 0
+  39 001a 002D     		cmp	r5, #0
+  40 001c 05D0     		beq	.L2
+  92:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Update(&md5, (u_char *)randData, randLen);
+  41              		.loc 1 92 0
+  42 001e 01A8     		add	r0, sp, #4
+  43 0020 291C     		mov	r1, r5
+  44 0022 321C     		mov	r2, r6
+  45 0024 FFF7FEFF 		bl	MD5Update
+  46 0028 04E0     		b	.L3
+  47              	.L2:
+  48              	.LBB2:
+  93:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   } else {
+  94:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     struct {
+  95:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****       /* INCLUDE fields for any system sources of randomness */
+  96:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****       char foobar;
+  97:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     } sysData;
+  98:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+  99:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     /* Load sysData fields here. */
+ 100:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Update(&md5, (u_char *)&sysData, sizeof(sysData));
+  49              		.loc 1 100 0
+  50 002a 01A8     		add	r0, sp, #4
+  51 002c 6946     		mov	r1, sp
+  52 002e 0422     		mov	r2, #4
+  53 0030 FFF7FEFF 		bl	MD5Update
+  54              	.L3:
+  55              	.LBE2:
+ 101:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   }
+ 102:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   MD5Final((u_char *)randPool, &md5);
+  56              		.loc 1 102 0
+  57 0034 0348     		ldr	r0, .L5
+  58 0036 01A9     		add	r1, sp, #4
+  59 0038 FFF7FEFF 		bl	MD5Final
+ 103:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*  ppp_trace(LOG_INFO, "churnRand: -> 0\n"); */
+ 104:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** }
+  60              		.loc 1 104 0
+  61 003c 1BB0     		add	sp, sp, #108
+  62              		@ sp needed for prologue
+  63              	.LVL3:
+  64              	.LVL4:
+  65 003e 70BC     		pop	{r4, r5, r6}
+  66 0040 01BC     		pop	{r0}
+  67 0042 0047     		bx	r0
+  68              	.L6:
+  69              		.align	2
+  70              	.L5:
+  71 0044 04000000 		.word	randPool
+  72              	.LFE291:
+  74              		.align	2
+  75              		.global	avRandomInit
+  76              		.code	16
+  77              		.thumb_func
+  79              	avRandomInit:
+  80              	.LFB290:
+  81              		.loc 1 69 0
+  82 0048 00B5     		push	{lr}
+  83              	.LCFI2:
+  84              		.loc 1 70 0
+  85 004a 0020     		mov	r0, #0
+  86 004c 0021     		mov	r1, #0
+  87 004e FFF7FEFF 		bl	avChurnRand
+  88              		.loc 1 71 0
+  89              		@ sp needed for prologue
+  90 0052 01BC     		pop	{r0}
+  91 0054 0047     		bx	r0
+  92              	.LFE290:
+  94 0056 C046     		.align	2
+  95              		.global	avGenRand
+  96              		.code	16
+  97              		.thumb_func
+  99              	avGenRand:
+ 100              	.LFB292:
+ 105:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+ 106:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*
+ 107:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Use the random pool to generate random data.  This degrades to pseudo
+ 108:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  random when used faster than randomness is supplied using churnRand().
+ 109:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Note: It's important that there be sufficient randomness in randPool
+ 110:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  before this is called for otherwise the range of the result may be
+ 111:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  narrow enough to make a search feasible.
+ 112:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *
+ 113:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Ref: Applied Cryptography 2nd Ed. by Bruce Schneier p. 427
+ 114:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *
+ 115:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * XXX Why does he not just call churnRand() for each block?  Probably
+ 116:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  so that you don't ever publish the seed which could possibly help
+ 117:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  predict future values.
+ 118:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * XXX Why don't we preserve md5 between blocks and just update it with
+ 119:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  randCount each time?  Probably there is a weakness but I wish that
+ 120:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  *  it was documented.
+ 121:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  */
+ 122:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** void
+ 123:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** avGenRand(char *buf, u32_t bufLen)
+ 124:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** {
+ 101              		.loc 1 124 0
+ 102 0058 F0B5     		push	{r4, r5, r6, r7, lr}
+ 103              	.LCFI3:
+ 104 005a 5F46     		mov	r7, fp
+ 105 005c 5646     		mov	r6, sl
+ 106 005e 4D46     		mov	r5, r9
+ 107 0060 4446     		mov	r4, r8
+ 108 0062 F0B4     		push	{r4, r5, r6, r7}
+ 109              	.LCFI4:
+ 110              	.LVL5:
+ 111 0064 9EB0     		sub	sp, sp, #120
+ 112              	.LCFI5:
+ 113 0066 071C     		mov	r7, r0
+ 114 0068 0D1C     		mov	r5, r1
+ 125:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   MD5_CTX md5;
+ 126:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   u_char tmp[16];
+ 127:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   u32_t n;
+ 128:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+ 129:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   while (bufLen > 0) {
+ 115              		.loc 1 129 0
+ 116 006a 0029     		cmp	r1, #0
+ 117 006c 27D0     		beq	.L13
+ 118              	.LVL6:
+ 130:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     n = LWIP_MIN(bufLen, RANDPOOLSZ);
+ 119              		.loc 1 130 0
+ 120 006e 1023     		mov	r3, #16
+ 121 0070 9B46     		mov	fp, r3
+ 122              	.LVL7:
+ 131:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Init(&md5);
+ 123              		.loc 1 131 0
+ 124 0072 6B44     		add	r3, r3, sp
+ 125 0074 9846     		mov	r8, r3
+ 132:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Update(&md5, (u_char *)randPool, sizeof(randPool));
+ 126              		.loc 1 132 0
+ 127 0076 164B     		ldr	r3, .L16
+ 128 0078 9946     		mov	r9, r3
+ 133:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Update(&md5, (u_char *)&randCount, sizeof(randCount));
+ 129              		.loc 1 133 0
+ 130 007a 164E     		ldr	r6, .L16+4
+ 131              	.LVL8:
+ 132              	.L14:
+ 133              		.loc 1 130 0
+ 134 007c 2C1C     		mov	r4, r5
+ 135              	.LVL9:
+ 136 007e 102D     		cmp	r5, #16
+ 137 0080 00D9     		bls	.L11
+ 138 0082 5C46     		mov	r4, fp
+ 139              	.L11:
+ 140              		.loc 1 131 0
+ 141 0084 4046     		mov	r0, r8
+ 142 0086 FFF7FEFF 		bl	MD5Init
+ 143              		.loc 1 132 0
+ 144 008a 4046     		mov	r0, r8
+ 145 008c 4946     		mov	r1, r9
+ 146 008e 5A46     		mov	r2, fp
+ 147 0090 FFF7FEFF 		bl	MD5Update
+ 148              		.loc 1 133 0
+ 149 0094 4046     		mov	r0, r8
+ 150 0096 311C     		mov	r1, r6
+ 151 0098 0422     		mov	r2, #4
+ 152 009a FFF7FEFF 		bl	MD5Update
+ 134:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MD5Final(tmp, &md5);
+ 153              		.loc 1 134 0
+ 154 009e 6846     		mov	r0, sp
+ 155 00a0 4146     		mov	r1, r8
+ 156 00a2 FFF7FEFF 		bl	MD5Final
+ 135:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     randCount++;
+ 157              		.loc 1 135 0
+ 158 00a6 3368     		ldr	r3, [r6]
+ 159 00a8 0133     		add	r3, r3, #1
+ 160 00aa 3360     		str	r3, [r6]
+ 136:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     MEMCPY(buf, tmp, n);
+ 161              		.loc 1 136 0
+ 162 00ac 381C     		mov	r0, r7
+ 163 00ae 6946     		mov	r1, sp
+ 164 00b0 221C     		mov	r2, r4
+ 165 00b2 FFF7FEFF 		bl	memcpy
+ 137:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     buf += n;
+ 166              		.loc 1 137 0
+ 167 00b6 3F19     		add	r7, r7, r4
+ 138:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****     bufLen -= n;
+ 168              		.loc 1 138 0
+ 169 00b8 2D1B     		sub	r5, r5, r4
+ 170              		.loc 1 129 0
+ 171 00ba 002D     		cmp	r5, #0
+ 172 00bc DED1     		bne	.L14
+ 173              	.LVL10:
+ 174              	.L13:
+ 139:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   }
+ 140:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** }
+ 175              		.loc 1 140 0
+ 176 00be 1EB0     		add	sp, sp, #120
+ 177              		@ sp needed for prologue
+ 178              	.LVL11:
+ 179              	.LVL12:
+ 180              	.LVL13:
+ 181              	.LVL14:
+ 182 00c0 3CBC     		pop	{r2, r3, r4, r5}
+ 183 00c2 9046     		mov	r8, r2
+ 184 00c4 9946     		mov	r9, r3
+ 185 00c6 A246     		mov	sl, r4
+ 186 00c8 AB46     		mov	fp, r5
+ 187 00ca F0BC     		pop	{r4, r5, r6, r7}
+ 188 00cc 01BC     		pop	{r0}
+ 189 00ce 0047     		bx	r0
+ 190              	.L17:
+ 191              		.align	2
+ 192              	.L16:
+ 193 00d0 04000000 		.word	randPool
+ 194 00d4 00000000 		.word	randCount
+ 195              	.LFE292:
+ 197              		.align	2
+ 198              		.global	avRandom
+ 199              		.code	16
+ 200              		.thumb_func
+ 202              	avRandom:
+ 203              	.LFB293:
+ 141:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+ 142:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** /*
+ 143:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  * Return a new random number.
+ 144:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****  */
+ 145:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** u32_t
+ 146:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** avRandom()
+ 147:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** {
+ 204              		.loc 1 147 0
+ 205 00d8 00B5     		push	{lr}
+ 206              	.LCFI6:
+ 207 00da 81B0     		sub	sp, sp, #4
+ 208              	.LCFI7:
+ 148:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   u32_t newRand;
+ 149:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+ 150:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   avGenRand((char *)&newRand, sizeof(newRand));
+ 209              		.loc 1 150 0
+ 210 00dc 6846     		mov	r0, sp
+ 211 00de 0421     		mov	r1, #4
+ 212 00e0 FFF7FEFF 		bl	avGenRand
+ 213 00e4 0098     		ldr	r0, [sp]
+ 214              	.LVL15:
+ 151:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** 
+ 152:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c ****   return newRand;
+ 153:rtos/common/ethernet/lwIP_132/src/netif/ppp/randm.c **** }
+ 215              		.loc 1 153 0
+ 216 00e6 01B0     		add	sp, sp, #4
+ 217              		@ sp needed for prologue
+ 218 00e8 02BC     		pop	{r1}
+ 219 00ea 0847     		bx	r1
+ 220              	.LFE293:
+ 222              		.bss
+ 223              		.align	2
+ 224              	randCount:
+ 225 0000 00000000 		.space	4
+ 226              	randPool:
+ 227 0004 00000000 		.space	16
+ 227      00000000 
+ 227      00000000 
+ 227      00000000 
+ 338              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 randm.c
+     /tmp/ccbVoyzk.s:1      .text:00000000 $t
+     /tmp/ccbVoyzk.s:16     .text:00000000 avChurnRand
+     /tmp/ccbVoyzk.s:71     .text:00000044 $d
+     /tmp/ccbVoyzk.s:226    .bss:00000004 randPool
+     /tmp/ccbVoyzk.s:79     .text:00000048 avRandomInit
+     /tmp/ccbVoyzk.s:76     .text:00000048 $t
+     /tmp/ccbVoyzk.s:99     .text:00000058 avGenRand
+     /tmp/ccbVoyzk.s:193    .text:000000d0 $d
+     /tmp/ccbVoyzk.s:224    .bss:00000000 randCount
+     /tmp/ccbVoyzk.s:202    .text:000000d8 avRandom
+     /tmp/ccbVoyzk.s:199    .text:000000d8 $t
+                             .bss:00000000 $d
+     /tmp/ccbVoyzk.s:342    .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+MD5Init
+MD5Update
+MD5Final
+memcpy

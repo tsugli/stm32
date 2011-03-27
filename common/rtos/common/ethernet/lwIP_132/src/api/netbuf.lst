@@ -1,0 +1,638 @@
+   1              		.code	16
+   2              		.file	"netbuf.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	netbuf_data
+  13              		.code	16
+  14              		.thumb_func
+  16              	netbuf_data:
+  17              	.LFB8:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/api/netbuf.c"
+   1:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Network buffer management
+   4:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  
+   7:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * All rights reserved. 
+  10:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * 
+  11:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  12:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *    derived from this software without specific prior written permission. 
+  21:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  23:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  24:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  25:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  26:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  27:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  28:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  29:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  30:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  31:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * 
+  35:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #if LWIP_NETCONN /* don't build if not configured for use in lwipopts.h */
+  42:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  43:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #include "lwip/netbuf.h"
+  44:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #include "lwip/memp.h"
+  45:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #include <string.h>
+  47:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  48:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+  49:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Create (allocate) and initialize a new netbuf.
+  50:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * The netbuf doesn't yet contain a packet buffer!
+  51:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  52:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @return a pointer to a new netbuf
+  53:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         NULL on lack of memory
+  54:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+  55:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** struct
+  56:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf *netbuf_new(void)
+  57:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+  58:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   struct netbuf *buf;
+  59:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  60:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf = memp_malloc(MEMP_NETBUF);
+  61:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf != NULL) {
+  62:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->p = NULL;
+  63:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->ptr = NULL;
+  64:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->addr = NULL;
+  65:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->port = 0;
+  66:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #if LWIP_NETBUF_RECVINFO
+  67:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->toaddr = NULL;
+  68:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->toport = 0;
+  69:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** #endif /* LWIP_NETBUF_RECVINFO */
+  70:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return buf;
+  71:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   } else {
+  72:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return NULL;
+  73:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+  74:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+  75:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  76:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+  77:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Deallocate a netbuf allocated by netbuf_new().
+  78:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  79:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf pointer to a netbuf allocated by netbuf_new()
+  80:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+  81:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** void
+  82:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_delete(struct netbuf *buf)
+  83:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+  84:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf != NULL) {
+  85:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     if (buf->p != NULL) {
+  86:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****       pbuf_free(buf->p);
+  87:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****       buf->p = buf->ptr = NULL;
+  88:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     }
+  89:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     memp_free(MEMP_NETBUF, buf);
+  90:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+  91:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+  92:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+  93:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+  94:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Allocate memory for a packet buffer for a given netbuf.
+  95:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+  96:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf the netbuf for which to allocate a packet buffer
+  97:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param size the size of the packet buffer to allocate
+  98:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @return pointer to the allocated memory
+  99:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         NULL if no memory could be allocated
+ 100:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 101:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** void *
+ 102:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_alloc(struct netbuf *buf, u16_t size)
+ 103:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+ 104:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_alloc: invalid buf", (buf != NULL), return NULL;);
+ 105:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 106:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   /* Deallocate any previously allocated memory. */
+ 107:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->p != NULL) {
+ 108:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     pbuf_free(buf->p);
+ 109:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 110:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->p = pbuf_alloc(PBUF_TRANSPORT, size, PBUF_RAM);
+ 111:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->p == NULL) {
+ 112:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****      return NULL;
+ 113:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 114:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ASSERT("check that first pbuf can hold size",
+ 115:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****              (buf->p->len >= size));
+ 116:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->ptr = buf->p;
+ 117:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   return buf->p->payload;
+ 118:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+ 119:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 120:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 121:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Free the packet buffer included in a netbuf
+ 122:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 123:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf pointer to the netbuf which contains the packet buffer to free
+ 124:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 125:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** void
+ 126:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_free(struct netbuf *buf)
+ 127:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+ 128:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_free: invalid buf", (buf != NULL), return;);
+ 129:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->p != NULL) {
+ 130:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     pbuf_free(buf->p);
+ 131:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 132:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->p = buf->ptr = NULL;
+ 133:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+ 134:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 135:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 136:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Let a netbuf reference existing (non-volatile) data.
+ 137:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 138:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf netbuf which should reference the data
+ 139:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param dataptr pointer to the data to reference
+ 140:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param size size of the data
+ 141:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @return ERR_OK if data is referenced
+ 142:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         ERR_MEM if data couldn't be referenced due to lack of memory
+ 143:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 144:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** err_t
+ 145:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_ref(struct netbuf *buf, const void *dataptr, u16_t size)
+ 146:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+ 147:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_ref: invalid buf", (buf != NULL), return ERR_ARG;);
+ 148:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->p != NULL) {
+ 149:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     pbuf_free(buf->p);
+ 150:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 151:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->p = pbuf_alloc(PBUF_TRANSPORT, 0, PBUF_REF);
+ 152:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->p == NULL) {
+ 153:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     buf->ptr = NULL;
+ 154:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return ERR_MEM;
+ 155:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 156:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->p->payload = (void*)dataptr;
+ 157:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->p->len = buf->p->tot_len = size;
+ 158:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->ptr = buf->p;
+ 159:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   return ERR_OK;
+ 160:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+ 161:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 162:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 163:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Chain one netbuf to another (@see pbuf_chain)
+ 164:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 165:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param head the first netbuf
+ 166:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param tail netbuf to chain after head, freed by this function, may not be reference after retur
+ 167:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 168:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** void
+ 169:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_chain(struct netbuf *head, struct netbuf *tail)
+ 170:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+ 171:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_ref: invalid head", (head != NULL), return;);
+ 172:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_chain: invalid tail", (tail != NULL), return;);
+ 173:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   pbuf_cat(head->p, tail->p);
+ 174:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   head->ptr = head->p;
+ 175:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   memp_free(MEMP_NETBUF, tail);
+ 176:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+ 177:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 178:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 179:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Get the data pointer and length of the data inside a netbuf.
+ 180:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 181:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf netbuf to get the data from
+ 182:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param dataptr pointer to a void pointer where to store the data pointer
+ 183:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param len pointer to an u16_t where the length of the data is stored
+ 184:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @return ERR_OK if the information was retreived,
+ 185:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         ERR_BUF on error.
+ 186:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 187:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** err_t
+ 188:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_data(struct netbuf *buf, void **dataptr, u16_t *len)
+ 189:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+  19              		.loc 1 189 0
+  20              	.LVL0:
+ 190:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_data: invalid buf", (buf != NULL), return ERR_ARG;);
+  21              		.loc 1 190 0
+  22 0000 0028     		cmp	r0, #0
+  23 0002 0FD0     		beq	.L2
+ 191:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_data: invalid dataptr", (dataptr != NULL), return ERR_ARG;);
+  24              		.loc 1 191 0
+  25 0004 0029     		cmp	r1, #0
+  26 0006 0DD0     		beq	.L2
+ 192:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_data: invalid len", (len != NULL), return ERR_ARG;);
+  27              		.loc 1 192 0
+  28 0008 002A     		cmp	r2, #0
+  29 000a 0BD0     		beq	.L2
+ 193:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 194:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->ptr == NULL) {
+  30              		.loc 1 194 0
+  31 000c 4368     		ldr	r3, [r0, #4]
+  32 000e 002B     		cmp	r3, #0
+  33 0010 01D1     		bne	.L3
+  34 0012 FE20     		mov	r0, #254
+  35              	.LVL1:
+  36 0014 07E0     		b	.L4
+  37              	.LVL2:
+  38              	.L3:
+ 195:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return ERR_BUF;
+ 196:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 197:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   *dataptr = buf->ptr->payload;
+  39              		.loc 1 197 0
+  40 0016 5B68     		ldr	r3, [r3, #4]
+  41 0018 0B60     		str	r3, [r1]
+ 198:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   *len = buf->ptr->len;
+  42              		.loc 1 198 0
+  43 001a 4368     		ldr	r3, [r0, #4]
+  44 001c 5B89     		ldrh	r3, [r3, #10]
+  45 001e 1380     		strh	r3, [r2]
+  46 0020 0020     		mov	r0, #0
+  47              	.LVL3:
+  48 0022 00E0     		b	.L4
+  49              	.LVL4:
+  50              	.L2:
+ 199:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   return ERR_OK;
+  51              		.loc 1 199 0
+  52 0024 F620     		mov	r0, #246
+  53              	.LVL5:
+  54              	.L4:
+  55 0026 0006     		lsl	r0, r0, #24
+  56 0028 0016     		asr	r0, r0, #24
+ 200:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+  57              		.loc 1 200 0
+  58              		@ sp needed for prologue
+  59 002a 7047     		bx	lr
+  60              	.LFE8:
+  62              		.align	2
+  63              		.global	netbuf_next
+  64              		.code	16
+  65              		.thumb_func
+  67              	netbuf_next:
+  68              	.LFB9:
+ 201:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 202:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 203:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Move the current data pointer of a packet buffer contained in a netbuf
+ 204:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * to the next part.
+ 205:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * The packet buffer itself is not modified.
+ 206:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 207:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf the netbuf to modify
+ 208:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @return -1 if there is no next part
+ 209:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         1  if moved to the next part but now there is no next part
+ 210:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *         0  if moved to the next part and there are still more parts
+ 211:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 212:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** s8_t
+ 213:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_next(struct netbuf *buf)
+ 214:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+  69              		.loc 1 214 0
+  70              	.LVL6:
+ 215:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_free: invalid buf", (buf != NULL), return -1;);
+  71              		.loc 1 215 0
+  72 002c 0028     		cmp	r0, #0
+  73 002e 08D0     		beq	.L7
+ 216:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->ptr->next == NULL) {
+  74              		.loc 1 216 0
+  75 0030 4368     		ldr	r3, [r0, #4]
+  76 0032 1B68     		ldr	r3, [r3]
+  77 0034 002B     		cmp	r3, #0
+  78 0036 04D0     		beq	.L7
+ 217:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return -1;
+ 218:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 219:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->ptr = buf->ptr->next;
+  79              		.loc 1 219 0
+  80 0038 4360     		str	r3, [r0, #4]
+  81 003a 1B68     		ldr	r3, [r3]
+  82 003c 5842     		neg	r0, r3
+  83 003e 5841     		adc	r0, r0, r3
+  84              	.LVL7:
+  85 0040 00E0     		b	.L8
+  86              	.LVL8:
+  87              	.L7:
+  88 0042 FF20     		mov	r0, #255
+  89              	.LVL9:
+  90              	.L8:
+  91 0044 0006     		lsl	r0, r0, #24
+  92 0046 0016     		asr	r0, r0, #24
+ 220:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   if (buf->ptr->next == NULL) {
+ 221:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****     return 1;
+ 222:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   }
+ 223:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   return 0;
+ 224:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+  93              		.loc 1 224 0
+  94              		@ sp needed for prologue
+  95 0048 7047     		bx	lr
+  96              	.LFE9:
+  98 004a C046     		.align	2
+  99              		.global	netbuf_first
+ 100              		.code	16
+ 101              		.thumb_func
+ 103              	netbuf_first:
+ 104              	.LFB10:
+ 225:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** 
+ 226:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** /**
+ 227:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * Move the current data pointer of a packet buffer contained in a netbuf
+ 228:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * to the beginning of the packet.
+ 229:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * The packet buffer itself is not modified.
+ 230:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  *
+ 231:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  * @param buf the netbuf to modify
+ 232:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****  */
+ 233:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** void
+ 234:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** netbuf_first(struct netbuf *buf)
+ 235:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** {
+ 105              		.loc 1 235 0
+ 106              	.LVL10:
+ 236:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   LWIP_ERROR("netbuf_free: invalid buf", (buf != NULL), return;);
+ 107              		.loc 1 236 0
+ 108 004c 0028     		cmp	r0, #0
+ 109 004e 01D0     		beq	.L12
+ 237:rtos/common/ethernet/lwIP_132/src/api/netbuf.c ****   buf->ptr = buf->p;
+ 110              		.loc 1 237 0
+ 111 0050 0368     		ldr	r3, [r0]
+ 112 0052 4360     		str	r3, [r0, #4]
+ 113              	.L12:
+ 238:rtos/common/ethernet/lwIP_132/src/api/netbuf.c **** }
+ 114              		.loc 1 238 0
+ 115              		@ sp needed for prologue
+ 116 0054 7047     		bx	lr
+ 117              	.LFE10:
+ 119 0056 C046     		.align	2
+ 120              		.global	netbuf_chain
+ 121              		.code	16
+ 122              		.thumb_func
+ 124              	netbuf_chain:
+ 125              	.LFB7:
+ 126              		.loc 1 170 0
+ 127 0058 30B5     		push	{r4, r5, lr}
+ 128              	.LCFI0:
+ 129              	.LVL11:
+ 130 005a 041C     		mov	r4, r0
+ 131 005c 0D1C     		mov	r5, r1
+ 132              		.loc 1 171 0
+ 133 005e 0028     		cmp	r0, #0
+ 134 0060 0BD0     		beq	.L15
+ 135              	.LVL12:
+ 136              		.loc 1 172 0
+ 137 0062 0029     		cmp	r1, #0
+ 138 0064 09D0     		beq	.L15
+ 139              	.LVL13:
+ 140              		.loc 1 173 0
+ 141 0066 0068     		ldr	r0, [r0]
+ 142              	.LVL14:
+ 143 0068 0968     		ldr	r1, [r1]
+ 144              	.LVL15:
+ 145 006a FFF7FEFF 		bl	pbuf_cat
+ 146              		.loc 1 174 0
+ 147 006e 2368     		ldr	r3, [r4]
+ 148 0070 6360     		str	r3, [r4, #4]
+ 149              		.loc 1 175 0
+ 150 0072 0620     		mov	r0, #6
+ 151 0074 291C     		mov	r1, r5
+ 152 0076 FFF7FEFF 		bl	memp_free
+ 153              	.LVL16:
+ 154              	.L15:
+ 155              		.loc 1 176 0
+ 156              		@ sp needed for prologue
+ 157              	.LVL17:
+ 158              	.LVL18:
+ 159 007a 30BC     		pop	{r4, r5}
+ 160 007c 01BC     		pop	{r0}
+ 161 007e 0047     		bx	r0
+ 162              	.LFE7:
+ 164              		.align	2
+ 165              		.global	netbuf_free
+ 166              		.code	16
+ 167              		.thumb_func
+ 169              	netbuf_free:
+ 170              	.LFB5:
+ 171              		.loc 1 127 0
+ 172 0080 10B5     		push	{r4, lr}
+ 173              	.LCFI1:
+ 174              	.LVL19:
+ 175 0082 041C     		mov	r4, r0
+ 176              		.loc 1 128 0
+ 177 0084 0028     		cmp	r0, #0
+ 178 0086 07D0     		beq	.L19
+ 179              		.loc 1 129 0
+ 180 0088 0068     		ldr	r0, [r0]
+ 181              	.LVL20:
+ 182 008a 0028     		cmp	r0, #0
+ 183 008c 01D0     		beq	.L18
+ 184              		.loc 1 130 0
+ 185 008e FFF7FEFF 		bl	pbuf_free
+ 186              	.L18:
+ 187              		.loc 1 132 0
+ 188 0092 0023     		mov	r3, #0
+ 189 0094 6360     		str	r3, [r4, #4]
+ 190 0096 2360     		str	r3, [r4]
+ 191              	.LVL21:
+ 192              	.L19:
+ 193              		.loc 1 133 0
+ 194              		@ sp needed for prologue
+ 195              	.LVL22:
+ 196 0098 10BC     		pop	{r4}
+ 197 009a 01BC     		pop	{r0}
+ 198 009c 0047     		bx	r0
+ 199              	.LFE5:
+ 201 009e C046     		.align	2
+ 202              		.global	netbuf_delete
+ 203              		.code	16
+ 204              		.thumb_func
+ 206              	netbuf_delete:
+ 207              	.LFB3:
+ 208              		.loc 1 83 0
+ 209 00a0 10B5     		push	{r4, lr}
+ 210              	.LCFI2:
+ 211              	.LVL23:
+ 212 00a2 041C     		mov	r4, r0
+ 213              		.loc 1 84 0
+ 214 00a4 0028     		cmp	r0, #0
+ 215 00a6 0BD0     		beq	.L23
+ 216              		.loc 1 85 0
+ 217 00a8 0068     		ldr	r0, [r0]
+ 218              	.LVL24:
+ 219 00aa 0028     		cmp	r0, #0
+ 220 00ac 04D0     		beq	.L22
+ 221              		.loc 1 86 0
+ 222 00ae FFF7FEFF 		bl	pbuf_free
+ 223              		.loc 1 87 0
+ 224 00b2 0023     		mov	r3, #0
+ 225 00b4 6360     		str	r3, [r4, #4]
+ 226 00b6 2360     		str	r3, [r4]
+ 227              	.L22:
+ 228              		.loc 1 89 0
+ 229 00b8 0620     		mov	r0, #6
+ 230 00ba 211C     		mov	r1, r4
+ 231 00bc FFF7FEFF 		bl	memp_free
+ 232              	.LVL25:
+ 233              	.L23:
+ 234              		.loc 1 91 0
+ 235              		@ sp needed for prologue
+ 236              	.LVL26:
+ 237 00c0 10BC     		pop	{r4}
+ 238 00c2 01BC     		pop	{r0}
+ 239 00c4 0047     		bx	r0
+ 240              	.LFE3:
+ 242 00c6 C046     		.align	2
+ 243              		.global	netbuf_ref
+ 244              		.code	16
+ 245              		.thumb_func
+ 247              	netbuf_ref:
+ 248              	.LFB6:
+ 249              		.loc 1 146 0
+ 250 00c8 70B5     		push	{r4, r5, r6, lr}
+ 251              	.LCFI3:
+ 252              	.LVL27:
+ 253 00ca 041C     		mov	r4, r0
+ 254 00cc 0E1C     		mov	r6, r1
+ 255 00ce 1204     		lsl	r2, r2, #16
+ 256              	.LVL28:
+ 257 00d0 150C     		lsr	r5, r2, #16
+ 258              	.LVL29:
+ 259              		.loc 1 147 0
+ 260 00d2 0028     		cmp	r0, #0
+ 261 00d4 01D1     		bne	.L25
+ 262              	.LVL30:
+ 263 00d6 F620     		mov	r0, #246
+ 264              	.LVL31:
+ 265 00d8 17E0     		b	.L26
+ 266              	.LVL32:
+ 267              	.L25:
+ 268              		.loc 1 148 0
+ 269 00da 0068     		ldr	r0, [r0]
+ 270              	.LVL33:
+ 271 00dc 0028     		cmp	r0, #0
+ 272 00de 01D0     		beq	.L27
+ 273              		.loc 1 149 0
+ 274 00e0 FFF7FEFF 		bl	pbuf_free
+ 275              	.LVL34:
+ 276              	.L27:
+ 277              		.loc 1 151 0
+ 278 00e4 0020     		mov	r0, #0
+ 279 00e6 0021     		mov	r1, #0
+ 280 00e8 0222     		mov	r2, #2
+ 281 00ea FFF7FEFF 		bl	pbuf_alloc
+ 282 00ee 2060     		str	r0, [r4]
+ 283              		.loc 1 152 0
+ 284 00f0 0028     		cmp	r0, #0
+ 285 00f2 03D1     		bne	.L28
+ 286              		.loc 1 153 0
+ 287 00f4 0023     		mov	r3, #0
+ 288 00f6 6360     		str	r3, [r4, #4]
+ 289 00f8 FF20     		mov	r0, #255
+ 290 00fa 06E0     		b	.L26
+ 291              	.L28:
+ 292              		.loc 1 156 0
+ 293 00fc 4660     		str	r6, [r0, #4]
+ 294              		.loc 1 157 0
+ 295 00fe 2368     		ldr	r3, [r4]
+ 296 0100 1D81     		strh	r5, [r3, #8]
+ 297 0102 5D81     		strh	r5, [r3, #10]
+ 298              		.loc 1 158 0
+ 299 0104 2368     		ldr	r3, [r4]
+ 300 0106 6360     		str	r3, [r4, #4]
+ 301 0108 0020     		mov	r0, #0
+ 302              	.LVL35:
+ 303              	.L26:
+ 304 010a 0006     		lsl	r0, r0, #24
+ 305 010c 0016     		asr	r0, r0, #24
+ 306              		.loc 1 160 0
+ 307              		@ sp needed for prologue
+ 308              	.LVL36:
+ 309              	.LVL37:
+ 310              	.LVL38:
+ 311 010e 70BC     		pop	{r4, r5, r6}
+ 312 0110 02BC     		pop	{r1}
+ 313 0112 0847     		bx	r1
+ 314              	.LFE6:
+ 316              		.align	2
+ 317              		.global	netbuf_alloc
+ 318              		.code	16
+ 319              		.thumb_func
+ 321              	netbuf_alloc:
+ 322              	.LFB4:
+ 323              		.loc 1 103 0
+ 324 0114 30B5     		push	{r4, r5, lr}
+ 325              	.LCFI4:
+ 326              	.LVL39:
+ 327 0116 041C     		mov	r4, r0
+ 328 0118 0904     		lsl	r1, r1, #16
+ 329              	.LVL40:
+ 330 011a 0D0C     		lsr	r5, r1, #16
+ 331              	.LVL41:
+ 332              		.loc 1 104 0
+ 333 011c 0028     		cmp	r0, #0
+ 334 011e 0FD0     		beq	.L31
+ 335              		.loc 1 107 0
+ 336 0120 0068     		ldr	r0, [r0]
+ 337              	.LVL42:
+ 338 0122 0028     		cmp	r0, #0
+ 339 0124 01D0     		beq	.L32
+ 340              		.loc 1 108 0
+ 341 0126 FFF7FEFF 		bl	pbuf_free
+ 342              	.L32:
+ 343              		.loc 1 110 0
+ 344 012a 0020     		mov	r0, #0
+ 345 012c 291C     		mov	r1, r5
+ 346 012e 0022     		mov	r2, #0
+ 347 0130 FFF7FEFF 		bl	pbuf_alloc
+ 348 0134 2060     		str	r0, [r4]
+ 349              		.loc 1 111 0
+ 350 0136 0028     		cmp	r0, #0
+ 351 0138 02D0     		beq	.L31
+ 352              		.loc 1 116 0
+ 353 013a 6060     		str	r0, [r4, #4]
+ 354              		.loc 1 117 0
+ 355 013c 4068     		ldr	r0, [r0, #4]
+ 356 013e 00E0     		b	.L33
+ 357              	.LVL43:
+ 358              	.L31:
+ 359 0140 0020     		mov	r0, #0
+ 360              	.L33:
+ 361              		.loc 1 118 0
+ 362              		@ sp needed for prologue
+ 363              	.LVL44:
+ 364              	.LVL45:
+ 365 0142 30BC     		pop	{r4, r5}
+ 366 0144 02BC     		pop	{r1}
+ 367 0146 0847     		bx	r1
+ 368              	.LFE4:
+ 370              		.align	2
+ 371              		.global	netbuf_new
+ 372              		.code	16
+ 373              		.thumb_func
+ 375              	netbuf_new:
+ 376              	.LFB2:
+ 377              		.loc 1 57 0
+ 378 0148 00B5     		push	{lr}
+ 379              	.LCFI5:
+ 380              		.loc 1 60 0
+ 381 014a 0620     		mov	r0, #6
+ 382 014c FFF7FEFF 		bl	memp_malloc
+ 383              		.loc 1 61 0
+ 384 0150 0028     		cmp	r0, #0
+ 385 0152 04D0     		beq	.L36
+ 386              	.LVL46:
+ 387              		.loc 1 62 0
+ 388 0154 0023     		mov	r3, #0
+ 389 0156 0360     		str	r3, [r0]
+ 390              		.loc 1 63 0
+ 391 0158 4360     		str	r3, [r0, #4]
+ 392              		.loc 1 64 0
+ 393 015a 8360     		str	r3, [r0, #8]
+ 394              		.loc 1 65 0
+ 395 015c 8381     		strh	r3, [r0, #12]
+ 396              	.L36:
+ 397              	.LVL47:
+ 398              		.loc 1 74 0
+ 399              		@ sp needed for prologue
+ 400 015e 02BC     		pop	{r1}
+ 401 0160 0847     		bx	r1
+ 402              	.LFE2:
+ 546              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 netbuf.c
+     /tmp/ccIKsVSa.s:1      .text:00000000 $t
+     /tmp/ccIKsVSa.s:16     .text:00000000 netbuf_data
+     /tmp/ccIKsVSa.s:67     .text:0000002c netbuf_next
+     /tmp/ccIKsVSa.s:103    .text:0000004c netbuf_first
+     /tmp/ccIKsVSa.s:124    .text:00000058 netbuf_chain
+     /tmp/ccIKsVSa.s:169    .text:00000080 netbuf_free
+     /tmp/ccIKsVSa.s:206    .text:000000a0 netbuf_delete
+     /tmp/ccIKsVSa.s:247    .text:000000c8 netbuf_ref
+     /tmp/ccIKsVSa.s:321    .text:00000114 netbuf_alloc
+     /tmp/ccIKsVSa.s:375    .text:00000148 netbuf_new
+     /tmp/ccIKsVSa.s:406    .debug_frame:00000000 $d
+     /tmp/ccIKsVSa.s:550    .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+pbuf_cat
+memp_free
+pbuf_free
+pbuf_alloc
+memp_malloc

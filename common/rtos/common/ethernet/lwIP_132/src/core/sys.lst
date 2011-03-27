@@ -1,0 +1,877 @@
+   1              		.code	16
+   2              		.file	"sys.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.code	16
+  13              		.thumb_func
+  15              	sswt_handler:
+  16              	.LFB294:
+  17              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/sys.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * lwIP Operating System abstraction
+   4:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #if (NO_SYS == 0) /* don't build if not configured for use in lwipopts.h */
+  42:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  43:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #include "lwip/sys.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #include "lwip/def.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #include "lwip/memp.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/sys.c **** #include "lwip/tcpip.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  48:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+  49:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Struct used for sys_sem_wait_timeout() to tell wether the time
+  50:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * has run out or the semaphore has really become available.
+  51:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+  52:rtos/common/ethernet/lwIP_132/src/core/sys.c **** struct sswt_cb
+  53:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+  54:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   s16_t timeflag;
+  55:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_t *psem;
+  56:rtos/common/ethernet/lwIP_132/src/core/sys.c **** };
+  57:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  58:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+  59:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Wait (forever) for a message to arrive in an mbox.
+  60:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * While waiting, timeouts (for this thread) are processed.
+  61:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+  62:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param mbox the mbox to fetch the message from
+  63:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param msg the place to store the message
+  64:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+  65:rtos/common/ethernet/lwIP_132/src/core/sys.c **** void
+  66:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_mbox_fetch(sys_mbox_t mbox, void **msg)
+  67:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+  68:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   u32_t time_needed;
+  69:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeouts *timeouts;
+  70:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeo *tmptimeout;
+  71:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_timeout_handler h;
+  72:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   void *arg;
+  73:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  74:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  again:
+  75:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeouts = sys_arch_timeouts();
+  76:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (!timeouts || !timeouts->next) {
+  78:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     UNLOCK_TCPIP_CORE();
+  79:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     time_needed = sys_arch_mbox_fetch(mbox, msg, 0);
+  80:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     LOCK_TCPIP_CORE();
+  81:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   } else {
+  82:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     if (timeouts->next->time > 0) {
+  83:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       UNLOCK_TCPIP_CORE();
+  84:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       time_needed = sys_arch_mbox_fetch(mbox, msg, timeouts->next->time);
+  85:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       LOCK_TCPIP_CORE();
+  86:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     } else {
+  87:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       time_needed = SYS_ARCH_TIMEOUT;
+  88:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+  89:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+  90:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     if (time_needed == SYS_ARCH_TIMEOUT) {
+  91:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* If time == SYS_ARCH_TIMEOUT, a timeout occured before a message
+  92:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          could be fetched. We should now call the timeout handler and
+  93:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          deallocate the memory allocated for the timeout. */
+  94:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       tmptimeout = timeouts->next;
+  95:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       timeouts->next = tmptimeout->next;
+  96:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       h   = tmptimeout->h;
+  97:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       arg = tmptimeout->arg;
+  98:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       memp_free(MEMP_SYS_TIMEOUT, tmptimeout);
+  99:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (h != NULL) {
+ 100:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         LWIP_DEBUGF(SYS_DEBUG, ("smf calling h=%p(%p)\n", *(void**)&h, arg));
+ 101:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         h(arg);
+ 102:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 103:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 104:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* We try again to fetch a message from the mbox. */
+ 105:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       goto again;
+ 106:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     } else {
+ 107:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* If time != SYS_ARCH_TIMEOUT, a message was received before the timeout
+ 108:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          occured. The time variable is set to the number of
+ 109:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          milliseconds we waited for the message. */
+ 110:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (time_needed < timeouts->next->time) {
+ 111:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeouts->next->time -= time_needed;
+ 112:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       } else {
+ 113:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeouts->next->time = 0;
+ 114:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 115:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+ 116:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 117:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 118:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 119:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 120:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Wait (forever) for a semaphore to become available.
+ 121:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * While waiting, timeouts (for this thread) are processed.
+ 122:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 123:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param sem semaphore to wait for
+ 124:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+ 125:rtos/common/ethernet/lwIP_132/src/core/sys.c **** void
+ 126:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_sem_wait(sys_sem_t sem)
+ 127:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+ 128:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   u32_t time_needed;
+ 129:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeouts *timeouts;
+ 130:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeo *tmptimeout;
+ 131:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_timeout_handler h;
+ 132:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   void *arg;
+ 133:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 134:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  again:
+ 135:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 136:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeouts = sys_arch_timeouts();
+ 137:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (!timeouts || !timeouts->next) {
+ 139:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     sys_arch_sem_wait(sem, 0);
+ 140:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   } else {
+ 141:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     if (timeouts->next->time > 0) {
+ 142:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       time_needed = sys_arch_sem_wait(sem, timeouts->next->time);
+ 143:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     } else {
+ 144:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       time_needed = SYS_ARCH_TIMEOUT;
+ 145:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+ 146:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 147:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     if (time_needed == SYS_ARCH_TIMEOUT) {
+ 148:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* If time == SYS_ARCH_TIMEOUT, a timeout occured before a message
+ 149:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         could be fetched. We should now call the timeout handler and
+ 150:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         deallocate the memory allocated for the timeout. */
+ 151:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       tmptimeout = timeouts->next;
+ 152:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       timeouts->next = tmptimeout->next;
+ 153:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       h = tmptimeout->h;
+ 154:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       arg = tmptimeout->arg;
+ 155:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       memp_free(MEMP_SYS_TIMEOUT, tmptimeout);
+ 156:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (h != NULL) {
+ 157:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         LWIP_DEBUGF(SYS_DEBUG, ("ssw h=%p(%p)\n", *(void**)&h, (void *)arg));
+ 158:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         h(arg);
+ 159:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 160:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 161:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* We try again to fetch a message from the mbox. */
+ 162:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       goto again;
+ 163:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     } else {
+ 164:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* If time != SYS_ARCH_TIMEOUT, a message was received before the timeout
+ 165:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          occured. The time variable is set to the number of
+ 166:rtos/common/ethernet/lwIP_132/src/core/sys.c ****          milliseconds we waited for the message. */
+ 167:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (time_needed < timeouts->next->time) {
+ 168:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeouts->next->time -= time_needed;
+ 169:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       } else {
+ 170:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeouts->next->time = 0;
+ 171:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 172:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+ 173:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 174:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 175:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 176:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 177:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Create a one-shot timer (aka timeout). Timeouts are processed in the
+ 178:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * following cases:
+ 179:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * - while waiting for a message using sys_mbox_fetch()
+ 180:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * - while waiting for a semaphore using sys_sem_wait() or sys_sem_wait_timeout()
+ 181:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * - while sleeping using the inbuilt sys_msleep()
+ 182:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 183:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param msecs time in milliseconds after that the timer should expire
+ 184:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param h callback function to call when msecs have elapsed
+ 185:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param arg argument to pass to the callback function
+ 186:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+ 187:rtos/common/ethernet/lwIP_132/src/core/sys.c **** void
+ 188:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_timeout(u32_t msecs, sys_timeout_handler h, void *arg)
+ 189:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+ 190:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeouts *timeouts;
+ 191:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeo *timeout, *t;
+ 192:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 193:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeout = memp_malloc(MEMP_SYS_TIMEOUT);
+ 194:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeout == NULL) {
+ 195:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     LWIP_ASSERT("sys_timeout: timeout != NULL", timeout != NULL);
+ 196:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return;
+ 197:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 198:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeout->next = NULL;
+ 199:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeout->h = h;
+ 200:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeout->arg = arg;
+ 201:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeout->time = msecs;
+ 202:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 203:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeouts = sys_arch_timeouts();
+ 204:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 205:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   LWIP_DEBUGF(SYS_DEBUG, ("sys_timeout: %p msecs=%"U32_F" h=%p arg=%p\n",
+ 206:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     (void *)timeout, msecs, *(void**)&h, (void *)arg));
+ 207:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 208:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeouts == NULL) {
+ 209:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     LWIP_ASSERT("sys_timeout: timeouts != NULL", timeouts != NULL);
+ 210:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return;
+ 211:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 212:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 213:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeouts->next == NULL) {
+ 214:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     timeouts->next = timeout;
+ 215:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return;
+ 216:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 217:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 218:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeouts->next->time > msecs) {
+ 219:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     timeouts->next->time -= msecs;
+ 220:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     timeout->next = timeouts->next;
+ 221:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     timeouts->next = timeout;
+ 222:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   } else {
+ 223:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     for(t = timeouts->next; t != NULL; t = t->next) {
+ 224:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       timeout->time -= t->time;
+ 225:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (t->next == NULL || t->next->time > timeout->time) {
+ 226:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         if (t->next != NULL) {
+ 227:rtos/common/ethernet/lwIP_132/src/core/sys.c ****           t->next->time -= timeout->time;
+ 228:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         }
+ 229:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeout->next = t->next;
+ 230:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         t->next = timeout;
+ 231:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         break;
+ 232:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 233:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+ 234:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 235:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 236:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 237:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 238:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Go through timeout list (for this task only) and remove the first matching
+ 239:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * entry, even though the timeout has not triggered yet.
+ 240:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 241:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @note This function only works as expected if there is only one timeout
+ 242:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * calling 'h' in the list of timeouts.
+ 243:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 244:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param h callback function that would be called by the timeout
+ 245:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param arg callback argument that would be passed to h
+ 246:rtos/common/ethernet/lwIP_132/src/core/sys.c **** */
+ 247:rtos/common/ethernet/lwIP_132/src/core/sys.c **** void
+ 248:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_untimeout(sys_timeout_handler h, void *arg)
+ 249:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+ 250:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeouts *timeouts;
+ 251:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sys_timeo *prev_t, *t;
+ 252:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 253:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   timeouts = sys_arch_timeouts();
+ 254:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 255:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeouts == NULL) {
+ 256:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     LWIP_ASSERT("sys_untimeout: timeouts != NULL", timeouts != NULL);
+ 257:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return;
+ 258:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 259:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeouts->next == NULL) {
+ 260:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return;
+ 261:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 262:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 263:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   for (t = timeouts->next, prev_t = NULL; t != NULL; prev_t = t, t = t->next) {
+ 264:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     if ((t->h == h) && (t->arg == arg)) {
+ 265:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* We have a match */
+ 266:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* Unlink from previous in list */
+ 267:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (prev_t == NULL) {
+ 268:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         timeouts->next = t->next;
+ 269:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       } else {
+ 270:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         prev_t->next = t->next;
+ 271:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 272:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       /* If not the last one, add time of this one back to next */
+ 273:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       if (t->next != NULL) {
+ 274:rtos/common/ethernet/lwIP_132/src/core/sys.c ****         t->next->time += t->time;
+ 275:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       }
+ 276:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       memp_free(MEMP_SYS_TIMEOUT, t);
+ 277:rtos/common/ethernet/lwIP_132/src/core/sys.c ****       return;
+ 278:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     }
+ 279:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 280:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   return;
+ 281:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 282:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 283:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 284:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Timeout handler function for sys_sem_wait_timeout()
+ 285:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 286:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param arg struct sswt_cb* used to signal a semaphore and end waiting.
+ 287:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+ 288:rtos/common/ethernet/lwIP_132/src/core/sys.c **** static void
+ 289:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sswt_handler(void *arg)
+ 290:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+  18              		.loc 1 290 0
+  19 0000 00B5     		push	{lr}
+  20              	.LCFI0:
+  21              	.LVL0:
+ 291:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sswt_cb *sswt_cb = (struct sswt_cb *) arg;
+ 292:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 293:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   /* Timeout. Set flag to TRUE and signal semaphore */
+ 294:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sswt_cb->timeflag = 1;
+  22              		.loc 1 294 0
+  23 0002 0123     		mov	r3, #1
+  24 0004 0380     		strh	r3, [r0]
+ 295:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_signal(*(sswt_cb->psem));
+  25              		.loc 1 295 0
+  26 0006 4368     		ldr	r3, [r0, #4]
+  27 0008 1868     		ldr	r0, [r3]
+  28              	.LVL1:
+  29 000a FFF7FEFF 		bl	sys_sem_signal
+ 296:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+  30              		.loc 1 296 0
+  31              		@ sp needed for prologue
+  32 000e 01BC     		pop	{r0}
+  33 0010 0047     		bx	r0
+  34              	.LFE294:
+  36 0012 C046     		.align	2
+  37              		.global	sys_untimeout
+  38              		.code	16
+  39              		.thumb_func
+  41              	sys_untimeout:
+  42              	.LFB293:
+  43              		.loc 1 249 0
+  44 0014 30B5     		push	{r4, r5, lr}
+  45              	.LCFI1:
+  46              	.LVL2:
+  47 0016 041C     		mov	r4, r0
+  48 0018 0D1C     		mov	r5, r1
+  49              		.loc 1 253 0
+  50 001a FFF7FEFF 		bl	sys_arch_timeouts
+  51              	.LVL3:
+  52              		.loc 1 255 0
+  53 001e 0028     		cmp	r0, #0
+  54 0020 21D0     		beq	.L10
+  55              	.LVL4:
+  56              		.loc 1 259 0
+  57 0022 0168     		ldr	r1, [r0]
+  58              	.LVL5:
+  59 0024 0029     		cmp	r1, #0
+  60 0026 1ED0     		beq	.L10
+  61              		.loc 1 260 0
+  62 0028 0022     		mov	r2, #0
+  63              	.LVL6:
+  64              	.L9:
+  65              		.loc 1 264 0
+  66 002a 8B68     		ldr	r3, [r1, #8]
+  67 002c A342     		cmp	r3, r4
+  68 002e 14D1     		bne	.L5
+  69 0030 CB68     		ldr	r3, [r1, #12]
+  70 0032 AB42     		cmp	r3, r5
+  71 0034 11D1     		bne	.L5
+  72              		.loc 1 267 0
+  73 0036 002A     		cmp	r2, #0
+  74 0038 02D1     		bne	.L6
+  75              		.loc 1 268 0
+  76 003a 0B68     		ldr	r3, [r1]
+  77 003c 0360     		str	r3, [r0]
+  78 003e 01E0     		b	.L7
+  79              	.L6:
+  80              		.loc 1 270 0
+  81 0040 0B68     		ldr	r3, [r1]
+  82 0042 1360     		str	r3, [r2]
+  83              	.L7:
+  84              		.loc 1 273 0
+  85 0044 0868     		ldr	r0, [r1]
+  86              	.LVL7:
+  87 0046 0028     		cmp	r0, #0
+  88 0048 03D0     		beq	.L8
+  89              		.loc 1 274 0
+  90 004a 4368     		ldr	r3, [r0, #4]
+  91 004c 4A68     		ldr	r2, [r1, #4]
+  92              	.LVL8:
+  93 004e 9B18     		add	r3, r3, r2
+  94 0050 4360     		str	r3, [r0, #4]
+  95              	.LVL9:
+  96              	.L8:
+  97              		.loc 1 276 0
+  98 0052 0B20     		mov	r0, #11
+  99 0054 FFF7FEFF 		bl	memp_free
+ 100              	.LVL10:
+ 101 0058 05E0     		b	.L10
+ 102              	.LVL11:
+ 103              	.L5:
+ 104              		.loc 1 263 0
+ 105 005a 0B68     		ldr	r3, [r1]
+ 106              	.LVL12:
+ 107 005c 002B     		cmp	r3, #0
+ 108 005e 02D0     		beq	.L10
+ 109 0060 0A1C     		mov	r2, r1
+ 110 0062 191C     		mov	r1, r3
+ 111 0064 E1E7     		b	.L9
+ 112              	.L10:
+ 113              		.loc 1 281 0
+ 114              		@ sp needed for prologue
+ 115              	.LVL13:
+ 116              	.LVL14:
+ 117 0066 30BC     		pop	{r4, r5}
+ 118 0068 01BC     		pop	{r0}
+ 119 006a 0047     		bx	r0
+ 120              	.LFE293:
+ 122              		.align	2
+ 123              		.global	sys_timeout
+ 124              		.code	16
+ 125              		.thumb_func
+ 127              	sys_timeout:
+ 128              	.LFB292:
+ 129              		.loc 1 189 0
+ 130 006c F0B5     		push	{r4, r5, r6, r7, lr}
+ 131              	.LCFI2:
+ 132              	.LVL15:
+ 133 006e 051C     		mov	r5, r0
+ 134 0070 0E1C     		mov	r6, r1
+ 135 0072 171C     		mov	r7, r2
+ 136              		.loc 1 193 0
+ 137 0074 0B20     		mov	r0, #11
+ 138              	.LVL16:
+ 139 0076 FFF7FEFF 		bl	memp_malloc
+ 140              	.LVL17:
+ 141 007a 041C     		mov	r4, r0
+ 142              	.LVL18:
+ 143              		.loc 1 194 0
+ 144 007c 0028     		cmp	r0, #0
+ 145 007e 2BD0     		beq	.L18
+ 146              	.LVL19:
+ 147              		.loc 1 198 0
+ 148 0080 0023     		mov	r3, #0
+ 149 0082 0360     		str	r3, [r0]
+ 150              		.loc 1 199 0
+ 151 0084 8660     		str	r6, [r0, #8]
+ 152              		.loc 1 200 0
+ 153 0086 C760     		str	r7, [r0, #12]
+ 154              		.loc 1 201 0
+ 155 0088 4560     		str	r5, [r0, #4]
+ 156              		.loc 1 203 0
+ 157 008a FFF7FEFF 		bl	sys_arch_timeouts
+ 158              	.LVL20:
+ 159 008e 021C     		mov	r2, r0
+ 160              	.LVL21:
+ 161              		.loc 1 208 0
+ 162 0090 0028     		cmp	r0, #0
+ 163 0092 21D0     		beq	.L18
+ 164              	.LVL22:
+ 165              		.loc 1 213 0
+ 166 0094 0068     		ldr	r0, [r0]
+ 167              	.LVL23:
+ 168 0096 0028     		cmp	r0, #0
+ 169 0098 01D1     		bne	.L13
+ 170              		.loc 1 214 0
+ 171 009a 1460     		str	r4, [r2]
+ 172 009c 1CE0     		b	.L18
+ 173              	.L13:
+ 174              		.loc 1 218 0
+ 175 009e 4368     		ldr	r3, [r0, #4]
+ 176 00a0 9D42     		cmp	r5, r3
+ 177 00a2 06D2     		bcs	.L19
+ 178              		.loc 1 219 0
+ 179 00a4 5B1B     		sub	r3, r3, r5
+ 180 00a6 4360     		str	r3, [r0, #4]
+ 181              		.loc 1 220 0
+ 182 00a8 1368     		ldr	r3, [r2]
+ 183 00aa 2360     		str	r3, [r4]
+ 184              		.loc 1 221 0
+ 185 00ac 1460     		str	r4, [r2]
+ 186 00ae 13E0     		b	.L18
+ 187              	.LVL24:
+ 188              	.L20:
+ 189 00b0 081C     		mov	r0, r1
+ 190              	.LVL25:
+ 191              	.L19:
+ 192              		.loc 1 224 0
+ 193 00b2 6268     		ldr	r2, [r4, #4]
+ 194              	.LVL26:
+ 195 00b4 4368     		ldr	r3, [r0, #4]
+ 196 00b6 D21A     		sub	r2, r2, r3
+ 197 00b8 6260     		str	r2, [r4, #4]
+ 198              		.loc 1 225 0
+ 199 00ba 0168     		ldr	r1, [r0]
+ 200              	.LVL27:
+ 201 00bc 0029     		cmp	r1, #0
+ 202 00be 03D0     		beq	.L15
+ 203 00c0 4B68     		ldr	r3, [r1, #4]
+ 204 00c2 9A42     		cmp	r2, r3
+ 205 00c4 F4D2     		bcs	.L20
+ 206 00c6 03E0     		b	.L21
+ 207              	.L15:
+ 208              		.loc 1 229 0
+ 209 00c8 0368     		ldr	r3, [r0]
+ 210 00ca 2360     		str	r3, [r4]
+ 211              		.loc 1 230 0
+ 212 00cc 0460     		str	r4, [r0]
+ 213 00ce 03E0     		b	.L18
+ 214              	.LVL28:
+ 215              	.L21:
+ 216              		.loc 1 227 0
+ 217 00d0 4B68     		ldr	r3, [r1, #4]
+ 218 00d2 9B1A     		sub	r3, r3, r2
+ 219 00d4 4B60     		str	r3, [r1, #4]
+ 220 00d6 F7E7     		b	.L15
+ 221              	.LVL29:
+ 222              	.L18:
+ 223              		.loc 1 235 0
+ 224              		@ sp needed for prologue
+ 225              	.LVL30:
+ 226              	.LVL31:
+ 227              	.LVL32:
+ 228              	.LVL33:
+ 229 00d8 F0BC     		pop	{r4, r5, r6, r7}
+ 230 00da 01BC     		pop	{r0}
+ 231 00dc 0047     		bx	r0
+ 232              	.LFE292:
+ 234 00de C046     		.align	2
+ 235              		.global	sys_sem_wait
+ 236              		.code	16
+ 237              		.thumb_func
+ 239              	sys_sem_wait:
+ 240              	.LFB291:
+ 241              		.loc 1 127 0
+ 242 00e0 70B5     		push	{r4, r5, r6, lr}
+ 243              	.LCFI3:
+ 244              	.LVL34:
+ 245 00e2 061C     		mov	r6, r0
+ 246              	.LVL35:
+ 247              	.L31:
+ 248              		.loc 1 136 0
+ 249 00e4 FFF7FEFF 		bl	sys_arch_timeouts
+ 250 00e8 041C     		mov	r4, r0
+ 251              	.LVL36:
+ 252              		.loc 1 138 0
+ 253 00ea 0028     		cmp	r0, #0
+ 254 00ec 02D0     		beq	.L23
+ 255              	.LVL37:
+ 256 00ee 0168     		ldr	r1, [r0]
+ 257 00f0 0029     		cmp	r1, #0
+ 258 00f2 04D1     		bne	.L24
+ 259              	.L23:
+ 260              		.loc 1 139 0
+ 261 00f4 301C     		mov	r0, r6
+ 262              	.LVL38:
+ 263 00f6 0021     		mov	r1, #0
+ 264 00f8 FFF7FEFF 		bl	sys_arch_sem_wait
+ 265 00fc 1EE0     		b	.L30
+ 266              	.LVL39:
+ 267              	.L24:
+ 268              		.loc 1 141 0
+ 269 00fe 4968     		ldr	r1, [r1, #4]
+ 270 0100 0029     		cmp	r1, #0
+ 271 0102 04D0     		beq	.L26
+ 272              		.loc 1 142 0
+ 273 0104 301C     		mov	r0, r6
+ 274              	.LVL40:
+ 275 0106 FFF7FEFF 		bl	sys_arch_sem_wait
+ 276              		.loc 1 147 0
+ 277 010a 431C     		add	r3, r0, #1
+ 278 010c 0DD1     		bne	.L27
+ 279              	.LVL41:
+ 280              	.L26:
+ 281              		.loc 1 151 0
+ 282 010e 2168     		ldr	r1, [r4]
+ 283              	.LVL42:
+ 284              		.loc 1 152 0
+ 285 0110 0B68     		ldr	r3, [r1]
+ 286 0112 2360     		str	r3, [r4]
+ 287              		.loc 1 153 0
+ 288 0114 8C68     		ldr	r4, [r1, #8]
+ 289              	.LVL43:
+ 290              		.loc 1 154 0
+ 291 0116 CD68     		ldr	r5, [r1, #12]
+ 292              		.loc 1 155 0
+ 293 0118 0B20     		mov	r0, #11
+ 294              	.LVL44:
+ 295 011a FFF7FEFF 		bl	memp_free
+ 296              	.LVL45:
+ 297              		.loc 1 156 0
+ 298 011e 002C     		cmp	r4, #0
+ 299 0120 E0D0     		beq	.L31
+ 300              		.loc 1 158 0
+ 301 0122 281C     		mov	r0, r5
+ 302 0124 00F076F8 		bl	.L32
+ 303 0128 DCE7     		b	.L31
+ 304              	.LVL46:
+ 305              	.L27:
+ 306              		.loc 1 167 0
+ 307 012a 2168     		ldr	r1, [r4]
+ 308 012c 4B68     		ldr	r3, [r1, #4]
+ 309 012e 8342     		cmp	r3, r0
+ 310 0130 02D9     		bls	.L29
+ 311              		.loc 1 168 0
+ 312 0132 1B1A     		sub	r3, r3, r0
+ 313 0134 4B60     		str	r3, [r1, #4]
+ 314 0136 01E0     		b	.L30
+ 315              	.L29:
+ 316              		.loc 1 170 0
+ 317 0138 0023     		mov	r3, #0
+ 318 013a 4B60     		str	r3, [r1, #4]
+ 319              	.L30:
+ 320              		.loc 1 174 0
+ 321              		@ sp needed for prologue
+ 322              	.LVL47:
+ 323              	.LVL48:
+ 324              	.LVL49:
+ 325 013c 70BC     		pop	{r4, r5, r6}
+ 326 013e 01BC     		pop	{r0}
+ 327 0140 0047     		bx	r0
+ 328              	.LFE291:
+ 330 0142 C046     		.align	2
+ 331              		.global	sys_sem_wait_timeout
+ 332              		.code	16
+ 333              		.thumb_func
+ 335              	sys_sem_wait_timeout:
+ 336              	.LFB295:
+ 297:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 298:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 299:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Wait for a semaphore with timeout (specified in ms)
+ 300:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 301:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param sem semaphore to wait
+ 302:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param timeout timeout in ms (0: wait forever)
+ 303:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @return 0 on timeout, 1 otherwise
+ 304:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+ 305:rtos/common/ethernet/lwIP_132/src/core/sys.c **** int
+ 306:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_sem_wait_timeout(sys_sem_t sem, u32_t timeout)
+ 307:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+ 337              		.loc 1 307 0
+ 338 0144 00B5     		push	{lr}
+ 339              	.LCFI4:
+ 340              	.LVL50:
+ 341 0146 83B0     		sub	sp, sp, #12
+ 342              	.LCFI5:
+ 343 0148 0090     		str	r0, [sp]
+ 344 014a 081C     		mov	r0, r1
+ 345              	.LVL51:
+ 308:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   struct sswt_cb sswt_cb;
+ 309:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 310:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sswt_cb.psem = &sem;
+ 346              		.loc 1 310 0
+ 347 014c 6B46     		mov	r3, sp
+ 348 014e 0293     		str	r3, [sp, #8]
+ 311:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sswt_cb.timeflag = 0;
+ 349              		.loc 1 311 0
+ 350 0150 0022     		mov	r2, #0
+ 351 0152 01AB     		add	r3, sp, #4
+ 352 0154 1A80     		strh	r2, [r3]
+ 312:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 313:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   /* If timeout is zero, then just wait forever */
+ 314:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (timeout > 0) {
+ 353              		.loc 1 314 0
+ 354 0156 0029     		cmp	r1, #0
+ 355 0158 03D0     		beq	.L34
+ 315:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     /* Create a timer and pass it the address of our flag */
+ 316:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     sys_timeout(timeout, sswt_handler, &sswt_cb);
+ 356              		.loc 1 316 0
+ 357 015a 0B49     		ldr	r1, .L38
+ 358              	.LVL52:
+ 359 015c 1A1C     		mov	r2, r3
+ 360 015e FFF7FEFF 		bl	sys_timeout
+ 361              	.LVL53:
+ 362              	.L34:
+ 317:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 318:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_wait(sem);
+ 363              		.loc 1 318 0
+ 364 0162 0098     		ldr	r0, [sp]
+ 365 0164 FFF7FEFF 		bl	sys_sem_wait
+ 366              	.LVL54:
+ 319:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   /* Was it a timeout? */
+ 320:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   if (sswt_cb.timeflag) {
+ 367              		.loc 1 320 0
+ 368 0168 01AB     		add	r3, sp, #4
+ 369 016a 0022     		mov	r2, #0
+ 370 016c 9B5E     		ldrsh	r3, [r3, r2]
+ 371 016e 002B     		cmp	r3, #0
+ 372 0170 01D0     		beq	.L35
+ 373              	.LVL55:
+ 374 0172 0020     		mov	r0, #0
+ 375 0174 04E0     		b	.L36
+ 376              	.L35:
+ 321:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     /* timeout */
+ 322:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return 0;
+ 323:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   } else {
+ 324:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     /* Not a timeout. Remove timeout entry */
+ 325:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     sys_untimeout(sswt_handler, &sswt_cb);
+ 377              		.loc 1 325 0
+ 378 0176 0448     		ldr	r0, .L38
+ 379 0178 01A9     		add	r1, sp, #4
+ 380 017a FFF7FEFF 		bl	sys_untimeout
+ 381 017e 0120     		mov	r0, #1
+ 382              	.L36:
+ 326:rtos/common/ethernet/lwIP_132/src/core/sys.c ****     return 1;
+ 327:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   }
+ 328:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 383              		.loc 1 328 0
+ 384 0180 03B0     		add	sp, sp, #12
+ 385              		@ sp needed for prologue
+ 386 0182 02BC     		pop	{r1}
+ 387 0184 0847     		bx	r1
+ 388              	.L39:
+ 389 0186 C046     		.align	2
+ 390              	.L38:
+ 391 0188 00000000 		.word	sswt_handler
+ 392              	.LFE295:
+ 394              		.align	2
+ 395              		.global	sys_msleep
+ 396              		.code	16
+ 397              		.thumb_func
+ 399              	sys_msleep:
+ 400              	.LFB296:
+ 329:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 330:rtos/common/ethernet/lwIP_132/src/core/sys.c **** /**
+ 331:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * Sleep for some ms. Timeouts are processed while sleeping.
+ 332:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  *
+ 333:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  * @param ms number of milliseconds to sleep
+ 334:rtos/common/ethernet/lwIP_132/src/core/sys.c ****  */
+ 335:rtos/common/ethernet/lwIP_132/src/core/sys.c **** void
+ 336:rtos/common/ethernet/lwIP_132/src/core/sys.c **** sys_msleep(u32_t ms)
+ 337:rtos/common/ethernet/lwIP_132/src/core/sys.c **** {
+ 401              		.loc 1 337 0
+ 402 018c 30B5     		push	{r4, r5, lr}
+ 403              	.LCFI6:
+ 404              	.LVL56:
+ 405 018e 051C     		mov	r5, r0
+ 338:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_t delaysem = sys_sem_new(0);
+ 406              		.loc 1 338 0
+ 407 0190 0020     		mov	r0, #0
+ 408              	.LVL57:
+ 409 0192 FFF7FEFF 		bl	sys_sem_new
+ 410 0196 041C     		mov	r4, r0
+ 411              	.LVL58:
+ 339:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 340:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_wait_timeout(delaysem, ms);
+ 412              		.loc 1 340 0
+ 413 0198 291C     		mov	r1, r5
+ 414 019a FFF7FEFF 		bl	sys_sem_wait_timeout
+ 341:rtos/common/ethernet/lwIP_132/src/core/sys.c **** 
+ 342:rtos/common/ethernet/lwIP_132/src/core/sys.c ****   sys_sem_free(delaysem);
+ 415              		.loc 1 342 0
+ 416 019e 201C     		mov	r0, r4
+ 417 01a0 FFF7FEFF 		bl	sys_sem_free
+ 343:rtos/common/ethernet/lwIP_132/src/core/sys.c **** }
+ 418              		.loc 1 343 0
+ 419              		@ sp needed for prologue
+ 420              	.LVL59:
+ 421              	.LVL60:
+ 422 01a4 30BC     		pop	{r4, r5}
+ 423 01a6 01BC     		pop	{r0}
+ 424 01a8 0047     		bx	r0
+ 425              	.LFE296:
+ 427 01aa C046     		.align	2
+ 428              		.global	sys_mbox_fetch
+ 429              		.code	16
+ 430              		.thumb_func
+ 432              	sys_mbox_fetch:
+ 433              	.LFB290:
+ 434              		.loc 1 67 0
+ 435 01ac F0B5     		push	{r4, r5, r6, r7, lr}
+ 436              	.LCFI7:
+ 437              	.LVL61:
+ 438 01ae 061C     		mov	r6, r0
+ 439 01b0 0F1C     		mov	r7, r1
+ 440              	.LVL62:
+ 441              	.L51:
+ 442              		.loc 1 75 0
+ 443 01b2 FFF7FEFF 		bl	sys_arch_timeouts
+ 444 01b6 041C     		mov	r4, r0
+ 445              	.LVL63:
+ 446              		.loc 1 77 0
+ 447 01b8 0028     		cmp	r0, #0
+ 448 01ba 02D0     		beq	.L43
+ 449              	.LVL64:
+ 450 01bc 0268     		ldr	r2, [r0]
+ 451 01be 002A     		cmp	r2, #0
+ 452 01c0 05D1     		bne	.L44
+ 453              	.L43:
+ 454              		.loc 1 79 0
+ 455 01c2 301C     		mov	r0, r6
+ 456              	.LVL65:
+ 457 01c4 391C     		mov	r1, r7
+ 458 01c6 0022     		mov	r2, #0
+ 459 01c8 FFF7FEFF 		bl	sys_arch_mbox_fetch
+ 460 01cc 1FE0     		b	.L50
+ 461              	.LVL66:
+ 462              	.L44:
+ 463              		.loc 1 82 0
+ 464 01ce 5268     		ldr	r2, [r2, #4]
+ 465 01d0 002A     		cmp	r2, #0
+ 466 01d2 05D0     		beq	.L46
+ 467              		.loc 1 84 0
+ 468 01d4 301C     		mov	r0, r6
+ 469              	.LVL67:
+ 470 01d6 391C     		mov	r1, r7
+ 471 01d8 FFF7FEFF 		bl	sys_arch_mbox_fetch
+ 472              		.loc 1 90 0
+ 473 01dc 431C     		add	r3, r0, #1
+ 474 01de 0DD1     		bne	.L47
+ 475              	.LVL68:
+ 476              	.L46:
+ 477              		.loc 1 94 0
+ 478 01e0 2168     		ldr	r1, [r4]
+ 479              	.LVL69:
+ 480              		.loc 1 95 0
+ 481 01e2 0B68     		ldr	r3, [r1]
+ 482 01e4 2360     		str	r3, [r4]
+ 483              		.loc 1 96 0
+ 484 01e6 8C68     		ldr	r4, [r1, #8]
+ 485              	.LVL70:
+ 486              		.loc 1 97 0
+ 487 01e8 CD68     		ldr	r5, [r1, #12]
+ 488              		.loc 1 98 0
+ 489 01ea 0B20     		mov	r0, #11
+ 490              	.LVL71:
+ 491 01ec FFF7FEFF 		bl	memp_free
+ 492              	.LVL72:
+ 493              		.loc 1 99 0
+ 494 01f0 002C     		cmp	r4, #0
+ 495 01f2 DED0     		beq	.L51
+ 496              		.loc 1 101 0
+ 497 01f4 281C     		mov	r0, r5
+ 498 01f6 00F00DF8 		bl	.L32
+ 499 01fa DAE7     		b	.L51
+ 500              	.LVL73:
+ 501              	.L47:
+ 502              		.loc 1 110 0
+ 503 01fc 2168     		ldr	r1, [r4]
+ 504 01fe 4B68     		ldr	r3, [r1, #4]
+ 505 0200 8342     		cmp	r3, r0
+ 506 0202 02D9     		bls	.L49
+ 507              		.loc 1 111 0
+ 508 0204 1B1A     		sub	r3, r3, r0
+ 509 0206 4B60     		str	r3, [r1, #4]
+ 510 0208 01E0     		b	.L50
+ 511              	.L49:
+ 512              		.loc 1 113 0
+ 513 020a 0023     		mov	r3, #0
+ 514 020c 4B60     		str	r3, [r1, #4]
+ 515              	.L50:
+ 516              		.loc 1 117 0
+ 517              		@ sp needed for prologue
+ 518              	.LVL74:
+ 519              	.LVL75:
+ 520              	.LVL76:
+ 521              	.LVL77:
+ 522 020e F0BC     		pop	{r4, r5, r6, r7}
+ 523 0210 01BC     		pop	{r0}
+ 524 0212 0047     		bx	r0
+ 525              	.LFE290:
+ 675              	.Letext0:
+ 2229              		.code 16
+ 2230              		.align	1
+ 2231              	.L32:
+ 2232 0214 2047C046 		bx	r4
+DEFINED SYMBOLS
+                            *ABS*:00000000 sys.c
+     /tmp/cckyDqVj.s:1      .text:00000000 $t
+     /tmp/cckyDqVj.s:15     .text:00000000 sswt_handler
+     /tmp/cckyDqVj.s:41     .text:00000014 sys_untimeout
+     /tmp/cckyDqVj.s:127    .text:0000006c sys_timeout
+     /tmp/cckyDqVj.s:239    .text:000000e0 sys_sem_wait
+     /tmp/cckyDqVj.s:335    .text:00000144 sys_sem_wait_timeout
+     /tmp/cckyDqVj.s:391    .text:00000188 $d
+     /tmp/cckyDqVj.s:399    .text:0000018c sys_msleep
+     /tmp/cckyDqVj.s:396    .text:0000018c $t
+     /tmp/cckyDqVj.s:432    .text:000001ac sys_mbox_fetch
+     /tmp/cckyDqVj.s:529    .debug_frame:00000000 $d
+     /tmp/cckyDqVj.s:679    .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+sys_sem_signal
+sys_arch_timeouts
+memp_free
+memp_malloc
+sys_arch_sem_wait
+sys_sem_new
+sys_sem_free
+sys_arch_mbox_fetch

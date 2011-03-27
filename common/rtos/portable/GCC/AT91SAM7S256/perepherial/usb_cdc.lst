@@ -1,0 +1,2680 @@
+   1              		.file	"usb_cdc.c"
+   9              	.Ltext0:
+  10              		.align	2
+  11              		.global	AT91F_CDC_Open
+  13              	AT91F_CDC_Open:
+  14              	.LFB291:
+  15              		.file 1 "rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c"
+   1:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+   2:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*      ATMEL Microcontroller Software Support  -  ROUSSET  -
+   3:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+   4:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* The software is delivered "AS IS" without warranty or condition of any
+   5:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* kind, either express, implied or statutory. This includes without
+   6:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* limitation any warranty or condition with respect to merchantability or
+   7:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* fitness for any particular purpose, or against the infringements of
+   8:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* intellectual property rights of others.
+   9:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+  10:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* File Name           : cdc_enumerate.c
+  11:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* Object              : Handle CDC enumeration
+  12:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*
+  13:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* 1.0 Apr 20 200 	: ODi Creation
+  14:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* 1.1 14/Sep/2004 JPP : Minor change
+  15:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* 1.1 15/12/2004  JPP : suppress warning
+  16:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+  17:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #include "board.h"
+  18:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #include "usb_cdc.h"
+  19:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  20:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  21:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** typedef unsigned char  uchar;
+  22:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** typedef unsigned short ushort;
+  23:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** typedef unsigned int   uint;
+  24:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  25:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+  26:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  27:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define AT91C_EP_IN_SIZE 0x40
+  28:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxLanguageStringDescriptor[] =
+  29:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  30:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	4,
+  31:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,
+  32:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x09, 0x04
+  33:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+  34:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  35:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxManufacturerStringDescriptor[] =
+  36:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  37:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	14,
+  38:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,
+  39:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  40:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'B', 0x00,
+  41:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'E', 0x00,
+  42:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'L', 0x00,
+  43:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'E', 0x00,
+  44:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'M', 0x00,
+  45:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'N', 0x00,
+  46:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+  47:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  48:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxProductStringDescriptor[] =
+  49:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  50:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	34,
+  51:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,
+  52:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  53:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'S', 0x00,
+  54:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00,
+  55:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'r', 0x00,
+  56:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'i', 0x00,
+  57:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'a', 0x00,
+  58:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'l', 0x00,
+  59:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	' ', 0x00,
+  60:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'c', 0x00,
+  61:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'o', 0x00,
+  62:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'n', 0x00,
+  63:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00,
+  64:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'c', 0x00,
+  65:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	't', 0x00,
+  66:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'i', 0x00,
+  67:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'o', 0x00,
+  68:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'n', 0x00,
+  69:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+  70:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  71:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxConfigurationStringDescriptor[] =
+  72:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  73:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	38,
+  74:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,
+  75:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  76:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'C', 0x00,
+  77:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'o', 0x00,
+  78:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'n', 0x00,
+  79:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'f', 0x00,
+  80:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'i', 0x00,
+  81:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'g', 0x00,
+  82:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'u', 0x00,
+  83:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'r', 0x00,
+  84:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'a', 0x00,
+  85:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	't', 0x00,
+  86:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'i', 0x00,
+  87:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'o', 0x00,
+  88:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'n', 0x00,
+  89:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	' ', 0x00,
+  90:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'N', 0x00,
+  91:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'a', 0x00,
+  92:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'm', 0x00,
+  93:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00
+  94:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+  95:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+  96:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxInterfaceStringDescriptor[] =
+  97:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  98:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	30,
+  99:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,
+ 100:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 101:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'I', 0x00,
+ 102:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'n', 0x00,
+ 103:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	't', 0x00,
+ 104:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00,
+ 105:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'r', 0x00,
+ 106:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'f', 0x00,
+ 107:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'a', 0x00,
+ 108:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'c', 0x00,
+ 109:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00,
+ 110:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	' ', 0x00,
+ 111:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'N', 0x00,
+ 112:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'a', 0x00,
+ 113:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'm', 0x00,
+ 114:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	'e', 0x00
+ 115:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+ 116:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 117:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxDevDescriptor[] = {
+ 118:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Device descriptor */
+ 119:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x12,   // bLength
+ 120:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,   // bDescriptorType
+ 121:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x10,   // bcdUSBL
+ 122:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,   //
+ 123:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02,   // bDeviceClass:    CDC class code
+ 124:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // bDeviceSubclass: CDC class sub code
+ 125:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // bDeviceProtocol: CDC Device protocol
+ 126:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x08,   // bMaxPacketSize0
+ 127:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0xEB,   // idVendorL
+ 128:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,   //
+ 129:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x16,   // idProductL
+ 130:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x61,   //
+ 131:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x10,   // bcdDeviceL
+ 132:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,   //
+ 133:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // iManufacturer    // 0x01
+ 134:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // iProduct
+ 135:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // SerialNumber
+ 136:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01    // bNumConfigs
+ 137:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+ 138:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 139:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** const char pxCfgDescriptor[] = {
+ 140:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* ============== CONFIGURATION 1 =========== */
+ 141:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Configuration 1 descriptor */
+ 142:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x09,   // CbLength
+ 143:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02,   // CbDescriptorType
+ 144:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x43,   // CwTotalLength 2 EP + Control
+ 145:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,
+ 146:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02,   // CbNumInterfaces
+ 147:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,   // CbConfigurationValue
+ 148:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // CiConfiguration
+ 149:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0xC0,   // CbmAttributes 0xA0
+ 150:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x32,   // CMaxPower
+ 151:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 152:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Communication Class Interface Descriptor Requirement */
+ 153:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x09, // bLength
+ 154:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x04, // bDescriptorType
+ 155:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bInterfaceNumber
+ 156:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bAlternateSetting
+ 157:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01, // bNumEndpoints
+ 158:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02, // bInterfaceClass
+ 159:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02, // bInterfaceSubclass
+ 160:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bInterfaceProtocol
+ 161:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // iInterface
+ 162:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 163:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Header Functional Descriptor */
+ 164:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05, // bFunction Length
+ 165:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x24, // bDescriptor type: CS_INTERFACE
+ 166:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bDescriptor subtype: Header Func Desc
+ 167:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x10, // bcdCDC:1.1
+ 168:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,
+ 169:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 170:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* ACM Functional Descriptor */
+ 171:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x04, // bFunctionLength
+ 172:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x24, // bDescriptor Type: CS_INTERFACE
+ 173:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02, // bDescriptor Subtype: ACM Func Desc
+ 174:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bmCapabilities
+ 175:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 176:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Union Functional Descriptor */
+ 177:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05, // bFunctionLength
+ 178:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x24, // bDescriptorType: CS_INTERFACE
+ 179:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x06, // bDescriptor Subtype: Union Func Desc
+ 180:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bMasterInterface: Communication Class Interface
+ 181:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01, // bSlaveInterface0: Data Class Interface
+ 182:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 183:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Call Management Functional Descriptor */
+ 184:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05, // bFunctionLength
+ 185:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x24, // bDescriptor Type: CS_INTERFACE
+ 186:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01, // bDescriptor Subtype: Call Management Func Desc
+ 187:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bmCapabilities: D1 + D0
+ 188:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01, // bDataInterface: Data Class Interface 1
+ 189:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 190:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Endpoint 1 descriptor */
+ 191:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x07,   // bLength
+ 192:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05,   // bDescriptorType
+ 193:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x83,   // bEndpointAddress, Endpoint 03 - IN
+ 194:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x03,   // bmAttributes      INT
+ 195:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x08,   // wMaxPacketSize
+ 196:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,
+ 197:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0xFF,   // bInterval
+ 198:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 199:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Data Class Interface Descriptor Requirement */
+ 200:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x09, // bLength
+ 201:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x04, // bDescriptorType
+ 202:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01, // bInterfaceNumber
+ 203:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bAlternateSetting
+ 204:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02, // bNumEndpoints
+ 205:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x0A, // bInterfaceClass
+ 206:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bInterfaceSubclass
+ 207:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // bInterfaceProtocol
+ 208:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00, // iInterface
+ 209:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 210:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* First alternate setting */
+ 211:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Endpoint 1 descriptor */
+ 212:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x07,   // bLength
+ 213:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05,   // bDescriptorType
+ 214:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x01,   // bEndpointAddress, Endpoint 01 - OUT
+ 215:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02,   // bmAttributes      BULK
+ 216:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91C_EP_OUT_SIZE,   // wMaxPacketSize
+ 217:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,
+ 218:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,   // bInterval
+ 219:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 220:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	/* Endpoint 2 descriptor */
+ 221:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x07,   // bLength
+ 222:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x05,   // bDescriptorType
+ 223:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x82,   // bEndpointAddress, Endpoint 02 - IN
+ 224:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x02,   // bmAttributes      BULK
+ 225:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91C_EP_IN_SIZE,   // wMaxPacketSize
+ 226:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00,
+ 227:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0x00    // bInterval
+ 228:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** };
+ 229:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 230:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** /* Descriptor type definitions. */
+ 231:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbDESCRIPTOR_TYPE_DEVICE		( 0x01 )
+ 232:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbDESCRIPTOR_TYPE_CONFIGURATION	( 0x02 )
+ 233:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbDESCRIPTOR_TYPE_STRING		( 0x03 )
+ 234:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 235:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 236:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** /* Index to the various string. */
+ 237:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbLANGUAGE_STRING			( 0 )
+ 238:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbMANUFACTURER_STRING			( 1 )
+ 239:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbPRODUCT_STRING			( 2 )
+ 240:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbCONFIGURATION_STRING			( 3 )
+ 241:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define usbINTERFACE_STRING			( 4 )
+ 242:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 243:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 244:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 245:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 246:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** /* USB standard request code */
+ 247:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_STATUS_ZERO           0x0080
+ 248:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_STATUS_INTERFACE      0x0081
+ 249:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_STATUS_ENDPOINT       0x0082
+ 250:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 251:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_CLEAR_FEATURE_ZERO        0x0100
+ 252:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_CLEAR_FEATURE_INTERFACE   0x0101
+ 253:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_CLEAR_FEATURE_ENDPOINT    0x0102
+ 254:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 255:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_FEATURE_ZERO          0x0300
+ 256:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_FEATURE_INTERFACE     0x0301
+ 257:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_FEATURE_ENDPOINT      0x0302
+ 258:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 259:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_ADDRESS               0x0500
+ 260:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_DESCRIPTOR            0x0680
+ 261:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_DESCRIPTOR            0x0700
+ 262:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_CONFIGURATION         0x0880
+ 263:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_CONFIGURATION         0x0900
+ 264:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_GET_INTERFACE             0x0A81
+ 265:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SET_INTERFACE             0x0B01
+ 266:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define STD_SYNCH_FRAME               0x0C82
+ 267:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 268:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** /* CDC Class Specific Request Code */
+ 269:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define GET_LINE_CODING               0x21A1
+ 270:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define SET_LINE_CODING               0x2021
+ 271:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** #define SET_CONTROL_LINE_STATE        0x2221
+ 272:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 273:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 274:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** typedef struct {
+ 275:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	unsigned int dwDTERRate;
+ 276:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	char bCharFormat;
+ 277:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	char bParityType;
+ 278:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	char bDataBits;
+ 279:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** } AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
+ 280:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 281:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** AT91S_CDC_LINE_CODING line = {
+ 282:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	115200, // baudrate
+ 283:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0,      // 1 Stop Bit
+ 284:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	0,      // None Parity
+ 285:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	8};     // 8 Data bits
+ 286:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 287:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** uint currentReceiveBank = AT91C_UDP_RX_DATA_BK0;
+ 288:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 289:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 290:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** struct _AT91S_CDC 	pCDC;
+ 291:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 292:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 293:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uchar AT91F_UDP_IsConfigured(AT91PS_CDC pCdc);
+ 294:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uint AT91F_UDP_Read(AT91PS_CDC pCdc, char *pData, uint length);
+ 295:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uint AT91F_UDP_Write(AT91PS_CDC pCdc, const char *pData, uint length);
+ 296:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static void AT91F_CDC_Enumerate(AT91PS_CDC pCdc);
+ 297:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 298:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 299:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 300:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_USB_Open
+ 301:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief This function Open the USB device
+ 302:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 303:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** /*
+ 304:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** void AT91F_USB_Open(void)
+ 305:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 306:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 307:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****   // Set the PLL USB Divider
+ 308:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
+ 309:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Specific Chip USB Initialisation
+ 310:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
+ 311:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91F_UDP_CfgPMC();
+ 312:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // CDC Open by structure initialization
+ 313:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91F_CDC_Open(&pCDC, AT91C_BASE_UDP);
+ 314:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 315:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 316:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 317:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** */
+ 318:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** void AT91F_USB_Open(void)
+ 319:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 320:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Set the PLL USB Divider
+ 321:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
+ 322:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 323:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Specific Chip USB Initialisation
+ 324:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Enables the 48MHz USB clock UDPCK and System Peripheral USB Clock
+ 325:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
+ 326:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_UDP);
+ 327:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 328:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Enable UDP PullUp (USB_DP_PUP) : enable & Clear of the corresponding PIO
+ 329:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Set in PIO mode and Configure in Output
+ 330:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91F_PIO_CfgOutput(AT91C_BASE_PIOA,AT91C_PIO_PA16);
+ 331:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // Clear for set the Pul up resistor
+ 332:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91F_PIO_ClearOutput(AT91C_BASE_PIOA,AT91C_PIO_PA16);
+ 333:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 334:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     // CDC Open by structure initialization
+ 335:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****     AT91F_CDC_Open(&pCDC, AT91C_BASE_UDP);
+ 336:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 337:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 338:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 339:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_CDC_Open
+ 340:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief
+ 341:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 342:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** AT91PS_CDC AT91F_CDC_Open(AT91PS_CDC pCdc, AT91PS_UDP pUdp)
+ 343:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+  16              		.loc 1 343 0
+  17              		@ Function supports interworking.
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  21              	.LVL0:
+ 344:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->pUdp = pUdp;
+  22              		.loc 1 344 0
+  23 0000 001080E5 		str	r1, [r0, #0]
+ 345:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->currentConfiguration = 0;
+  24              		.loc 1 345 0
+  25 0004 0020A0E3 		mov	r2, #0
+  26 0008 0420C0E5 		strb	r2, [r0, #4]
+ 346:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->currentConnection    = 0;
+  27              		.loc 1 346 0
+  28 000c 0520C0E5 		strb	r2, [r0, #5]
+ 347:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->currentRcvBank       = AT91C_UDP_RX_DATA_BK0;
+  29              		.loc 1 347 0
+  30 0010 022082E2 		add	r2, r2, #2
+  31 0014 082080E5 		str	r2, [r0, #8]
+ 348:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->IsConfigured = AT91F_UDP_IsConfigured;
+  32              		.loc 1 348 0
+  33 0018 14209FE5 		ldr	r2, .L3
+  34 001c 0C2080E5 		str	r2, [r0, #12]
+ 349:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->Write        = AT91F_UDP_Write;
+  35              		.loc 1 349 0
+  36 0020 10209FE5 		ldr	r2, .L3+4
+  37 0024 102080E5 		str	r2, [r0, #16]
+ 350:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->Read         = AT91F_UDP_Read;
+  38              		.loc 1 350 0
+  39 0028 0C209FE5 		ldr	r2, .L3+8
+  40 002c 142080E5 		str	r2, [r0, #20]
+  41              	.LVL1:
+ 351:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	return pCdc;
+ 352:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+  42              		.loc 1 352 0
+  43 0030 1EFF2FE1 		bx	lr
+  44              	.L4:
+  45              		.align	2
+  46              	.L3:
+  47 0034 00000000 		.word	AT91F_UDP_IsConfigured
+  48 0038 00000000 		.word	AT91F_UDP_Write
+  49 003c 00000000 		.word	AT91F_UDP_Read
+  50              	.LFE291:
+  52              		.align	2
+  53              		.global	AT91F_USB_Open
+  55              	AT91F_USB_Open:
+  56              	.LFB290:
+  57              		.loc 1 319 0
+  58              		@ Function supports interworking.
+  59              		@ args = 0, pretend = 0, frame = 0
+  60              		@ frame_needed = 0, uses_anonymous_args = 0
+  61 0040 04E02DE5 		str	lr, [sp, #-4]!
+  62              	.LCFI0:
+  63              		.loc 1 321 0
+  64 0044 032CE0E3 		mvn	r2, #768
+  65 0048 D33012E5 		ldr	r3, [r2, #-211]
+  66 004c 013283E3 		orr	r3, r3, #268435456
+  67 0050 D33002E5 		str	r3, [r2, #-211]
+  68              		.loc 1 325 0
+  69 0054 8030A0E3 		mov	r3, #128
+  70 0058 FF3002E5 		str	r3, [r2, #-255]
+  71              		.loc 1 326 0
+  72 005c 1E3D83E2 		add	r3, r3, #1920
+  73 0060 EF3002E5 		str	r3, [r2, #-239]
+  74              	.LBB6:
+  75              	.LBB7:
+  76              		.file 2 "./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h"
+   1:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* ----------------------------------------------------------------------------
+   2:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*         ATMEL Microcontroller Software Support  -  ROUSSET  -
+   3:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* ----------------------------------------------------------------------------
+   4:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* DISCLAIMER:  THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR
+   5:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+   6:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
+   7:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR ANY DIRECT, INDIRECT,
+   8:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+   9:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+  10:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  11:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  12:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+  13:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  14:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* ----------------------------------------------------------------------------
+  15:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* File Name           : lib_AT91SAM7S256.h
+  16:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* Object              : AT91SAM7S256 inlined functions
+  17:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* Generated           : AT91 SW Application Group  01/16/2006 (16:36:07)
+  18:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*
+  19:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_MC_SAM7S.h/1.1/Thu Mar 25 15:19:14 2004//
+  20:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_pdc.h/1.2/Tue Jul  2 13:29:40 2002//
+  21:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_dbgu.h/1.1/Thu Aug 25 12:56:22 2005//
+  22:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_VREG_6085B.h/1.1/Tue Feb  1 16:20:47 2005//
+  23:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_ssc.h/1.4/Fri Jan 31 12:19:20 2003//
+  24:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_spi2.h/1.2/Tue Aug 23 15:37:28 2005//
+  25:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_PWM_SAM.h/1.3/Thu Jan 22 10:10:50 2004//
+  26:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_tc_1753b.h/1.1/Fri Jan 31 12:20:02 2003//
+  27:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_pitc_6079A.h/1.2/Tue Nov  9 14:43:56 2004//
+  28:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_pmc_SAM7S.h/1.5/Fri Nov  4 09:37:21 2005//
+  29:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_adc.h/1.6/Fri Oct 17 09:12:38 2003//
+  30:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_rstc_6098A.h/1.1/Wed Oct  6 10:39:20 2004//
+  31:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_rttc_6081A.h/1.1/Wed Oct  6 10:39:38 2004//
+  32:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_pio.h/1.3/Fri Jan 31 12:18:56 2003//
+  33:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_twi.h/1.3/Mon Jul 19 14:27:58 2004//
+  34:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_wdtc_6080A.h/1.1/Wed Oct  6 10:38:30 2004//
+  35:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_usart.h/1.5/Thu Nov 21 16:01:54 2002//
+  36:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_udp.h/1.5/Tue Aug 30 12:13:47 2005//
+  37:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* CVS Reference       : /lib_aic_6075b.h/1.2/Thu Jul  7 07:48:22 2005//
+  38:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* ----------------------------------------------------------------------------
+  39:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  40:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** #ifndef lib_AT91SAM7S256_H
+  41:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** #define lib_AT91SAM7S256_H
+  42:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  43:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** /* *****************************************************************************
+  44:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****                 SOFTWARE API FOR AIC
+  45:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****    ***************************************************************************** */
+  46:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** #define AT91C_AIC_BRANCH_OPCODE ((void (*) ()) 0xE51FFF20) // ldr, pc, [pc, #-&F20]
+  47:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  48:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  49:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_ConfigureIt
+  50:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Interrupt Handler Initialization
+  51:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  52:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int AT91F_AIC_ConfigureIt (
+  53:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,  // \arg pointer to the AIC registers
+  54:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id,     // \arg interrupt number to initialize
+  55:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int priority,   // \arg priority to give to the interrupt
+  56:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int src_type,   // \arg activation and sense of activation
+  57:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*newHandler) () ) // \arg address of the interrupt handler
+  58:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+  59:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int oldHandler;
+  60:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     unsigned int mask ;
+  61:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  62:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     oldHandler = pAic->AIC_SVR[irq_id];
+  63:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  64:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     mask = 0x1 << irq_id ;
+  65:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Disable the interrupt on the interrupt controller
+  66:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_IDCR = mask ;
+  67:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Save the interrupt handler routine pointer and the interrupt priority
+  68:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_SVR[irq_id] = (unsigned int) newHandler ;
+  69:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Store the Source Mode Register
+  70:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_SMR[irq_id] = src_type | priority  ;
+  71:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Clear the interrupt on the interrupt controller
+  72:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_ICCR = mask ;
+  73:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  74:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return oldHandler;
+  75:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+  76:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  77:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  78:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_EnableIt
+  79:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable corresponding IT number
+  80:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  81:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_AIC_EnableIt (
+  82:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,      // \arg pointer to the AIC registers
+  83:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id ) // \arg interrupt number to initialize
+  84:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+  85:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Enable the interrupt on the interrupt controller
+  86:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_IECR = 0x1 << irq_id ;
+  87:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+  88:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+  89:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  90:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_DisableIt
+  91:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Disable corresponding IT number
+  92:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+  93:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_AIC_DisableIt (
+  94:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,      // \arg pointer to the AIC registers
+  95:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id ) // \arg interrupt number to initialize
+  96:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+  97:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     unsigned int mask = 0x1 << irq_id;
+  98:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Disable the interrupt on the interrupt controller
+  99:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_IDCR = mask ;
+ 100:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Clear the interrupt on the Interrupt Controller ( if one is pending )
+ 101:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_ICCR = mask ;
+ 102:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 103:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 104:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 105:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_ClearIt
+ 106:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Clear corresponding IT number
+ 107:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 108:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_AIC_ClearIt (
+ 109:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,     // \arg pointer to the AIC registers
+ 110:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id) // \arg interrupt number to initialize
+ 111:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 112:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Clear the interrupt on the Interrupt Controller ( if one is pending )
+ 113:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_ICCR = (0x1 << irq_id);
+ 114:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 115:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 116:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 117:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_AcknowledgeIt
+ 118:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Acknowledge corresponding IT number
+ 119:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 120:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_AIC_AcknowledgeIt (
+ 121:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic)     // \arg pointer to the AIC registers
+ 122:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 123:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     pAic->AIC_EOICR = pAic->AIC_EOICR;
+ 124:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 125:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 126:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 127:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_SetExceptionVector
+ 128:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Configure vector handler
+ 129:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 130:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int  AT91F_AIC_SetExceptionVector (
+ 131:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int *pVector, // \arg pointer to the AIC registers
+ 132:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*Handler) () )   // \arg Interrupt Handler
+ 133:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 134:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int oldVector = *pVector;
+ 135:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 136:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	if ((unsigned int) Handler == (unsigned int) AT91C_AIC_BRANCH_OPCODE)
+ 137:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		*pVector = (unsigned int) AT91C_AIC_BRANCH_OPCODE;
+ 138:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	else
+ 139:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		*pVector = (((((unsigned int) Handler) - ((unsigned int) pVector) - 0x8) >> 2) & 0x00FFFFFF) | 0x
+ 140:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 141:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return oldVector;
+ 142:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 143:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 144:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 145:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_Trig
+ 146:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Trig an IT
+ 147:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 148:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void  AT91F_AIC_Trig (
+ 149:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,     // \arg pointer to the AIC registers
+ 150:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id) // \arg interrupt number
+ 151:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 152:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pAic->AIC_ISCR = (0x1 << irq_id) ;
+ 153:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 154:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 155:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 156:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_IsActive
+ 157:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if an IT is active
+ 158:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 159:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int  AT91F_AIC_IsActive (
+ 160:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,     // \arg pointer to the AIC registers
+ 161:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id) // \arg Interrupt Number
+ 162:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 163:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return (pAic->AIC_ISR & (0x1 << irq_id));
+ 164:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 165:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 166:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 167:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_IsPending
+ 168:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if an IT is pending
+ 169:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 170:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int  AT91F_AIC_IsPending (
+ 171:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,     // \arg pointer to the AIC registers
+ 172:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int irq_id) // \arg Interrupt Number
+ 173:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 174:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return (pAic->AIC_IPR & (0x1 << irq_id));
+ 175:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 176:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 177:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 178:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_AIC_Open
+ 179:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set exception vectors and AIC registers to default values
+ 180:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 181:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_AIC_Open(
+ 182:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_AIC pAic,        // \arg pointer to the AIC registers
+ 183:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*IrqHandler) (),  // \arg Default IRQ vector exception
+ 184:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*FiqHandler) (),  // \arg Default FIQ vector exception
+ 185:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*DefaultHandler)  (), // \arg Default Handler set in ISR
+ 186:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	void (*SpuriousHandler) (), // \arg Default Spurious Handler
+ 187:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int protectMode)   // \arg Debug Control Register
+ 188:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 189:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	int i;
+ 190:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 191:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Disable all interrupts and set IVR to the default handler
+ 192:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	for (i = 0; i < 32; ++i) {
+ 193:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_AIC_DisableIt(pAic, i);
+ 194:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_AIC_ConfigureIt(pAic, i, AT91C_AIC_PRIOR_LOWEST, AT91C_AIC_SRCTYPE_HIGH_LEVEL, DefaultHandl
+ 195:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 196:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 197:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Set the IRQ exception vector
+ 198:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_AIC_SetExceptionVector((unsigned int *) 0x18, IrqHandler);
+ 199:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Set the Fast Interrupt exception vector
+ 200:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_AIC_SetExceptionVector((unsigned int *) 0x1C, FiqHandler);
+ 201:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 202:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pAic->AIC_SPU = (unsigned int) SpuriousHandler;
+ 203:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pAic->AIC_DCR = protectMode;
+ 204:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 205:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** /* *****************************************************************************
+ 206:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****                 SOFTWARE API FOR PDC
+ 207:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****    ***************************************************************************** */
+ 208:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 209:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_SetNextRx
+ 210:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set the next receive transfer descriptor
+ 211:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 212:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_SetNextRx (
+ 213:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,     // \arg pointer to a PDC controller
+ 214:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *address,       // \arg address to the next bloc to be received
+ 215:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int bytes)  // \arg number of bytes to be received
+ 216:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 217:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_RNPR = (unsigned int) address;
+ 218:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_RNCR = bytes;
+ 219:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 220:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 221:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 222:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_SetNextTx
+ 223:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set the next transmit transfer descriptor
+ 224:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 225:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_SetNextTx (
+ 226:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,       // \arg pointer to a PDC controller
+ 227:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *address,         // \arg address to the next bloc to be transmitted
+ 228:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int bytes)    // \arg number of bytes to be transmitted
+ 229:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 230:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_TNPR = (unsigned int) address;
+ 231:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_TNCR = bytes;
+ 232:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 233:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 234:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 235:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_SetRx
+ 236:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set the receive transfer descriptor
+ 237:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 238:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_SetRx (
+ 239:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,       // \arg pointer to a PDC controller
+ 240:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *address,         // \arg address to the next bloc to be received
+ 241:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int bytes)    // \arg number of bytes to be received
+ 242:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 243:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_RPR = (unsigned int) address;
+ 244:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_RCR = bytes;
+ 245:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 246:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 247:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 248:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_SetTx
+ 249:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set the transmit transfer descriptor
+ 250:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 251:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_SetTx (
+ 252:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,       // \arg pointer to a PDC controller
+ 253:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *address,         // \arg address to the next bloc to be transmitted
+ 254:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int bytes)    // \arg number of bytes to be transmitted
+ 255:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 256:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_TPR = (unsigned int) address;
+ 257:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_TCR = bytes;
+ 258:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 259:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 260:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 261:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_EnableTx
+ 262:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable transmit
+ 263:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 264:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_EnableTx (
+ 265:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 266:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 267:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_PTCR = AT91C_PDC_TXTEN;
+ 268:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 269:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 270:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 271:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_EnableRx
+ 272:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable receive
+ 273:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 274:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_EnableRx (
+ 275:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 276:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 277:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_PTCR = AT91C_PDC_RXTEN;
+ 278:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 279:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 280:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 281:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_DisableTx
+ 282:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Disable transmit
+ 283:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 284:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_DisableTx (
+ 285:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 286:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 287:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_PTCR = AT91C_PDC_TXTDIS;
+ 288:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 289:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 290:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 291:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_DisableRx
+ 292:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Disable receive
+ 293:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 294:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_DisableRx (
+ 295:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 296:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 297:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPDC->PDC_PTCR = AT91C_PDC_RXTDIS;
+ 298:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 299:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 300:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 301:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_IsTxEmpty
+ 302:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if the current transfer descriptor has been sent
+ 303:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 304:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_PDC_IsTxEmpty ( // \return return 1 if transfer is complete
+ 305:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 306:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 307:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return !(pPDC->PDC_TCR);
+ 308:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 309:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 310:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 311:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_IsNextTxEmpty
+ 312:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if the next transfer descriptor has been moved to the current td
+ 313:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 314:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_PDC_IsNextTxEmpty ( // \return return 1 if transfer is complete
+ 315:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 316:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 317:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return !(pPDC->PDC_TNCR);
+ 318:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 319:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 320:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 321:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_IsRxEmpty
+ 322:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if the current transfer descriptor has been filled
+ 323:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 324:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_PDC_IsRxEmpty ( // \return return 1 if transfer is complete
+ 325:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 326:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 327:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return !(pPDC->PDC_RCR);
+ 328:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 329:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 330:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 331:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_IsNextRxEmpty
+ 332:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if the next transfer descriptor has been moved to the current td
+ 333:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 334:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_PDC_IsNextRxEmpty ( // \return return 1 if transfer is complete
+ 335:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC )       // \arg pointer to a PDC controller
+ 336:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 337:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return !(pPDC->PDC_RNCR);
+ 338:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 339:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 340:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 341:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_Open
+ 342:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Open PDC: disable TX and RX reset transfer descriptors, re-enable RX and TX
+ 343:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 344:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_Open (
+ 345:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC)       // \arg pointer to a PDC controller
+ 346:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 347:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Disable the RX and TX PDC transfer requests
+ 348:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_DisableRx(pPDC);
+ 349:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_DisableTx(pPDC);
+ 350:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 351:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	//* Reset all Counter register Next buffer first
+ 352:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetNextTx(pPDC, (char *) 0, 0);
+ 353:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetNextRx(pPDC, (char *) 0, 0);
+ 354:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetTx(pPDC, (char *) 0, 0);
+ 355:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetRx(pPDC, (char *) 0, 0);
+ 356:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 357:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Enable the RX and TX PDC transfer requests
+ 358:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_EnableRx(pPDC);
+ 359:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_EnableTx(pPDC);
+ 360:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 361:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 362:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 363:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_Close
+ 364:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Close PDC: disable TX and RX reset transfer descriptors
+ 365:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 366:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PDC_Close (
+ 367:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC)       // \arg pointer to a PDC controller
+ 368:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 369:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****     //* Disable the RX and TX PDC transfer requests
+ 370:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_DisableRx(pPDC);
+ 371:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_DisableTx(pPDC);
+ 372:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 373:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	//* Reset all Counter register Next buffer first
+ 374:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetNextTx(pPDC, (char *) 0, 0);
+ 375:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetNextRx(pPDC, (char *) 0, 0);
+ 376:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetTx(pPDC, (char *) 0, 0);
+ 377:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91F_PDC_SetRx(pPDC, (char *) 0, 0);
+ 378:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 379:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 380:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 381:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 382:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_SendFrame
+ 383:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Close PDC: disable TX and RX reset transfer descriptors
+ 384:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 385:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int AT91F_PDC_SendFrame(
+ 386:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,
+ 387:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *pBuffer,
+ 388:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int szBuffer,
+ 389:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *pNextBuffer,
+ 390:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int szNextBuffer )
+ 391:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 392:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	if (AT91F_PDC_IsTxEmpty(pPDC)) {
+ 393:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* Buffer and next buffer can be initialized
+ 394:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetTx(pPDC, pBuffer, szBuffer);
+ 395:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetNextTx(pPDC, pNextBuffer, szNextBuffer);
+ 396:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 2;
+ 397:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 398:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	else if (AT91F_PDC_IsNextTxEmpty(pPDC)) {
+ 399:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* Only one buffer can be initialized
+ 400:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetNextTx(pPDC, pBuffer, szBuffer);
+ 401:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 1;
+ 402:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 403:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	else {
+ 404:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* All buffer are in use...
+ 405:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 0;
+ 406:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 407:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 408:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 409:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 410:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PDC_ReceiveFrame
+ 411:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Close PDC: disable TX and RX reset transfer descriptors
+ 412:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 413:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int AT91F_PDC_ReceiveFrame (
+ 414:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PDC pPDC,
+ 415:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *pBuffer,
+ 416:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int szBuffer,
+ 417:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	char *pNextBuffer,
+ 418:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int szNextBuffer )
+ 419:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 420:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	if (AT91F_PDC_IsRxEmpty(pPDC)) {
+ 421:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* Buffer and next buffer can be initialized
+ 422:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetRx(pPDC, pBuffer, szBuffer);
+ 423:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetNextRx(pPDC, pNextBuffer, szNextBuffer);
+ 424:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 2;
+ 425:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 426:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	else if (AT91F_PDC_IsNextRxEmpty(pPDC)) {
+ 427:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* Only one buffer can be initialized
+ 428:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		AT91F_PDC_SetNextRx(pPDC, pBuffer, szBuffer);
+ 429:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 1;
+ 430:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 431:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	else {
+ 432:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		//* All buffer are in use...
+ 433:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		return 0;
+ 434:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	}
+ 435:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 436:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** /* *****************************************************************************
+ 437:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****                 SOFTWARE API FOR DBGU
+ 438:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****    ***************************************************************************** */
+ 439:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 440:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_DBGU_InterruptEnable
+ 441:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable DBGU Interrupt
+ 442:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 443:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_DBGU_InterruptEnable(
+ 444:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         AT91PS_DBGU pDbgu,   // \arg  pointer to a DBGU controller
+ 445:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         unsigned int flag) // \arg  dbgu interrupt to be enabled
+ 446:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 447:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         pDbgu->DBGU_IER = flag;
+ 448:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 449:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 450:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 451:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_DBGU_InterruptDisable
+ 452:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Disable DBGU Interrupt
+ 453:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 454:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_DBGU_InterruptDisable(
+ 455:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         AT91PS_DBGU pDbgu,   // \arg  pointer to a DBGU controller
+ 456:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         unsigned int flag) // \arg  dbgu interrupt to be disabled
+ 457:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 458:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         pDbgu->DBGU_IDR = flag;
+ 459:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 460:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 461:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 462:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_DBGU_GetInterruptMaskStatus
+ 463:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Return DBGU Interrupt Mask Status
+ 464:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 465:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int AT91F_DBGU_GetInterruptMaskStatus( // \return DBGU Interrupt Mask Status
+ 466:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         AT91PS_DBGU pDbgu) // \arg  pointer to a DBGU controller
+ 467:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 468:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         return pDbgu->DBGU_IMR;
+ 469:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 470:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 471:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 472:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_DBGU_IsInterruptMasked
+ 473:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if DBGU Interrupt is Masked
+ 474:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 475:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_DBGU_IsInterruptMasked(
+ 476:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         AT91PS_DBGU pDbgu,   // \arg  pointer to a DBGU controller
+ 477:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         unsigned int flag) // \arg  flag to be tested
+ 478:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 479:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****         return (AT91F_DBGU_GetInterruptMaskStatus(pDbgu) & flag);
+ 480:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 481:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 482:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** /* *****************************************************************************
+ 483:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****                 SOFTWARE API FOR PIO
+ 484:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h ****    ***************************************************************************** */
+ 485:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 486:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgPeriph
+ 487:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable pins to be drived by peripheral
+ 488:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 489:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgPeriph(
+ 490:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 491:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int periphAEnable,  // \arg PERIPH A to enable
+ 492:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int periphBEnable)  // \arg PERIPH B to enable
+ 493:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 494:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 495:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_ASR = periphAEnable;
+ 496:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_BSR = periphBEnable;
+ 497:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_PDR = (periphAEnable | periphBEnable); // Set in Periph mode
+ 498:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 499:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 500:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 501:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgOutput
+ 502:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable PIO in output mode
+ 503:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 504:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgOutput(
+ 505:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 506:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int pioEnable)      // \arg PIO to be enabled
+ 507:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 508:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_PER = pioEnable; // Set in PIO mode
+  77              		.loc 2 508 0
+  78 0064 022B42E2 		sub	r2, r2, #2048
+  79 0068 3E3B83E2 		add	r3, r3, #63488
+  80 006c FF3002E5 		str	r3, [r2, #-255]
+ 509:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_OER = pioEnable; // Configure in Output
+  81              		.loc 2 509 0
+  82 0070 EF3002E5 		str	r3, [r2, #-239]
+  83              	.LBE7:
+  84              	.LBE6:
+  85              	.LBB8:
+  86              	.LBB9:
+ 510:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 511:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 512:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 513:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgInput
+ 514:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable PIO in input mode
+ 515:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 516:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgInput(
+ 517:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 518:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int inputEnable)      // \arg PIO to be enabled
+ 519:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 520:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Disable output
+ 521:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_ODR  = inputEnable;
+ 522:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_PER  = inputEnable;
+ 523:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 524:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 525:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 526:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgOpendrain
+ 527:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Configure PIO in open drain
+ 528:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 529:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgOpendrain(
+ 530:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 531:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int multiDrvEnable) // \arg pio to be configured in open drain
+ 532:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 533:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Configure the multi-drive option
+ 534:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_MDDR = ~multiDrvEnable;
+ 535:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_MDER = multiDrvEnable;
+ 536:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 537:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 538:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 539:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgPullup
+ 540:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable pullup on PIO
+ 541:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 542:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgPullup(
+ 543:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 544:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int pullupEnable)   // \arg enable pullup on PIO
+ 545:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 546:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 		// Connect or not Pullup
+ 547:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_PPUDR = ~pullupEnable;
+ 548:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_PPUER = pullupEnable;
+ 549:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 550:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 551:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 552:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgDirectDrive
+ 553:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable direct drive on PIO
+ 554:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 555:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgDirectDrive(
+ 556:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 557:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int directDrive)    // \arg PIO to be configured with direct drive
+ 558:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 559:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 560:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Configure the Direct Drive
+ 561:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_OWDR  = ~directDrive;
+ 562:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_OWER  = directDrive;
+ 563:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 564:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 565:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 566:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_CfgInputFilter
+ 567:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Enable input filter on input PIO
+ 568:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 569:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_CfgInputFilter(
+ 570:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,             // \arg pointer to a PIO controller
+ 571:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int inputFilter)    // \arg PIO to be configured with input filter
+ 572:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 573:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 574:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	// Configure the Direct Drive
+ 575:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_IFDR  = ~inputFilter;
+ 576:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_IFER  = inputFilter;
+ 577:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 578:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 579:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 580:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_GetInput
+ 581:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Return PIO input value
+ 582:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 583:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline unsigned int AT91F_PIO_GetInput( // \return PIO input
+ 584:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio) // \arg  pointer to a PIO controller
+ 585:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 586:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return pPio->PIO_PDSR;
+ 587:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 588:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 589:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 590:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_IsInputSet
+ 591:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Test if PIO is input flag is active
+ 592:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 593:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline int AT91F_PIO_IsInputSet(
+ 594:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,   // \arg  pointer to a PIO controller
+ 595:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int flag) // \arg  flag to be tested
+ 596:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 597:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	return (AT91F_PIO_GetInput(pPio) & flag);
+ 598:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 599:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 600:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 601:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 602:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_SetOutput
+ 603:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set to 1 output PIO
+ 604:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 605:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_SetOutput(
+ 606:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,   // \arg  pointer to a PIO controller
+ 607:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int flag) // \arg  output to be set
+ 608:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 609:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_SODR = flag;
+ 610:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** }
+ 611:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 
+ 612:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 613:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \fn    AT91F_PIO_ClearOutput
+ 614:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //* \brief Set to 0 output PIO
+ 615:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** //*----------------------------------------------------------------------------
+ 616:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** __inline void AT91F_PIO_ClearOutput(
+ 617:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	AT91PS_PIO pPio,   // \arg  pointer to a PIO controller
+ 618:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	unsigned int flag) // \arg  output to be cleared
+ 619:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** {
+ 620:./rtos/portable/GCC/AT91SAM7S256/lib_AT91SAM7S256.h **** 	pPio->PIO_CODR = flag;
+  87              		.loc 2 620 0
+  88 0074 CB3002E5 		str	r3, [r2, #-203]
+  89              	.LBE9:
+  90              	.LBE8:
+  91              		.loc 1 335 0
+  92 0078 10009FE5 		ldr	r0, .L7
+  93 007c 0B12A0E3 		mov	r1, #-1342177280
+  94 0080 4116A0E1 		mov	r1, r1, asr #12
+  95 0084 FEFFFFEB 		bl	AT91F_CDC_Open
+  96              		.loc 1 336 0
+  97 0088 04E09DE4 		ldr	lr, [sp], #4
+  98 008c 1EFF2FE1 		bx	lr
+  99              	.L8:
+ 100              		.align	2
+ 101              	.L7:
+ 102 0090 00000000 		.word	pCDC
+ 103              	.LFE290:
+ 105              		.align	2
+ 107              	AT91F_USB_SendData:
+ 108              	.LFB295:
+ 353:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 354:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 355:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_UDP_IsConfigured
+ 356:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Test if the device is configured and handle enumeration
+ 357:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 358:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uchar AT91F_UDP_IsConfigured(AT91PS_CDC pCdc)
+ 359:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 360:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91PS_UDP pUDP = pCdc->pUdp;
+ 361:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91_REG isr = pUDP->UDP_ISR;
+ 362:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 363:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	if (isr & AT91C_UDP_ENDBUSRES) {
+ 364:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_ICR = AT91C_UDP_ENDBUSRES;
+ 365:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		// reset all endpoints
+ 366:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_RSTEP  = (unsigned int)-1;
+ 367:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_RSTEP  = 0;
+ 368:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		// Enable the function
+ 369:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_FADDR = AT91C_UDP_FEN;
+ 370:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		// Configure endpoint 0
+ 371:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[0] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_CTRL);
+ 372:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 373:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	else if (isr & AT91C_UDP_EPINT0) {
+ 374:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_ICR = AT91C_UDP_EPINT0;
+ 375:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_CDC_Enumerate(pCdc);
+ 376:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 377:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	return pCdc->currentConfiguration;
+ 378:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 379:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 380:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 381:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_UDP_Read
+ 382:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Read available data from Endpoint OUT
+ 383:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 384:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uint AT91F_UDP_Read(AT91PS_CDC pCdc, char *pData, uint length)
+ 385:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 386:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91PS_UDP pUdp = pCdc->pUdp;
+ 387:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	uint packetSize, nbBytesRcv = 0, curReceiveBank = pCdc->currentRcvBank;
+ 388:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 389:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (length) {
+ 390:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ( !AT91F_UDP_IsConfigured(pCdc) )
+ 391:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			break;
+ 392:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ( pUdp->UDP_CSR[AT91C_EP_OUT] & curReceiveBank ) {
+ 393:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			packetSize = MIN(pUdp->UDP_CSR[AT91C_EP_OUT] >> 16, length);
+ 394:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			length -= packetSize;
+ 395:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			if (packetSize < AT91C_EP_OUT_SIZE)
+ 396:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				length = 0;
+ 397:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			while(packetSize--)
+ 398:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				pData[nbBytesRcv++] = pUdp->UDP_FDR[AT91C_EP_OUT];
+ 399:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			pUdp->UDP_CSR[AT91C_EP_OUT] &= ~(curReceiveBank);
+ 400:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			if (curReceiveBank == AT91C_UDP_RX_DATA_BK0)
+ 401:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			    curReceiveBank = AT91C_UDP_RX_DATA_BK1;
+ 402:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			else
+ 403:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			    curReceiveBank = AT91C_UDP_RX_DATA_BK0;
+ 404:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 405:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 406:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 407:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pCdc->currentRcvBank = curReceiveBank;
+ 408:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	return nbBytesRcv;
+ 409:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 410:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 411:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 412:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 413:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_CDC_Write
+ 414:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Send through endpoint 2
+ 415:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 416:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static uint AT91F_UDP_Write(AT91PS_CDC pCdc, const char *pData, uint length)
+ 417:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 418:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91PS_UDP pUdp = pCdc->pUdp;
+ 419:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	uint cpt = 0;
+ 420:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 421:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	// Send the first packet
+ 422:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	cpt = MIN(length, AT91C_EP_IN_SIZE);
+ 423:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	length -= cpt;
+ 424:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (cpt--) pUdp->UDP_FDR[AT91C_EP_IN] = *pData++;
+ 425:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[AT91C_EP_IN] |= AT91C_UDP_TXPKTRDY;
+ 426:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 427:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (length) {
+ 428:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		// Fill the second bank
+ 429:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		cpt = MIN(length, AT91C_EP_IN_SIZE);
+ 430:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		length -= cpt;
+ 431:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while (cpt--) pUdp->UDP_FDR[AT91C_EP_IN] = *pData++;
+ 432:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		// Wait for the the first bank to be sent
+ 433:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while ( !(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) )
+ 434:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			if ( !AT91F_UDP_IsConfigured(pCdc) ) return length;
+ 435:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUdp->UDP_CSR[AT91C_EP_IN] &= ~(AT91C_UDP_TXCOMP);
+ 436:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
+ 437:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUdp->UDP_CSR[AT91C_EP_IN] |= AT91C_UDP_TXPKTRDY;
+ 438:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 439:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	// Wait for the end of transfer
+ 440:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while ( !(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) )
+ 441:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ( !AT91F_UDP_IsConfigured(pCdc) ) return length;
+ 442:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[AT91C_EP_IN] &= ~(AT91C_UDP_TXCOMP);
+ 443:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
+ 444:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 445:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	return length;
+ 446:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 447:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 448:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 449:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_USB_SendData
+ 450:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Send Data through the control endpoint
+ 451:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 452:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** unsigned int csrTab[100];
+ 453:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** unsigned char csrIdx = 0;
+ 454:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 455:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint length)
+ 456:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 109              		.loc 1 456 0
+ 110              		@ Function supports interworking.
+ 111              		@ args = 0, pretend = 0, frame = 4
+ 112              		@ frame_needed = 0, uses_anonymous_args = 0
+ 113              		@ link register save eliminated.
+ 114              	.LVL2:
+ 115 0094 30002DE9 		stmfd	sp!, {r4, r5}
+ 116              	.LCFI1:
+ 117 0098 04D04DE2 		sub	sp, sp, #4
+ 118              	.LCFI2:
+ 119 009c 0240A0E1 		mov	r4, r2
+ 457:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	uint cpt = 0;
+ 458:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91_REG csr;
+ 459:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 460:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	do {
+ 461:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		cpt = MIN(length, 8);
+ 462:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		length -= cpt;
+ 463:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 464:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while (cpt--)
+ 120              		.loc 1 464 0
+ 121 00a0 0050A0E3 		mov	r5, #0
+ 122              	.LVL3:
+ 123              	.L17:
+ 124              		.loc 1 461 0
+ 125 00a4 080054E3 		cmp	r4, #8
+ 126 00a8 0420A031 		movcc	r2, r4
+ 127 00ac 0820A023 		movcs	r2, #8
+ 128              		.loc 1 464 0
+ 129 00b0 000052E3 		cmp	r2, #0
+ 130 00b4 0600000A 		beq	.L10
+ 131 00b8 05C0A0E1 		mov	ip, r5
+ 132              	.L11:
+ 465:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			pUdp->UDP_FDR[0] = *pData++;
+ 133              		.loc 1 465 0
+ 134 00bc 0C30D1E7 		ldrb	r3, [r1, ip]	@ zero_extendqisi2
+ 135 00c0 503080E5 		str	r3, [r0, #80]
+ 136 00c4 01C08CE2 		add	ip, ip, #1
+ 137              		.loc 1 464 0
+ 138 00c8 0C0052E1 		cmp	r2, ip
+ 139 00cc FAFFFF1A 		bne	.L11
+ 140 00d0 021081E0 		add	r1, r1, r2
+ 141              	.LVL4:
+ 142              	.L10:
+ 466:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 467:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if (pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP) {
+ 143              		.loc 1 467 0
+ 144 00d4 303090E5 		ldr	r3, [r0, #48]
+ 145 00d8 010013E3 		tst	r3, #1
+ 146 00dc 0500000A 		beq	.L12
+ 468:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			pUdp->UDP_CSR[0] &= ~(AT91C_UDP_TXCOMP);
+ 147              		.loc 1 468 0
+ 148 00e0 303090E5 		ldr	r3, [r0, #48]
+ 149 00e4 0130C3E3 		bic	r3, r3, #1
+ 150 00e8 303080E5 		str	r3, [r0, #48]
+ 151              	.L13:
+ 469:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			while (pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP);
+ 152              		.loc 1 469 0
+ 153 00ec 303090E5 		ldr	r3, [r0, #48]
+ 154 00f0 010013E3 		tst	r3, #1
+ 155 00f4 FCFFFF1A 		bne	.L13
+ 156              	.L12:
+ 470:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 471:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 472:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUdp->UDP_CSR[0] |= AT91C_UDP_TXPKTRDY;
+ 157              		.loc 1 472 0
+ 158 00f8 303090E5 		ldr	r3, [r0, #48]
+ 159 00fc 103083E3 		orr	r3, r3, #16
+ 160 0100 303080E5 		str	r3, [r0, #48]
+ 161              	.L16:
+ 473:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		do {
+ 474:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			csr = pUdp->UDP_CSR[0];
+ 162              		.loc 1 474 0
+ 163 0104 303090E5 		ldr	r3, [r0, #48]
+ 164              	.LVL5:
+ 165 0108 00308DE5 		str	r3, [sp, #0]
+ 475:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 476:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			// Data IN stage has been stopped by a status OUT
+ 477:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			if (csr & AT91C_UDP_RX_DATA_BK0) {
+ 166              		.loc 1 477 0
+ 167 010c 00309DE5 		ldr	r3, [sp, #0]
+ 168              	.LVL6:
+ 169 0110 020013E3 		tst	r3, #2
+ 478:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				pUdp->UDP_CSR[0] &= ~(AT91C_UDP_RX_DATA_BK0);
+ 170              		.loc 1 478 0
+ 171 0114 30309015 		ldrne	r3, [r0, #48]
+ 172 0118 0230C313 		bicne	r3, r3, #2
+ 173 011c 30308015 		strne	r3, [r0, #48]
+ 174 0120 0D00001A 		bne	.L19
+ 175              	.L14:
+ 479:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				return;
+ 480:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			}
+ 481:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		} while ( !(csr & AT91C_UDP_TXCOMP) );
+ 176              		.loc 1 481 0
+ 177 0124 00309DE5 		ldr	r3, [sp, #0]
+ 178 0128 010013E3 		tst	r3, #1
+ 179 012c F4FFFF0A 		beq	.L16
+ 482:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 483:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	} while (length);
+ 180              		.loc 1 483 0
+ 181 0130 024054E0 		subs	r4, r4, r2
+ 182 0134 DAFFFF1A 		bne	.L17
+ 484:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 485:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	if (pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP) {
+ 183              		.loc 1 485 0
+ 184 0138 303090E5 		ldr	r3, [r0, #48]
+ 185 013c 010013E3 		tst	r3, #1
+ 186 0140 0500000A 		beq	.L19
+ 486:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUdp->UDP_CSR[0] &= ~(AT91C_UDP_TXCOMP);
+ 187              		.loc 1 486 0
+ 188 0144 303090E5 		ldr	r3, [r0, #48]
+ 189 0148 0130C3E3 		bic	r3, r3, #1
+ 190 014c 303080E5 		str	r3, [r0, #48]
+ 191              	.L18:
+ 487:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while (pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP);
+ 192              		.loc 1 487 0
+ 193 0150 303090E5 		ldr	r3, [r0, #48]
+ 194 0154 010013E3 		tst	r3, #1
+ 195 0158 FCFFFF1A 		bne	.L18
+ 196              	.L19:
+ 488:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 489:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 197              		.loc 1 489 0
+ 198 015c 04D08DE2 		add	sp, sp, #4
+ 199 0160 3000BDE8 		ldmfd	sp!, {r4, r5}
+ 200 0164 1EFF2FE1 		bx	lr
+ 201              	.LFE295:
+ 203              		.align	2
+ 204              		.global	AT91F_USB_SendZlp
+ 206              	AT91F_USB_SendZlp:
+ 207              	.LFB296:
+ 490:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 491:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 492:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_USB_SendZlp
+ 493:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Send zero length packet through the control endpoint
+ 494:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 495:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** void AT91F_USB_SendZlp(AT91PS_UDP pUdp)
+ 496:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 208              		.loc 1 496 0
+ 209              		@ Function supports interworking.
+ 210              		@ args = 0, pretend = 0, frame = 0
+ 211              		@ frame_needed = 0, uses_anonymous_args = 0
+ 212              		@ link register save eliminated.
+ 213              	.LVL7:
+ 497:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[0] |= AT91C_UDP_TXPKTRDY;
+ 214              		.loc 1 497 0
+ 215 0168 303090E5 		ldr	r3, [r0, #48]
+ 216 016c 103083E3 		orr	r3, r3, #16
+ 217 0170 303080E5 		str	r3, [r0, #48]
+ 218              	.L26:
+ 498:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while ( !(pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP) );
+ 219              		.loc 1 498 0
+ 220 0174 303090E5 		ldr	r3, [r0, #48]
+ 221 0178 010013E3 		tst	r3, #1
+ 222 017c FCFFFF0A 		beq	.L26
+ 499:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[0] &= ~(AT91C_UDP_TXCOMP);
+ 223              		.loc 1 499 0
+ 224 0180 303090E5 		ldr	r3, [r0, #48]
+ 225 0184 0130C3E3 		bic	r3, r3, #1
+ 226 0188 303080E5 		str	r3, [r0, #48]
+ 227              	.L27:
+ 500:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (pUdp->UDP_CSR[0] & AT91C_UDP_TXCOMP);
+ 228              		.loc 1 500 0
+ 229 018c 303090E5 		ldr	r3, [r0, #48]
+ 230 0190 010013E3 		tst	r3, #1
+ 231 0194 FCFFFF1A 		bne	.L27
+ 501:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 232              		.loc 1 501 0
+ 233 0198 1EFF2FE1 		bx	lr
+ 234              	.LFE296:
+ 236              		.align	2
+ 237              		.global	AT91F_USB_SendStall
+ 239              	AT91F_USB_SendStall:
+ 240              	.LFB297:
+ 502:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 503:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 504:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_USB_SendStall
+ 505:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief Stall the control endpoint
+ 506:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 507:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** void AT91F_USB_SendStall(AT91PS_UDP pUdp)
+ 508:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 241              		.loc 1 508 0
+ 242              		@ Function supports interworking.
+ 243              		@ args = 0, pretend = 0, frame = 0
+ 244              		@ frame_needed = 0, uses_anonymous_args = 0
+ 245              		@ link register save eliminated.
+ 246              	.LVL8:
+ 509:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[0] |= AT91C_UDP_FORCESTALL;
+ 247              		.loc 1 509 0
+ 248 019c 303090E5 		ldr	r3, [r0, #48]
+ 249 01a0 203083E3 		orr	r3, r3, #32
+ 250 01a4 303080E5 		str	r3, [r0, #48]
+ 251              	.L32:
+ 510:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while ( !(pUdp->UDP_CSR[0] & AT91C_UDP_ISOERROR) );
+ 252              		.loc 1 510 0
+ 253 01a8 303090E5 		ldr	r3, [r0, #48]
+ 254 01ac 080013E3 		tst	r3, #8
+ 255 01b0 FCFFFF0A 		beq	.L32
+ 511:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUdp->UDP_CSR[0] &= ~(AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR);
+ 256              		.loc 1 511 0
+ 257 01b4 303090E5 		ldr	r3, [r0, #48]
+ 258 01b8 2830C3E3 		bic	r3, r3, #40
+ 259 01bc 303080E5 		str	r3, [r0, #48]
+ 260              	.L33:
+ 512:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while (pUdp->UDP_CSR[0] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
+ 261              		.loc 1 512 0
+ 262 01c0 303090E5 		ldr	r3, [r0, #48]
+ 263 01c4 280013E3 		tst	r3, #40
+ 264 01c8 FCFFFF1A 		bne	.L33
+ 513:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** }
+ 265              		.loc 1 513 0
+ 266 01cc 1EFF2FE1 		bx	lr
+ 267              	.LFE297:
+ 269              		.align	2
+ 271              	AT91F_UDP_IsConfigured:
+ 272              	.LFB292:
+ 273              		.loc 1 359 0
+ 274              		@ Function supports interworking.
+ 275              		@ args = 0, pretend = 0, frame = 8
+ 276              		@ frame_needed = 0, uses_anonymous_args = 0
+ 277              	.LVL9:
+ 278 01d0 70402DE9 		stmfd	sp!, {r4, r5, r6, lr}
+ 279              	.LCFI3:
+ 280 01d4 08D04DE2 		sub	sp, sp, #8
+ 281              	.LCFI4:
+ 282 01d8 0050A0E1 		mov	r5, r0
+ 283              		.loc 1 360 0
+ 284 01dc 002090E5 		ldr	r2, [r0, #0]
+ 285              	.LVL10:
+ 286              		.loc 1 361 0
+ 287 01e0 1C3092E5 		ldr	r3, [r2, #28]
+ 288              	.LVL11:
+ 289 01e4 04308DE5 		str	r3, [sp, #4]
+ 290              		.loc 1 363 0
+ 291 01e8 04309DE5 		ldr	r3, [sp, #4]
+ 292              	.LVL12:
+ 293 01ec 010A13E3 		tst	r3, #4096
+ 294 01f0 0A00000A 		beq	.L38
+ 295              		.loc 1 364 0
+ 296 01f4 013AA0E3 		mov	r3, #4096
+ 297 01f8 203082E5 		str	r3, [r2, #32]
+ 298              		.loc 1 366 0
+ 299 01fc 0030E0E3 		mvn	r3, #0
+ 300 0200 283082E5 		str	r3, [r2, #40]
+ 301              		.loc 1 367 0
+ 302 0204 013083E2 		add	r3, r3, #1
+ 303 0208 283082E5 		str	r3, [r2, #40]
+ 304              		.loc 1 369 0
+ 305 020c 013C83E2 		add	r3, r3, #256
+ 306 0210 083082E5 		str	r3, [r2, #8]
+ 307              		.loc 1 371 0
+ 308 0214 7F3C83E2 		add	r3, r3, #32512
+ 309 0218 303082E5 		str	r3, [r2, #48]
+ 310 021c 530100EA 		b	.L39
+ 311              	.L38:
+ 312              		.loc 1 373 0
+ 313 0220 04309DE5 		ldr	r3, [sp, #4]
+ 314 0224 010013E3 		tst	r3, #1
+ 315 0228 5001000A 		beq	.L39
+ 316              		.loc 1 374 0
+ 317 022c 0130A0E3 		mov	r3, #1
+ 318 0230 203082E5 		str	r3, [r2, #32]
+ 319              	.LBB12:
+ 320              	.LBB13:
+ 514:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 515:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 516:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \fn    AT91F_CDC_Enumerate
+ 517:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //* \brief This function is a callback invoked when a SETUP packet is received
+ 518:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** //*----------------------------------------------------------------------------
+ 519:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** static void AT91F_CDC_Enumerate(AT91PS_CDC pCdc)
+ 520:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** {
+ 521:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	AT91PS_UDP pUDP = pCdc->pUdp;
+ 321              		.loc 1 521 0
+ 322 0234 004090E5 		ldr	r4, [r0, #0]
+ 323              	.LVL13:
+ 522:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	uchar bmRequestType, bRequest;
+ 523:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	ushort wValue, wIndex, wLength, wStatus;
+ 524:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 525:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 526:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	if ( !(pUDP->UDP_CSR[0] & AT91C_UDP_RXSETUP) )
+ 324              		.loc 1 526 0
+ 325 0238 303094E5 		ldr	r3, [r4, #48]
+ 326 023c 040013E3 		tst	r3, #4
+ 327 0240 4A01000A 		beq	.L39
+ 527:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		return;
+ 528:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 529:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	bmRequestType = pUDP->UDP_FDR[0];
+ 328              		.loc 1 529 0
+ 329 0244 503094E5 		ldr	r3, [r4, #80]
+ 330 0248 FF1003E2 		and	r1, r3, #255
+ 331              	.LVL14:
+ 530:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	bRequest      = pUDP->UDP_FDR[0];
+ 332              		.loc 1 530 0
+ 333 024c 50E094E5 		ldr	lr, [r4, #80]
+ 531:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wValue        = (pUDP->UDP_FDR[0] & 0xFF);
+ 334              		.loc 1 531 0
+ 335 0250 503094E5 		ldr	r3, [r4, #80]
+ 336 0254 0338A0E1 		mov	r3, r3, asl #16
+ 337 0258 2338A0E1 		mov	r3, r3, lsr #16
+ 338 025c FF3003E2 		and	r3, r3, #255
+ 339              	.LVL15:
+ 532:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wValue       |= (pUDP->UDP_FDR[0] << 8);
+ 340              		.loc 1 532 0
+ 341 0260 502094E5 		ldr	r2, [r4, #80]
+ 342              	.LVL16:
+ 343 0264 023483E1 		orr	r3, r3, r2, asl #8
+ 344              	.LVL17:
+ 345 0268 0338A0E1 		mov	r3, r3, asl #16
+ 346 026c 2368A0E1 		mov	r6, r3, lsr #16
+ 347              	.LVL18:
+ 533:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wIndex        = (pUDP->UDP_FDR[0] & 0xFF);
+ 348              		.loc 1 533 0
+ 349 0270 503094E5 		ldr	r3, [r4, #80]
+ 350 0274 0338A0E1 		mov	r3, r3, asl #16
+ 351 0278 2338A0E1 		mov	r3, r3, lsr #16
+ 352 027c FF3003E2 		and	r3, r3, #255
+ 353              	.LVL19:
+ 534:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wIndex       |= (pUDP->UDP_FDR[0] << 8);
+ 354              		.loc 1 534 0
+ 355 0280 502094E5 		ldr	r2, [r4, #80]
+ 356 0284 023483E1 		orr	r3, r3, r2, asl #8
+ 357              	.LVL20:
+ 358 0288 0338A0E1 		mov	r3, r3, asl #16
+ 359 028c 2308A0E1 		mov	r0, r3, lsr #16
+ 360              	.LVL21:
+ 535:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wLength       = (pUDP->UDP_FDR[0] & 0xFF);
+ 361              		.loc 1 535 0
+ 362 0290 503094E5 		ldr	r3, [r4, #80]
+ 363 0294 0338A0E1 		mov	r3, r3, asl #16
+ 364 0298 2338A0E1 		mov	r3, r3, lsr #16
+ 365 029c FF3003E2 		and	r3, r3, #255
+ 366              	.LVL22:
+ 536:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	wLength      |= (pUDP->UDP_FDR[0] << 8);
+ 367              		.loc 1 536 0
+ 368 02a0 502094E5 		ldr	r2, [r4, #80]
+ 369 02a4 023483E1 		orr	r3, r3, r2, asl #8
+ 370              	.LVL23:
+ 371 02a8 0338A0E1 		mov	r3, r3, asl #16
+ 372 02ac 23C8A0E1 		mov	ip, r3, lsr #16
+ 373              	.LVL24:
+ 537:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 538:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	if (bmRequestType & 0x80) {
+ 374              		.loc 1 538 0
+ 375 02b0 800011E3 		tst	r1, #128
+ 376 02b4 0500000A 		beq	.L40
+ 539:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[0] |= AT91C_UDP_DIR;
+ 377              		.loc 1 539 0
+ 378 02b8 303094E5 		ldr	r3, [r4, #48]
+ 379 02bc 803083E3 		orr	r3, r3, #128
+ 380 02c0 303084E5 		str	r3, [r4, #48]
+ 381              	.L41:
+ 540:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while ( !(pUDP->UDP_CSR[0] & AT91C_UDP_DIR) );
+ 382              		.loc 1 540 0
+ 383 02c4 303094E5 		ldr	r3, [r4, #48]
+ 384 02c8 800013E3 		tst	r3, #128
+ 385 02cc FCFFFF0A 		beq	.L41
+ 386              	.L40:
+ 541:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	}
+ 542:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	pUDP->UDP_CSR[0] &= ~AT91C_UDP_RXSETUP;
+ 387              		.loc 1 542 0
+ 388 02d0 303094E5 		ldr	r3, [r4, #48]
+ 389 02d4 0430C3E3 		bic	r3, r3, #4
+ 390 02d8 303084E5 		str	r3, [r4, #48]
+ 391              	.L42:
+ 543:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	while ( (pUDP->UDP_CSR[0]  & AT91C_UDP_RXSETUP)  );
+ 392              		.loc 1 543 0
+ 393 02dc 303094E5 		ldr	r3, [r4, #48]
+ 394 02e0 040013E3 		tst	r3, #4
+ 395 02e4 FCFFFF1A 		bne	.L42
+ 544:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 545:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	// Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
+ 546:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	switch ((bRequest << 8) | bmRequestType) {
+ 396              		.loc 1 546 0
+ 397 02e8 FF300EE2 		and	r3, lr, #255
+ 398 02ec 032481E1 		orr	r2, r1, r3, asl #8
+ 399 02f0 033CA0E3 		mov	r3, #768
+ 400 02f4 013083E2 		add	r3, r3, #1
+ 401 02f8 030052E1 		cmp	r2, r3
+ 402 02fc CE00000A 		beq	.L51
+ 403 0300 140000CA 		bgt	.L60
+ 404 0304 010C52E3 		cmp	r2, #256
+ 405 0308 E100000A 		beq	.L47
+ 406 030c 060000CA 		bgt	.L61
+ 407 0310 810052E3 		cmp	r2, #129
+ 408 0314 9900000A 		beq	.L45
+ 409 0318 820052E3 		cmp	r2, #130
+ 410 031c 9E00000A 		beq	.L46
+ 411 0320 800052E3 		cmp	r2, #128
+ 412 0324 0F01001A 		bne	.L43
+ 413 0328 8D0000EA 		b	.L105
+ 414              	.L61:
+ 415 032c 013CA0E3 		mov	r3, #256
+ 416 0330 023083E2 		add	r3, r3, #2
+ 417 0334 030052E1 		cmp	r2, r3
+ 418 0338 DB00000A 		beq	.L49
+ 419 033c 023043E2 		sub	r3, r3, #2
+ 420 0340 013083E2 		add	r3, r3, #1
+ 421 0344 030052E1 		cmp	r2, r3
+ 422 0348 D40000DA 		ble	.L48
+ 423 034c 030C52E3 		cmp	r2, #768
+ 424 0350 0401001A 		bne	.L43
+ 425 0354 B50000EA 		b	.L106
+ 426              	.L60:
+ 427 0358 220D52E3 		cmp	r2, #2176
+ 428 035c 7B00000A 		beq	.L55
+ 429 0360 080000CA 		bgt	.L62
+ 430 0364 050C52E3 		cmp	r2, #1280
+ 431 0368 5D00000A 		beq	.L53
+ 432 036c 1A0D52E3 		cmp	r2, #1664
+ 433 0370 1500000A 		beq	.L54
+ 434 0374 033CA0E3 		mov	r3, #768
+ 435 0378 023083E2 		add	r3, r3, #2
+ 436 037c 030052E1 		cmp	r2, r3
+ 437 0380 F800001A 		bne	.L43
+ 438 0384 AF0000EA 		b	.L107
+ 439              	.L62:
+ 440 0388 023AA0E3 		mov	r3, #8192
+ 441 038c 213083E2 		add	r3, r3, #33
+ 442 0390 030052E1 		cmp	r2, r3
+ 443 0394 DF00000A 		beq	.L101
+ 444 0398 020000CA 		bgt	.L63
+ 445 039c 090C52E3 		cmp	r2, #2304
+ 446 03a0 F000001A 		bne	.L43
+ 447 03a4 560000EA 		b	.L108
+ 448              	.L63:
+ 449 03a8 863DA0E3 		mov	r3, #8576
+ 450 03ac 213083E2 		add	r3, r3, #33
+ 451 03b0 030052E1 		cmp	r2, r3
+ 452 03b4 E000000A 		beq	.L58
+ 453 03b8 5F3083E2 		add	r3, r3, #95
+ 454 03bc 213083E2 		add	r3, r3, #33
+ 455 03c0 030052E1 		cmp	r2, r3
+ 456 03c4 E700001A 		bne	.L43
+ 457 03c8 E20000EA 		b	.L109
+ 458              	.L54:
+ 547:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_GET_DESCRIPTOR:
+ 548:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 549:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                 switch(wValue>>8)
+ 459              		.loc 1 549 0
+ 460 03cc 2634A0E1 		mov	r3, r6, lsr #8
+ 461 03d0 020053E3 		cmp	r3, #2
+ 462 03d4 0A00000A 		beq	.L66
+ 463 03d8 030053E3 		cmp	r3, #3
+ 464 03dc 0F00000A 		beq	.L67
+ 465 03e0 010053E3 		cmp	r3, #1
+ 466 03e4 3B00001A 		bne	.L64
+ 550:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                 {
+ 551:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                   case usbDESCRIPTOR_TYPE_DEVICE:        // Return Device Descriptor
+ 552:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxDevDescriptor, MIN(sizeof(pxDevDescriptor), 
+ 467              		.loc 1 552 0
+ 468 03e8 13005CE3 		cmp	ip, #19
+ 469 03ec 0400A0E1 		mov	r0, r4
+ 470              	.LVL25:
+ 471 03f0 88139FE5 		ldr	r1, .L110
+ 472              	.LVL26:
+ 473 03f4 0C20A031 		movcc	r2, ip
+ 474 03f8 1220A023 		movcs	r2, #18
+ 475 03fc 24FFFFEB 		bl	AT91F_USB_SendData
+ 476              	.LVL27:
+ 477 0400 DA0000EA 		b	.L39
+ 478              	.LVL28:
+ 479              	.L66:
+ 553:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                     break;
+ 554:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                   case usbDESCRIPTOR_TYPE_CONFIGURATION:        // Return Device Descriptor
+ 555:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxCfgDescriptor, MIN(sizeof(pxCfgDescriptor), 
+ 480              		.loc 1 555 0
+ 481 0404 44005CE3 		cmp	ip, #68
+ 482 0408 0400A0E1 		mov	r0, r4
+ 483              	.LVL29:
+ 484 040c 70139FE5 		ldr	r1, .L110+4
+ 485              	.LVL30:
+ 486 0410 0C20A031 		movcc	r2, ip
+ 487 0414 4320A023 		movcs	r2, #67
+ 488 0418 1DFFFFEB 		bl	AT91F_USB_SendData
+ 489              	.LVL31:
+ 490 041c D30000EA 		b	.L39
+ 491              	.LVL32:
+ 492              	.L67:
+ 556:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                     break;
+ 557:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 558:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                  case usbDESCRIPTOR_TYPE_STRING:        // Return Strings
+ 559:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                         switch(wValue&0xFF)
+ 493              		.loc 1 559 0
+ 494 0420 FF3006E2 		and	r3, r6, #255
+ 495 0424 040053E3 		cmp	r3, #4
+ 496 0428 03F19F97 		ldrls	pc, [pc, r3, asl #2]
+ 497 042c 270000EA 		b	.L72
+ 498              	.L78:
+ 499 0430 44040000 		.word	.L73
+ 500 0434 60040000 		.word	.L74
+ 501 0438 7C040000 		.word	.L75
+ 502 043c 98040000 		.word	.L76
+ 503 0440 B4040000 		.word	.L77
+ 504              	.L73:
+ 560:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                         {
+ 561:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                            case usbLANGUAGE_STRING:        // Return Strings
+ 562:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxLanguageStringDescriptor, MIN(sizeof(pxLangu
+ 505              		.loc 1 562 0
+ 506 0444 05005CE3 		cmp	ip, #5
+ 507 0448 0400A0E1 		mov	r0, r4
+ 508              	.LVL33:
+ 509 044c 34139FE5 		ldr	r1, .L110+8
+ 510              	.LVL34:
+ 511 0450 0C20A031 		movcc	r2, ip
+ 512 0454 0420A023 		movcs	r2, #4
+ 513 0458 0DFFFFEB 		bl	AT91F_USB_SendData
+ 514              	.LVL35:
+ 515 045c 1D0000EA 		b	.L64
+ 516              	.LVL36:
+ 517              	.L74:
+ 563:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           break;
+ 564:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           case usbMANUFACTURER_STRING:        // Return Strings
+ 565:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxManufacturerStringDescriptor, MIN(sizeof(pxM
+ 518              		.loc 1 565 0
+ 519 0460 0F005CE3 		cmp	ip, #15
+ 520 0464 0400A0E1 		mov	r0, r4
+ 521              	.LVL37:
+ 522 0468 1C139FE5 		ldr	r1, .L110+12
+ 523              	.LVL38:
+ 524 046c 0C20A031 		movcc	r2, ip
+ 525 0470 0E20A023 		movcs	r2, #14
+ 526 0474 06FFFFEB 		bl	AT91F_USB_SendData
+ 527              	.LVL39:
+ 528 0478 160000EA 		b	.L64
+ 529              	.LVL40:
+ 530              	.L75:
+ 566:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           break;
+ 567:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           case usbPRODUCT_STRING:        // Return Strings
+ 568:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxProductStringDescriptor, MIN(sizeof(pxProduc
+ 531              		.loc 1 568 0
+ 532 047c 23005CE3 		cmp	ip, #35
+ 533 0480 0400A0E1 		mov	r0, r4
+ 534              	.LVL41:
+ 535 0484 04139FE5 		ldr	r1, .L110+16
+ 536              	.LVL42:
+ 537 0488 0C20A031 		movcc	r2, ip
+ 538 048c 2220A023 		movcs	r2, #34
+ 539 0490 FFFEFFEB 		bl	AT91F_USB_SendData
+ 540              	.LVL43:
+ 541 0494 0F0000EA 		b	.L64
+ 542              	.LVL44:
+ 543              	.L76:
+ 569:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           break;
+ 570:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           case usbCONFIGURATION_STRING:        // Return Strings
+ 571:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxConfigurationStringDescriptor, MIN(sizeof(px
+ 544              		.loc 1 571 0
+ 545 0498 27005CE3 		cmp	ip, #39
+ 546 049c 0400A0E1 		mov	r0, r4
+ 547              	.LVL45:
+ 548 04a0 EC129FE5 		ldr	r1, .L110+20
+ 549              	.LVL46:
+ 550 04a4 0C20A031 		movcc	r2, ip
+ 551 04a8 2620A023 		movcs	r2, #38
+ 552 04ac F8FEFFEB 		bl	AT91F_USB_SendData
+ 553              	.LVL47:
+ 554 04b0 080000EA 		b	.L64
+ 555              	.LVL48:
+ 556              	.L77:
+ 572:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           break;
+ 573:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           case usbINTERFACE_STRING:        // Return Strings
+ 574:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                             AT91F_USB_SendData(pUDP, pxInterfaceStringDescriptor, MIN(sizeof(pxInte
+ 557              		.loc 1 574 0
+ 558 04b4 1F005CE3 		cmp	ip, #31
+ 559 04b8 0400A0E1 		mov	r0, r4
+ 560              	.LVL49:
+ 561 04bc D4129FE5 		ldr	r1, .L110+24
+ 562              	.LVL50:
+ 563 04c0 0C20A031 		movcc	r2, ip
+ 564 04c4 1E20A023 		movcs	r2, #30
+ 565 04c8 F1FEFFEB 		bl	AT91F_USB_SendData
+ 566              	.LVL51:
+ 567 04cc 010000EA 		b	.L64
+ 568              	.LVL52:
+ 569              	.L72:
+ 575:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                           break;
+ 576:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 577:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                         default:AT91F_USB_SendStall(pUDP);
+ 570              		.loc 1 577 0
+ 571 04d0 0400A0E1 		mov	r0, r4
+ 572              	.LVL53:
+ 573 04d4 FEFFFFEB 		bl	AT91F_USB_SendStall
+ 574              	.LVL54:
+ 575              	.L64:
+ 578:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                         }
+ 579:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 580:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                   default:AT91F_USB_SendStall(pUDP);
+ 576              		.loc 1 580 0
+ 577 04d8 0400A0E1 		mov	r0, r4
+ 578              	.LVL55:
+ 579 04dc FEFFFFEB 		bl	AT91F_USB_SendStall
+ 580              	.LVL56:
+ 581 04e0 A20000EA 		b	.L39
+ 582              	.LVL57:
+ 583              	.L53:
+ 581:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c ****                 }
+ 582:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 583:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_SET_ADDRESS:
+ 584:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 584              		.loc 1 584 0
+ 585 04e4 0400A0E1 		mov	r0, r4
+ 586              	.LVL58:
+ 587 04e8 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 588              	.LVL59:
+ 585:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_FADDR = (AT91C_UDP_FEN | wValue);
+ 589              		.loc 1 585 0
+ 590 04ec 013C86E3 		orr	r3, r6, #256
+ 591 04f0 083084E5 		str	r3, [r4, #8]
+ 592 04f4 003056E2 		subs	r3, r6, #0
+ 593 04f8 0130A013 		movne	r3, #1
+ 586:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_FADDEN : 0;
+ 594              		.loc 1 586 0
+ 595 04fc 043084E5 		str	r3, [r4, #4]
+ 596 0500 9A0000EA 		b	.L39
+ 597              	.LVL60:
+ 598              	.L108:
+ 587:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 588:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_SET_CONFIGURATION:
+ 589:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pCdc->currentConfiguration = wValue;
+ 599              		.loc 1 589 0
+ 600 0504 0460C5E5 		strb	r6, [r5, #4]
+ 590:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 601              		.loc 1 590 0
+ 602 0508 0400A0E1 		mov	r0, r4
+ 603              	.LVL61:
+ 604 050c FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 605              	.LVL62:
+ 591:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
+ 606              		.loc 1 591 0
+ 607 0510 000056E3 		cmp	r6, #0
+ 608 0514 0130A003 		moveq	r3, #1
+ 609 0518 04308405 		streq	r3, [r4, #4]
+ 592:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[1] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
+ 610              		.loc 1 592 0
+ 611 051c 01304302 		subeq	r3, r3, #1
+ 612 0520 34308405 		streq	r3, [r4, #52]
+ 593:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[2] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
+ 613              		.loc 1 593 0
+ 614 0524 38308405 		streq	r3, [r4, #56]
+ 615              		.loc 1 591 0
+ 616 0528 0600000A 		beq	.L99
+ 617 052c 0230A0E3 		mov	r3, #2
+ 618 0530 043084E5 		str	r3, [r4, #4]
+ 619              		.loc 1 592 0
+ 620 0534 823CA0E3 		mov	r3, #33280
+ 621 0538 343084E5 		str	r3, [r4, #52]
+ 622              		.loc 1 593 0
+ 623 053c 013B83E2 		add	r3, r3, #1024
+ 624 0540 383084E5 		str	r3, [r4, #56]
+ 625 0544 013C83E2 		add	r3, r3, #256
+ 626              	.L99:
+ 594:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[3] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
+ 627              		.loc 1 594 0
+ 628 0548 3C3084E5 		str	r3, [r4, #60]
+ 629 054c 870000EA 		b	.L39
+ 630              	.LVL63:
+ 631              	.L55:
+ 595:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 596:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_GET_CONFIGURATION:
+ 597:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendData(pUDP, (char *) &(pCdc->currentConfiguration), sizeof(pCdc->currentConfiguratio
+ 632              		.loc 1 597 0
+ 633 0550 0400A0E1 		mov	r0, r4
+ 634              	.LVL64:
+ 635 0554 041085E2 		add	r1, r5, #4
+ 636              	.LVL65:
+ 637 0558 0120A0E3 		mov	r2, #1
+ 638 055c CCFEFFEB 		bl	AT91F_USB_SendData
+ 639              	.LVL66:
+ 640 0560 820000EA 		b	.L39
+ 641              	.LVL67:
+ 642              	.L105:
+ 598:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 599:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_GET_STATUS_ZERO:
+ 600:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wStatus = 0;
+ 643              		.loc 1 600 0
+ 644 0564 08108DE2 		add	r1, sp, #8
+ 645              	.LVL68:
+ 646 0568 0030A0E3 		mov	r3, #0	@ movhi
+ 647 056c B63061E1 		strh	r3, [r1, #-6]!	@ movhi
+ 648              	.LVL69:
+ 601:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendData(pUDP, (char *) &wStatus, sizeof(wStatus));
+ 649              		.loc 1 601 0
+ 650 0570 0400A0E1 		mov	r0, r4
+ 651              	.LVL70:
+ 652 0574 0220A0E3 		mov	r2, #2
+ 653 0578 C5FEFFEB 		bl	AT91F_USB_SendData
+ 654              	.LVL71:
+ 655 057c 7B0000EA 		b	.L39
+ 656              	.LVL72:
+ 657              	.L45:
+ 602:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 603:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_GET_STATUS_INTERFACE:
+ 604:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wStatus = 0;
+ 658              		.loc 1 604 0
+ 659 0580 08108DE2 		add	r1, sp, #8
+ 660              	.LVL73:
+ 661 0584 0030A0E3 		mov	r3, #0	@ movhi
+ 662 0588 B63061E1 		strh	r3, [r1, #-6]!	@ movhi
+ 663              	.LVL74:
+ 605:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendData(pUDP, (char *) &wStatus, sizeof(wStatus));
+ 664              		.loc 1 605 0
+ 665 058c 0400A0E1 		mov	r0, r4
+ 666              	.LVL75:
+ 667 0590 0220A0E3 		mov	r2, #2
+ 668 0594 BEFEFFEB 		bl	AT91F_USB_SendData
+ 669              	.LVL76:
+ 670 0598 740000EA 		b	.L39
+ 671              	.LVL77:
+ 672              	.L46:
+ 606:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 607:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_GET_STATUS_ENDPOINT:
+ 608:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wStatus = 0;
+ 673              		.loc 1 608 0
+ 674 059c 0030A0E3 		mov	r3, #0	@ movhi
+ 675 05a0 B230CDE1 		strh	r3, [sp, #2]	@ movhi
+ 676              	.LVL78:
+ 609:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wIndex &= 0x0F;
+ 677              		.loc 1 609 0
+ 678 05a4 0F2000E2 		and	r2, r0, #15
+ 679              	.LVL79:
+ 610:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ((pUDP->UDP_GLBSTATE & AT91C_UDP_CONFG) && (wIndex <= 3)) {
+ 680              		.loc 1 610 0
+ 681 05a8 043094E5 		ldr	r3, [r4, #4]
+ 682 05ac 020013E3 		tst	r3, #2
+ 683 05b0 0C00000A 		beq	.L90
+ 684 05b4 030052E3 		cmp	r2, #3
+ 685 05b8 0A00008A 		bhi	.L90
+ 611:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			wStatus = (pUDP->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
+ 686              		.loc 1 611 0
+ 687 05bc 0C3082E2 		add	r3, r2, #12
+ 688 05c0 033194E7 		ldr	r3, [r4, r3, asl #2]
+ 689 05c4 A337A0E1 		mov	r3, r3, lsr #15
+ 690 05c8 013023E2 		eor	r3, r3, #1
+ 691 05cc 013003E2 		and	r3, r3, #1
+ 692 05d0 08108DE2 		add	r1, sp, #8
+ 693              	.LVL80:
+ 694 05d4 B63061E1 		strh	r3, [r1, #-6]!	@ movhi
+ 695              	.LVL81:
+ 612:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendData(pUDP, (char *) &wStatus, sizeof(wStatus));
+ 696              		.loc 1 612 0
+ 697 05d8 0400A0E1 		mov	r0, r4
+ 698 05dc 0220A0E3 		mov	r2, #2
+ 699              	.LVL82:
+ 700 05e0 ABFEFFEB 		bl	AT91F_USB_SendData
+ 701              	.LVL83:
+ 702 05e4 610000EA 		b	.L39
+ 703              	.LVL84:
+ 704              	.L90:
+ 613:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 614:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		else if ((pUDP->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (wIndex == 0)) {
+ 705              		.loc 1 614 0
+ 706 05e8 043094E5 		ldr	r3, [r4, #4]
+ 707 05ec 010013E3 		tst	r3, #1
+ 708 05f0 0B00000A 		beq	.L91
+ 709 05f4 000052E3 		cmp	r2, #0
+ 710 05f8 0900001A 		bne	.L91
+ 615:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			wStatus = (pUDP->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
+ 711              		.loc 1 615 0
+ 712 05fc 303094E5 		ldr	r3, [r4, #48]
+ 713 0600 A337A0E1 		mov	r3, r3, lsr #15
+ 714 0604 013023E2 		eor	r3, r3, #1
+ 715 0608 013003E2 		and	r3, r3, #1
+ 716 060c 08108DE2 		add	r1, sp, #8
+ 717              	.LVL85:
+ 718 0610 B63061E1 		strh	r3, [r1, #-6]!	@ movhi
+ 719              	.LVL86:
+ 616:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendData(pUDP, (char *) &wStatus, sizeof(wStatus));
+ 720              		.loc 1 616 0
+ 721 0614 0400A0E1 		mov	r0, r4
+ 722 0618 022082E2 		add	r2, r2, #2
+ 723              	.LVL87:
+ 724 061c 9CFEFFEB 		bl	AT91F_USB_SendData
+ 725              	.LVL88:
+ 726 0620 520000EA 		b	.L39
+ 727              	.LVL89:
+ 728              	.L91:
+ 617:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 618:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		else
+ 619:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendStall(pUDP);
+ 729              		.loc 1 619 0
+ 730 0624 0400A0E1 		mov	r0, r4
+ 731 0628 FEFFFFEB 		bl	AT91F_USB_SendStall
+ 732              	.LVL90:
+ 733 062c 4F0000EA 		b	.L39
+ 734              	.LVL91:
+ 735              	.L106:
+ 620:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 621:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_SET_FEATURE_ZERO:
+ 622:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendStall(pUDP);
+ 736              		.loc 1 622 0
+ 737 0630 0400A0E1 		mov	r0, r4
+ 738              	.LVL92:
+ 739 0634 FEFFFFEB 		bl	AT91F_USB_SendStall
+ 740              	.LVL93:
+ 741 0638 4C0000EA 		b	.L39
+ 742              	.LVL94:
+ 743              	.L51:
+ 623:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	    break;
+ 624:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_SET_FEATURE_INTERFACE:
+ 625:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 744              		.loc 1 625 0
+ 745 063c 0400A0E1 		mov	r0, r4
+ 746              	.LVL95:
+ 747 0640 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 748              	.LVL96:
+ 749 0644 490000EA 		b	.L39
+ 750              	.LVL97:
+ 751              	.L107:
+ 626:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 627:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_SET_FEATURE_ENDPOINT:
+ 628:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wIndex &= 0x0F;
+ 629:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ((wValue == 0) && wIndex && (wIndex <= 3)) {
+ 752              		.loc 1 629 0
+ 753 0648 0F2000E2 		and	r2, r0, #15
+ 754              	.LVL98:
+ 755 064c 0F3010E2 		ands	r3, r0, #15
+ 756 0650 0130A013 		movne	r3, #1
+ 757 0654 000056E3 		cmp	r6, #0
+ 758 0658 0030A013 		movne	r3, #0
+ 759 065c 01300302 		andeq	r3, r3, #1
+ 760 0660 000053E3 		cmp	r3, #0
+ 761 0664 0700000A 		beq	.L92
+ 762              	.LVL99:
+ 763 0668 030052E3 		cmp	r2, #3
+ 764 066c 0500008A 		bhi	.L92
+ 765              	.LVL100:
+ 630:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			pUDP->UDP_CSR[wIndex] = 0;
+ 766              		.loc 1 630 0
+ 767 0670 0C2082E2 		add	r2, r2, #12
+ 768              	.LVL101:
+ 769 0674 0030A0E3 		mov	r3, #0
+ 770 0678 023184E7 		str	r3, [r4, r2, asl #2]
+ 631:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendZlp(pUDP);
+ 771              		.loc 1 631 0
+ 772 067c 0400A0E1 		mov	r0, r4
+ 773              	.LVL102:
+ 774 0680 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 775              	.LVL103:
+ 776 0684 390000EA 		b	.L39
+ 777              	.LVL104:
+ 778              	.L92:
+ 632:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 633:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		else
+ 634:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendStall(pUDP);
+ 779              		.loc 1 634 0
+ 780 0688 0400A0E1 		mov	r0, r4
+ 781              	.LVL105:
+ 782 068c FEFFFFEB 		bl	AT91F_USB_SendStall
+ 783              	.LVL106:
+ 784 0690 360000EA 		b	.L39
+ 785              	.LVL107:
+ 786              	.L47:
+ 635:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 636:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_CLEAR_FEATURE_ZERO:
+ 637:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendStall(pUDP);
+ 787              		.loc 1 637 0
+ 788 0694 0400A0E1 		mov	r0, r4
+ 789              	.LVL108:
+ 790 0698 FEFFFFEB 		bl	AT91F_USB_SendStall
+ 791              	.LVL109:
+ 792 069c 330000EA 		b	.L39
+ 793              	.LVL110:
+ 794              	.L48:
+ 638:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	    break;
+ 639:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_CLEAR_FEATURE_INTERFACE:
+ 640:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 795              		.loc 1 640 0
+ 796 06a0 0400A0E1 		mov	r0, r4
+ 797              	.LVL111:
+ 798 06a4 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 799              	.LVL112:
+ 800 06a8 300000EA 		b	.L39
+ 801              	.LVL113:
+ 802              	.L49:
+ 641:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 642:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case STD_CLEAR_FEATURE_ENDPOINT:
+ 643:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		wIndex &= 0x0F;
+ 644:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		if ((wValue == 0) && wIndex && (wIndex <= 3)) {
+ 803              		.loc 1 644 0
+ 804 06ac 0F2000E2 		and	r2, r0, #15
+ 805              	.LVL114:
+ 806 06b0 0F3010E2 		ands	r3, r0, #15
+ 807 06b4 0130A013 		movne	r3, #1
+ 808 06b8 000056E3 		cmp	r6, #0
+ 809 06bc 0030A013 		movne	r3, #0
+ 810 06c0 01300302 		andeq	r3, r3, #1
+ 811 06c4 000053E3 		cmp	r3, #0
+ 812 06c8 0F00000A 		beq	.L93
+ 813              	.LVL115:
+ 814 06cc 030052E3 		cmp	r2, #3
+ 815 06d0 0D00008A 		bhi	.L93
+ 816              	.LVL116:
+ 645:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			if (wIndex == 1)
+ 817              		.loc 1 645 0
+ 818 06d4 010052E3 		cmp	r2, #1
+ 646:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				pUDP->UDP_CSR[1] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
+ 819              		.loc 1 646 0
+ 820 06d8 823CA003 		moveq	r3, #33280
+ 821 06dc 34308405 		streq	r3, [r4, #52]
+ 822              		.loc 1 645 0
+ 823 06e0 0600000A 		beq	.L95
+ 647:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			else if (wIndex == 2)
+ 824              		.loc 1 647 0
+ 825 06e4 020052E3 		cmp	r2, #2
+ 648:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				pUDP->UDP_CSR[2] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
+ 826              		.loc 1 648 0
+ 827 06e8 863CA003 		moveq	r3, #34304
+ 828 06ec 38308405 		streq	r3, [r4, #56]
+ 829              		.loc 1 647 0
+ 830 06f0 0200000A 		beq	.L95
+ 649:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			else if (wIndex == 3)
+ 831              		.loc 1 649 0
+ 832 06f4 030052E3 		cmp	r2, #3
+ 650:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 				pUDP->UDP_CSR[3] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN);
+ 833              		.loc 1 650 0
+ 834 06f8 873CA003 		moveq	r3, #34560
+ 835 06fc 3C308405 		streq	r3, [r4, #60]
+ 836              	.L95:
+ 651:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendZlp(pUDP);
+ 837              		.loc 1 651 0
+ 838 0700 0400A0E1 		mov	r0, r4
+ 839 0704 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 840              	.LVL117:
+ 841 0708 180000EA 		b	.L39
+ 842              	.LVL118:
+ 843              	.L93:
+ 652:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		}
+ 653:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		else
+ 654:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 			AT91F_USB_SendStall(pUDP);
+ 844              		.loc 1 654 0
+ 845 070c 0400A0E1 		mov	r0, r4
+ 846              	.LVL119:
+ 847 0710 FEFFFFEB 		bl	AT91F_USB_SendStall
+ 848              	.LVL120:
+ 849 0714 150000EA 		b	.L39
+ 850              	.LVL121:
+ 851              	.L101:
+ 655:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 656:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 
+ 657:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	// handle CDC class requests
+ 658:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case SET_LINE_CODING:
+ 659:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		while ( !(pUDP->UDP_CSR[0] & AT91C_UDP_RX_DATA_BK0) );
+ 852              		.loc 1 659 0
+ 853 0718 303094E5 		ldr	r3, [r4, #48]
+ 854 071c 020013E3 		tst	r3, #2
+ 855 0720 FCFFFF0A 		beq	.L101
+ 660:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pUDP->UDP_CSR[0] &= ~(AT91C_UDP_RX_DATA_BK0);
+ 856              		.loc 1 660 0
+ 857 0724 303094E5 		ldr	r3, [r4, #48]
+ 858 0728 0230C3E3 		bic	r3, r3, #2
+ 859 072c 303084E5 		str	r3, [r4, #48]
+ 661:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 860              		.loc 1 661 0
+ 861 0730 0400A0E1 		mov	r0, r4
+ 862              	.LVL122:
+ 863 0734 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 864              	.LVL123:
+ 865 0738 0C0000EA 		b	.L39
+ 866              	.LVL124:
+ 867              	.L58:
+ 662:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 663:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case GET_LINE_CODING:
+ 664:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendData(pUDP, (char *) &line, MIN(sizeof(line), wLength));
+ 868              		.loc 1 664 0
+ 869 073c 09005CE3 		cmp	ip, #9
+ 870 0740 0400A0E1 		mov	r0, r4
+ 871              	.LVL125:
+ 872 0744 50109FE5 		ldr	r1, .L110+28
+ 873              	.LVL126:
+ 874 0748 0C20A031 		movcc	r2, ip
+ 875 074c 0820A023 		movcs	r2, #8
+ 876 0750 4FFEFFEB 		bl	AT91F_USB_SendData
+ 877              	.LVL127:
+ 878 0754 050000EA 		b	.L39
+ 879              	.LVL128:
+ 880              	.L109:
+ 665:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 666:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	case SET_CONTROL_LINE_STATE:
+ 667:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		pCdc->currentConnection = wValue;
+ 881              		.loc 1 667 0
+ 882 0758 0560C5E5 		strb	r6, [r5, #5]
+ 668:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendZlp(pUDP);
+ 883              		.loc 1 668 0
+ 884 075c 0400A0E1 		mov	r0, r4
+ 885              	.LVL129:
+ 886 0760 FEFFFFEB 		bl	AT91F_USB_SendZlp
+ 887              	.LVL130:
+ 888 0764 010000EA 		b	.L39
+ 889              	.LVL131:
+ 890              	.L43:
+ 669:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		break;
+ 670:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 	default:
+ 671:rtos/portable/GCC/AT91SAM7S256/perepherial/usb_cdc.c **** 		AT91F_USB_SendStall(pUDP);
+ 891              		.loc 1 671 0
+ 892 0768 0400A0E1 		mov	r0, r4
+ 893              	.LVL132:
+ 894 076c FEFFFFEB 		bl	AT91F_USB_SendStall
+ 895              	.LVL133:
+ 896              	.L39:
+ 897              	.LBE13:
+ 898              	.LBE12:
+ 899              		.loc 1 378 0
+ 900 0770 0400D5E5 		ldrb	r0, [r5, #4]	@ zero_extendqisi2
+ 901 0774 08D08DE2 		add	sp, sp, #8
+ 902 0778 7040BDE8 		ldmfd	sp!, {r4, r5, r6, lr}
+ 903 077c 1EFF2FE1 		bx	lr
+ 904              	.L111:
+ 905              		.align	2
+ 906              	.L110:
+ 907 0780 00000000 		.word	pxDevDescriptor
+ 908 0784 00000000 		.word	pxCfgDescriptor
+ 909 0788 00000000 		.word	pxLanguageStringDescriptor
+ 910 078c 00000000 		.word	pxManufacturerStringDescriptor
+ 911 0790 00000000 		.word	pxProductStringDescriptor
+ 912 0794 00000000 		.word	pxConfigurationStringDescriptor
+ 913 0798 00000000 		.word	pxInterfaceStringDescriptor
+ 914 079c 00000000 		.word	line
+ 915              	.LFE292:
+ 917              		.align	2
+ 919              	AT91F_UDP_Read:
+ 920              	.LFB293:
+ 921              		.loc 1 385 0
+ 922              		@ Function supports interworking.
+ 923              		@ args = 0, pretend = 0, frame = 0
+ 924              		@ frame_needed = 0, uses_anonymous_args = 0
+ 925              	.LVL134:
+ 926 07a0 F0472DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
+ 927              	.LCFI5:
+ 928 07a4 0060A0E1 		mov	r6, r0
+ 929 07a8 01A0A0E1 		mov	sl, r1
+ 930              		.loc 1 386 0
+ 931 07ac 004090E5 		ldr	r4, [r0, #0]
+ 932              	.LVL135:
+ 933              		.loc 1 387 0
+ 934 07b0 085090E5 		ldr	r5, [r0, #8]
+ 935              	.LVL136:
+ 936              		.loc 1 389 0
+ 937 07b4 007052E2 		subs	r7, r2, #0
+ 938 07b8 0080A003 		moveq	r8, #0
+ 939              	.LVL137:
+ 940 07bc 2300000A 		beq	.L114
+ 941              	.LVL138:
+ 942 07c0 0080A0E3 		mov	r8, #0
+ 943              		.loc 1 397 0
+ 944 07c4 0890A0E1 		mov	r9, r8
+ 945              	.LVL139:
+ 946              	.L126:
+ 947              		.loc 1 390 0
+ 948 07c8 0600A0E1 		mov	r0, r6
+ 949              	.LVL140:
+ 950 07cc 7FFEFFEB 		bl	AT91F_UDP_IsConfigured
+ 951 07d0 000050E3 		cmp	r0, #0
+ 952 07d4 1D00000A 		beq	.L114
+ 953              		.loc 1 392 0
+ 954 07d8 343094E5 		ldr	r3, [r4, #52]
+ 955 07dc 030015E1 		tst	r5, r3
+ 956 07e0 F8FFFF0A 		beq	.L126
+ 957              		.loc 1 393 0
+ 958 07e4 343094E5 		ldr	r3, [r4, #52]
+ 959 07e8 230857E1 		cmp	r7, r3, lsr #16
+ 960 07ec 0700A091 		movls	r0, r7
+ 961              	.LVL141:
+ 962 07f0 34309485 		ldrhi	r3, [r4, #52]
+ 963 07f4 2308A081 		movhi	r0, r3, lsr #16
+ 964              		.loc 1 395 0
+ 965 07f8 3F0050E3 		cmp	r0, #63
+ 966 07fc 0970A091 		movls	r7, r9
+ 967              		.loc 1 394 0
+ 968 0800 07706080 		rsbhi	r7, r0, r7
+ 969              		.loc 1 397 0
+ 970 0804 000050E3 		cmp	r0, #0
+ 971 0808 0700000A 		beq	.L120
+ 972 080c 0920A0E1 		mov	r2, r9
+ 973              		.loc 1 398 0
+ 974 0810 08108AE0 		add	r1, sl, r8
+ 975              	.L121:
+ 976 0814 543094E5 		ldr	r3, [r4, #84]
+ 977 0818 0230C1E7 		strb	r3, [r1, r2]
+ 978 081c 012082E2 		add	r2, r2, #1
+ 979              		.loc 1 397 0
+ 980 0820 020050E1 		cmp	r0, r2
+ 981 0824 FAFFFF1A 		bne	.L121
+ 982 0828 008088E0 		add	r8, r8, r0
+ 983              	.L120:
+ 984              		.loc 1 399 0
+ 985 082c 342094E5 		ldr	r2, [r4, #52]
+ 986 0830 0530E0E1 		mvn	r3, r5
+ 987 0834 023003E0 		and	r3, r3, r2
+ 988 0838 343084E5 		str	r3, [r4, #52]
+ 989              		.loc 1 400 0
+ 990 083c 020055E3 		cmp	r5, #2
+ 991 0840 4050A003 		moveq	r5, #64
+ 992 0844 0250A013 		movne	r5, #2
+ 993              		.loc 1 389 0
+ 994 0848 000057E3 		cmp	r7, #0
+ 995 084c DDFFFF1A 		bne	.L126
+ 996              	.LVL142:
+ 997              	.L114:
+ 998              		.loc 1 407 0
+ 999 0850 085086E5 		str	r5, [r6, #8]
+ 1000              		.loc 1 410 0
+ 1001 0854 0800A0E1 		mov	r0, r8
+ 1002              	.LVL143:
+ 1003 0858 F047BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
+ 1004 085c 1EFF2FE1 		bx	lr
+ 1005              	.LFE293:
+ 1007              		.align	2
+ 1009              	AT91F_UDP_Write:
+ 1010              	.LFB294:
+ 1011              		.loc 1 417 0
+ 1012              		@ Function supports interworking.
+ 1013              		@ args = 0, pretend = 0, frame = 0
+ 1014              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1015              	.LVL144:
+ 1016 0860 F0412DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, lr}
+ 1017              	.LCFI6:
+ 1018 0864 0070A0E1 		mov	r7, r0
+ 1019 0868 0150A0E1 		mov	r5, r1
+ 1020              		.loc 1 418 0
+ 1021 086c 004090E5 		ldr	r4, [r0, #0]
+ 1022              	.LVL145:
+ 1023              		.loc 1 422 0
+ 1024 0870 400052E3 		cmp	r2, #64
+ 1025 0874 0210A031 		movcc	r1, r2
+ 1026 0878 4010A023 		movcs	r1, #64
+ 1027              	.LVL146:
+ 1028              		.loc 1 423 0
+ 1029 087c 026061E0 		rsb	r6, r1, r2
+ 1030              	.LVL147:
+ 1031              		.loc 1 424 0
+ 1032 0880 000051E3 		cmp	r1, #0
+ 1033 0884 0600000A 		beq	.L128
+ 1034 0888 0020A0E3 		mov	r2, #0
+ 1035              	.L129:
+ 1036 088c 0230D5E7 		ldrb	r3, [r5, r2]	@ zero_extendqisi2
+ 1037 0890 583084E5 		str	r3, [r4, #88]
+ 1038 0894 012082E2 		add	r2, r2, #1
+ 1039 0898 020051E1 		cmp	r1, r2
+ 1040 089c FAFFFF1A 		bne	.L129
+ 1041 08a0 015085E0 		add	r5, r5, r1
+ 1042              	.L128:
+ 1043              		.loc 1 425 0
+ 1044 08a4 383094E5 		ldr	r3, [r4, #56]
+ 1045 08a8 103083E3 		orr	r3, r3, #16
+ 1046 08ac 383084E5 		str	r3, [r4, #56]
+ 1047              		.loc 1 427 0
+ 1048 08b0 000056E3 		cmp	r6, #0
+ 1049 08b4 2600000A 		beq	.L140
+ 1050              		.loc 1 431 0
+ 1051 08b8 0080A0E3 		mov	r8, #0
+ 1052              	.L141:
+ 1053              		.loc 1 429 0
+ 1054 08bc 400056E3 		cmp	r6, #64
+ 1055 08c0 0610A031 		movcc	r1, r6
+ 1056 08c4 4010A023 		movcs	r1, #64
+ 1057              	.LVL148:
+ 1058              		.loc 1 430 0
+ 1059 08c8 066061E0 		rsb	r6, r1, r6
+ 1060              		.loc 1 431 0
+ 1061 08cc 000051E3 		cmp	r1, #0
+ 1062 08d0 0B00000A 		beq	.L148
+ 1063 08d4 0820A0E1 		mov	r2, r8
+ 1064              	.L132:
+ 1065 08d8 0230D5E7 		ldrb	r3, [r5, r2]	@ zero_extendqisi2
+ 1066 08dc 583084E5 		str	r3, [r4, #88]
+ 1067 08e0 012082E2 		add	r2, r2, #1
+ 1068 08e4 020051E1 		cmp	r1, r2
+ 1069 08e8 FAFFFF1A 		bne	.L132
+ 1070 08ec 015085E0 		add	r5, r5, r1
+ 1071 08f0 030000EA 		b	.L148
+ 1072              	.L134:
+ 1073              		.loc 1 434 0
+ 1074 08f4 0700A0E1 		mov	r0, r7
+ 1075              	.LVL149:
+ 1076 08f8 34FEFFEB 		bl	AT91F_UDP_IsConfigured
+ 1077              	.LVL150:
+ 1078 08fc 000050E3 		cmp	r0, #0
+ 1079 0900 1C00000A 		beq	.L133
+ 1080              	.LVL151:
+ 1081              	.L148:
+ 1082              		.loc 1 433 0
+ 1083 0904 383094E5 		ldr	r3, [r4, #56]
+ 1084 0908 010013E3 		tst	r3, #1
+ 1085 090c F8FFFF0A 		beq	.L134
+ 1086              	.LVL152:
+ 1087              		.loc 1 435 0
+ 1088 0910 383094E5 		ldr	r3, [r4, #56]
+ 1089 0914 0130C3E3 		bic	r3, r3, #1
+ 1090 0918 383084E5 		str	r3, [r4, #56]
+ 1091              	.L135:
+ 1092              		.loc 1 436 0
+ 1093 091c 383094E5 		ldr	r3, [r4, #56]
+ 1094 0920 010013E3 		tst	r3, #1
+ 1095 0924 FCFFFF1A 		bne	.L135
+ 1096              		.loc 1 437 0
+ 1097 0928 383094E5 		ldr	r3, [r4, #56]
+ 1098 092c 103083E3 		orr	r3, r3, #16
+ 1099 0930 383084E5 		str	r3, [r4, #56]
+ 1100              		.loc 1 427 0
+ 1101 0934 000056E3 		cmp	r6, #0
+ 1102 0938 DFFFFF1A 		bne	.L141
+ 1103 093c 040000EA 		b	.L140
+ 1104              	.L137:
+ 1105              		.loc 1 441 0
+ 1106 0940 0700A0E1 		mov	r0, r7
+ 1107              	.LVL153:
+ 1108 0944 21FEFFEB 		bl	AT91F_UDP_IsConfigured
+ 1109              	.LVL154:
+ 1110 0948 000050E3 		cmp	r0, #0
+ 1111 094c 0060A003 		moveq	r6, #0
+ 1112 0950 0800000A 		beq	.L133
+ 1113              	.LVL155:
+ 1114              	.L140:
+ 1115              		.loc 1 440 0
+ 1116 0954 383094E5 		ldr	r3, [r4, #56]
+ 1117 0958 010013E3 		tst	r3, #1
+ 1118 095c F7FFFF0A 		beq	.L137
+ 1119              	.LVL156:
+ 1120              		.loc 1 442 0
+ 1121 0960 383094E5 		ldr	r3, [r4, #56]
+ 1122 0964 0130C3E3 		bic	r3, r3, #1
+ 1123 0968 383084E5 		str	r3, [r4, #56]
+ 1124              	.L138:
+ 1125              		.loc 1 443 0
+ 1126 096c 383094E5 		ldr	r3, [r4, #56]
+ 1127 0970 010013E3 		tst	r3, #1
+ 1128 0974 FCFFFF1A 		bne	.L138
+ 1129              	.LVL157:
+ 1130              	.L133:
+ 1131              		.loc 1 446 0
+ 1132 0978 0600A0E1 		mov	r0, r6
+ 1133 097c F041BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, lr}
+ 1134 0980 1EFF2FE1 		bx	lr
+ 1135              	.LFE294:
+ 1137              		.global	pxLanguageStringDescriptor
+ 1138              		.section	.rodata
+ 1141              	pxLanguageStringDescriptor:
+ 1142 0000 04       		.byte	4
+ 1143 0001 03       		.byte	3
+ 1144 0002 09       		.byte	9
+ 1145 0003 04       		.byte	4
+ 1146              		.global	pxManufacturerStringDescriptor
+ 1149              	pxManufacturerStringDescriptor:
+ 1150 0004 0E       		.byte	14
+ 1151 0005 03       		.byte	3
+ 1152 0006 42       		.byte	66
+ 1153 0007 00       		.byte	0
+ 1154 0008 45       		.byte	69
+ 1155 0009 00       		.byte	0
+ 1156 000a 4C       		.byte	76
+ 1157 000b 00       		.byte	0
+ 1158 000c 45       		.byte	69
+ 1159 000d 00       		.byte	0
+ 1160 000e 4D       		.byte	77
+ 1161 000f 00       		.byte	0
+ 1162 0010 4E       		.byte	78
+ 1163 0011 00       		.byte	0
+ 1164              		.global	pxProductStringDescriptor
+ 1167              	pxProductStringDescriptor:
+ 1168 0012 22       		.byte	34
+ 1169 0013 03       		.byte	3
+ 1170 0014 53       		.byte	83
+ 1171 0015 00       		.byte	0
+ 1172 0016 65       		.byte	101
+ 1173 0017 00       		.byte	0
+ 1174 0018 72       		.byte	114
+ 1175 0019 00       		.byte	0
+ 1176 001a 69       		.byte	105
+ 1177 001b 00       		.byte	0
+ 1178 001c 61       		.byte	97
+ 1179 001d 00       		.byte	0
+ 1180 001e 6C       		.byte	108
+ 1181 001f 00       		.byte	0
+ 1182 0020 20       		.byte	32
+ 1183 0021 00       		.byte	0
+ 1184 0022 63       		.byte	99
+ 1185 0023 00       		.byte	0
+ 1186 0024 6F       		.byte	111
+ 1187 0025 00       		.byte	0
+ 1188 0026 6E       		.byte	110
+ 1189 0027 00       		.byte	0
+ 1190 0028 65       		.byte	101
+ 1191 0029 00       		.byte	0
+ 1192 002a 63       		.byte	99
+ 1193 002b 00       		.byte	0
+ 1194 002c 74       		.byte	116
+ 1195 002d 00       		.byte	0
+ 1196 002e 69       		.byte	105
+ 1197 002f 00       		.byte	0
+ 1198 0030 6F       		.byte	111
+ 1199 0031 00       		.byte	0
+ 1200 0032 6E       		.byte	110
+ 1201 0033 00       		.byte	0
+ 1202              		.global	pxConfigurationStringDescriptor
+ 1205              	pxConfigurationStringDescriptor:
+ 1206 0034 26       		.byte	38
+ 1207 0035 03       		.byte	3
+ 1208 0036 43       		.byte	67
+ 1209 0037 00       		.byte	0
+ 1210 0038 6F       		.byte	111
+ 1211 0039 00       		.byte	0
+ 1212 003a 6E       		.byte	110
+ 1213 003b 00       		.byte	0
+ 1214 003c 66       		.byte	102
+ 1215 003d 00       		.byte	0
+ 1216 003e 69       		.byte	105
+ 1217 003f 00       		.byte	0
+ 1218 0040 67       		.byte	103
+ 1219 0041 00       		.byte	0
+ 1220 0042 75       		.byte	117
+ 1221 0043 00       		.byte	0
+ 1222 0044 72       		.byte	114
+ 1223 0045 00       		.byte	0
+ 1224 0046 61       		.byte	97
+ 1225 0047 00       		.byte	0
+ 1226 0048 74       		.byte	116
+ 1227 0049 00       		.byte	0
+ 1228 004a 69       		.byte	105
+ 1229 004b 00       		.byte	0
+ 1230 004c 6F       		.byte	111
+ 1231 004d 00       		.byte	0
+ 1232 004e 6E       		.byte	110
+ 1233 004f 00       		.byte	0
+ 1234 0050 20       		.byte	32
+ 1235 0051 00       		.byte	0
+ 1236 0052 4E       		.byte	78
+ 1237 0053 00       		.byte	0
+ 1238 0054 61       		.byte	97
+ 1239 0055 00       		.byte	0
+ 1240 0056 6D       		.byte	109
+ 1241 0057 00       		.byte	0
+ 1242 0058 65       		.byte	101
+ 1243 0059 00       		.byte	0
+ 1244              		.global	pxInterfaceStringDescriptor
+ 1247              	pxInterfaceStringDescriptor:
+ 1248 005a 1E       		.byte	30
+ 1249 005b 03       		.byte	3
+ 1250 005c 49       		.byte	73
+ 1251 005d 00       		.byte	0
+ 1252 005e 6E       		.byte	110
+ 1253 005f 00       		.byte	0
+ 1254 0060 74       		.byte	116
+ 1255 0061 00       		.byte	0
+ 1256 0062 65       		.byte	101
+ 1257 0063 00       		.byte	0
+ 1258 0064 72       		.byte	114
+ 1259 0065 00       		.byte	0
+ 1260 0066 66       		.byte	102
+ 1261 0067 00       		.byte	0
+ 1262 0068 61       		.byte	97
+ 1263 0069 00       		.byte	0
+ 1264 006a 63       		.byte	99
+ 1265 006b 00       		.byte	0
+ 1266 006c 65       		.byte	101
+ 1267 006d 00       		.byte	0
+ 1268 006e 20       		.byte	32
+ 1269 006f 00       		.byte	0
+ 1270 0070 4E       		.byte	78
+ 1271 0071 00       		.byte	0
+ 1272 0072 61       		.byte	97
+ 1273 0073 00       		.byte	0
+ 1274 0074 6D       		.byte	109
+ 1275 0075 00       		.byte	0
+ 1276 0076 65       		.byte	101
+ 1277 0077 00       		.byte	0
+ 1278              		.global	pxDevDescriptor
+ 1281              	pxDevDescriptor:
+ 1282 0078 12       		.byte	18
+ 1283 0079 01       		.byte	1
+ 1284 007a 10       		.byte	16
+ 1285 007b 01       		.byte	1
+ 1286 007c 02       		.byte	2
+ 1287 007d 00       		.byte	0
+ 1288 007e 00       		.byte	0
+ 1289 007f 08       		.byte	8
+ 1290 0080 EB       		.byte	-21
+ 1291 0081 03       		.byte	3
+ 1292 0082 16       		.byte	22
+ 1293 0083 61       		.byte	97
+ 1294 0084 10       		.byte	16
+ 1295 0085 01       		.byte	1
+ 1296 0086 00       		.byte	0
+ 1297 0087 00       		.byte	0
+ 1298 0088 00       		.byte	0
+ 1299 0089 01       		.byte	1
+ 1300              		.global	pxCfgDescriptor
+ 1303              	pxCfgDescriptor:
+ 1304 008a 09       		.byte	9
+ 1305 008b 02       		.byte	2
+ 1306 008c 43       		.byte	67
+ 1307 008d 00       		.byte	0
+ 1308 008e 02       		.byte	2
+ 1309 008f 01       		.byte	1
+ 1310 0090 00       		.byte	0
+ 1311 0091 C0       		.byte	-64
+ 1312 0092 32       		.byte	50
+ 1313 0093 09       		.byte	9
+ 1314 0094 04       		.byte	4
+ 1315 0095 00       		.byte	0
+ 1316 0096 00       		.byte	0
+ 1317 0097 01       		.byte	1
+ 1318 0098 02       		.byte	2
+ 1319 0099 02       		.byte	2
+ 1320 009a 00       		.byte	0
+ 1321 009b 00       		.byte	0
+ 1322 009c 05       		.byte	5
+ 1323 009d 24       		.byte	36
+ 1324 009e 00       		.byte	0
+ 1325 009f 10       		.byte	16
+ 1326 00a0 01       		.byte	1
+ 1327 00a1 04       		.byte	4
+ 1328 00a2 24       		.byte	36
+ 1329 00a3 02       		.byte	2
+ 1330 00a4 00       		.byte	0
+ 1331 00a5 05       		.byte	5
+ 1332 00a6 24       		.byte	36
+ 1333 00a7 06       		.byte	6
+ 1334 00a8 00       		.byte	0
+ 1335 00a9 01       		.byte	1
+ 1336 00aa 05       		.byte	5
+ 1337 00ab 24       		.byte	36
+ 1338 00ac 01       		.byte	1
+ 1339 00ad 00       		.byte	0
+ 1340 00ae 01       		.byte	1
+ 1341 00af 07       		.byte	7
+ 1342 00b0 05       		.byte	5
+ 1343 00b1 83       		.byte	-125
+ 1344 00b2 03       		.byte	3
+ 1345 00b3 08       		.byte	8
+ 1346 00b4 00       		.byte	0
+ 1347 00b5 FF       		.byte	-1
+ 1348 00b6 09       		.byte	9
+ 1349 00b7 04       		.byte	4
+ 1350 00b8 01       		.byte	1
+ 1351 00b9 00       		.byte	0
+ 1352 00ba 02       		.byte	2
+ 1353 00bb 0A       		.byte	10
+ 1354 00bc 00       		.byte	0
+ 1355 00bd 00       		.byte	0
+ 1356 00be 00       		.byte	0
+ 1357 00bf 07       		.byte	7
+ 1358 00c0 05       		.byte	5
+ 1359 00c1 01       		.byte	1
+ 1360 00c2 02       		.byte	2
+ 1361 00c3 40       		.byte	64
+ 1362 00c4 00       		.byte	0
+ 1363 00c5 00       		.byte	0
+ 1364 00c6 07       		.byte	7
+ 1365 00c7 05       		.byte	5
+ 1366 00c8 82       		.byte	-126
+ 1367 00c9 02       		.byte	2
+ 1368 00ca 40       		.byte	64
+ 1369 00cb 00       		.byte	0
+ 1370 00cc 00       		.byte	0
+ 1371              		.global	line
+ 1372              		.data
+ 1373              		.align	2
+ 1376              	line:
+ 1377 0000 00C20100 		.word	115200
+ 1378 0004 00       		.byte	0
+ 1379 0005 00       		.byte	0
+ 1380 0006 08       		.byte	8
+ 1381 0007 00       		.space	1
+ 1382              		.global	currentReceiveBank
+ 1383              		.align	2
+ 1386              	currentReceiveBank:
+ 1387 0008 02000000 		.word	2
+ 1388              		.global	csrIdx
+ 1389              		.bss
+ 1392              	csrIdx:
+ 1393 0000 00       		.space	1
+ 1394              		.comm	pCDC,24,4
+ 1395              		.comm	csrTab,400,4
+ 1546              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 usb_cdc.c
+     /tmp/cccv30jC.s:13     .text:00000000 AT91F_CDC_Open
+     /tmp/cccv30jC.s:23     .text:00000000 $a
+     /tmp/cccv30jC.s:47     .text:00000034 $d
+     /tmp/cccv30jC.s:271    .text:000001d0 AT91F_UDP_IsConfigured
+     /tmp/cccv30jC.s:1009   .text:00000860 AT91F_UDP_Write
+     /tmp/cccv30jC.s:919    .text:000007a0 AT91F_UDP_Read
+     /tmp/cccv30jC.s:55     .text:00000040 AT91F_USB_Open
+     /tmp/cccv30jC.s:61     .text:00000040 $a
+     /tmp/cccv30jC.s:102    .text:00000090 $d
+                            *COM*:00000018 pCDC
+     /tmp/cccv30jC.s:107    .text:00000094 AT91F_USB_SendData
+     /tmp/cccv30jC.s:115    .text:00000094 $a
+     /tmp/cccv30jC.s:206    .text:00000168 AT91F_USB_SendZlp
+     /tmp/cccv30jC.s:239    .text:0000019c AT91F_USB_SendStall
+     /tmp/cccv30jC.s:499    .text:00000430 $d
+     /tmp/cccv30jC.s:506    .text:00000444 $a
+     /tmp/cccv30jC.s:907    .text:00000780 $d
+     /tmp/cccv30jC.s:1281   .rodata:00000078 pxDevDescriptor
+     /tmp/cccv30jC.s:1303   .rodata:0000008a pxCfgDescriptor
+     /tmp/cccv30jC.s:1141   .rodata:00000000 pxLanguageStringDescriptor
+     /tmp/cccv30jC.s:1149   .rodata:00000004 pxManufacturerStringDescriptor
+     /tmp/cccv30jC.s:1167   .rodata:00000012 pxProductStringDescriptor
+     /tmp/cccv30jC.s:1205   .rodata:00000034 pxConfigurationStringDescriptor
+     /tmp/cccv30jC.s:1247   .rodata:0000005a pxInterfaceStringDescriptor
+     /tmp/cccv30jC.s:1376   .data:00000000 line
+     /tmp/cccv30jC.s:926    .text:000007a0 $a
+     /tmp/cccv30jC.s:1142   .rodata:00000000 $d
+     /tmp/cccv30jC.s:1377   .data:00000000 $d
+     /tmp/cccv30jC.s:1386   .data:00000008 currentReceiveBank
+     /tmp/cccv30jC.s:1392   .bss:00000000 csrIdx
+                            *COM*:00000190 csrTab
+     /tmp/cccv30jC.s:1550   .debug_loc:00000000 $d
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,1474 @@
+   1              		.code	16
+   2              		.file	"mem.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	mem_malloc
+  13              		.code	16
+  14              		.thumb_func
+  16              	mem_malloc:
+  17              	.LFB294:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/mem.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Dynamic memory manager
+   4:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * This is a lightweight replacement for the standard C library malloc().
+   6:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+   7:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * If you want to use the standard C library malloc() instead, define
+   8:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * MEM_LIBC_MALLOC to 1 in your lwipopts.h
+   9:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  10:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * To let mem_malloc() use pools (prevents fragmentation and is much faster than
+  11:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * a heap but might waste some memory), define MEM_USE_POOLS to 1, define
+  12:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * MEM_USE_CUSTOM_POOLS to 1 and create a file "lwippools.h" that includes a list
+  13:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * of pools like this (more pools can be added between _START and _END):
+  14:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  15:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Define three pools with sizes 256, 512, and 1512 bytes
+  16:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * LWIP_MALLOC_MEMPOOL_START
+  17:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * LWIP_MALLOC_MEMPOOL(20, 256)
+  18:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * LWIP_MALLOC_MEMPOOL(10, 512)
+  19:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * LWIP_MALLOC_MEMPOOL(5, 1512)
+  20:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * LWIP_MALLOC_MEMPOOL_END
+  21:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+  22:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  23:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /*
+  24:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+  25:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * All rights reserved.
+  26:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  27:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  28:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * are permitted provided that the following conditions are met:
+  29:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  30:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  31:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *    this list of conditions and the following disclaimer.
+  32:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  33:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *    this list of conditions and the following disclaimer in the documentation
+  34:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *    and/or other materials provided with the distribution.
+  35:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * 3. The name of the author may not be used to endorse or promote products
+  36:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *    derived from this software without specific prior written permission.
+  37:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  38:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  39:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  40:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  41:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  42:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  43:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  44:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  45:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  46:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  47:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * OF SUCH DAMAGE.
+  48:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  49:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * This file is part of the lwIP TCP/IP stack.
+  50:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  51:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Author: Adam Dunkels <adam@sics.se>
+  52:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *         Simon Goldschmidt
+  53:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  54:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+  55:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  56:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include "lwip/opt.h"
+  57:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  58:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if !MEM_LIBC_MALLOC /* don't build if not configured for use in lwipopts.h */
+  59:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  60:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include "lwip/def.h"
+  61:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include "lwip/mem.h"
+  62:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include "lwip/sys.h"
+  63:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include "lwip/stats.h"
+  64:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  65:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #include <string.h>
+  66:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  67:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if MEM_USE_POOLS
+  68:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* lwIP head implemented with different sized pools */
+  69:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  70:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+  71:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Allocate memory: determine the smallest pool that is big enough
+  72:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * to contain an element of 'size' and get an element from that pool.
+  73:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+  74:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param size the size in bytes of the memory needed
+  75:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @return a pointer to the allocated memory or NULL if the pool is empty
+  76:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+  77:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void *
+  78:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_malloc(mem_size_t size)
+  79:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+  80:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct memp_malloc_helper *element;
+  81:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   memp_t poolnr;
+  82:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t required_size = size + sizeof(struct memp_malloc_helper);
+  83:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+  84:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   for (poolnr = MEMP_POOL_FIRST; poolnr <= MEMP_POOL_LAST; poolnr++) {
+  85:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if MEM_USE_POOLS_TRY_BIGGER_POOL
+  86:rtos/common/ethernet/lwIP_132/src/core/mem.c **** again:
+  87:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* MEM_USE_POOLS_TRY_BIGGER_POOL */
+  88:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* is this pool big enough to hold an element of the required size
+  89:rtos/common/ethernet/lwIP_132/src/core/mem.c ****        plus a struct memp_malloc_helper that saves the pool this element came from? */
+  90:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (required_size <= memp_sizes[poolnr]) {
+  91:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       break;
+  92:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+  93:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+  94:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (poolnr > MEMP_POOL_LAST) {
+  95:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     LWIP_ASSERT("mem_malloc(): no pool is that big!", 0);
+  96:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+  97:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+  98:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   element = (struct memp_malloc_helper*)memp_malloc(poolnr);
+  99:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (element == NULL) {
+ 100:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* No need to DEBUGF or ASSERT: This error is already
+ 101:rtos/common/ethernet/lwIP_132/src/core/mem.c ****        taken care of in memp.c */
+ 102:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if MEM_USE_POOLS_TRY_BIGGER_POOL
+ 103:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /** Try a bigger pool if this one is empty! */
+ 104:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (poolnr < MEMP_POOL_LAST) {
+ 105:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       poolnr++;
+ 106:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       goto again;
+ 107:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 108:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* MEM_USE_POOLS_TRY_BIGGER_POOL */
+ 109:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+ 110:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 111:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 112:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* save the pool number this element came from */
+ 113:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   element->poolnr = poolnr;
+ 114:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* and return a pointer to the memory directly after the struct memp_malloc_helper */
+ 115:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   element++;
+ 116:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 117:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   return element;
+ 118:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 119:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 120:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 121:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Free memory previously allocated by mem_malloc. Loads the pool number
+ 122:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * and calls memp_free with that pool number to put the element back into
+ 123:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * its pool
+ 124:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 125:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param rmem the memory element to free
+ 126:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 127:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void
+ 128:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_free(void *rmem)
+ 129:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 130:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct memp_malloc_helper *hmem = (struct memp_malloc_helper*)rmem;
+ 131:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 132:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("rmem != NULL", (rmem != NULL));
+ 133:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("rmem == MEM_ALIGN(rmem)", (rmem == LWIP_MEM_ALIGN(rmem)));
+ 134:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 135:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* get the original struct memp_malloc_helper */
+ 136:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   hmem--;
+ 137:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("hmem != NULL", (hmem != NULL));
+ 139:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("hmem == MEM_ALIGN(hmem)", (hmem == LWIP_MEM_ALIGN(hmem)));
+ 140:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("hmem->poolnr < MEMP_MAX", (hmem->poolnr < MEMP_MAX));
+ 141:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 142:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* and put it in the pool we saved earlier */
+ 143:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   memp_free(hmem->poolnr, hmem);
+ 144:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 145:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 146:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #else /* MEM_USE_POOLS */
+ 147:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* lwIP replacement for your libc malloc() */
+ 148:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 149:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 150:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * The heap is made up as a list of structs of this type.
+ 151:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * This does not have to be aligned since for getting its size,
+ 152:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * we only use the macro SIZEOF_STRUCT_MEM, which automatically alignes.
+ 153:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 154:rtos/common/ethernet/lwIP_132/src/core/mem.c **** struct mem {
+ 155:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /** index (-> ram[next]) of the next struct */
+ 156:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t next;
+ 157:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /** index (-> ram[next]) of the next struct */
+ 158:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t prev;
+ 159:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /** 1: this area is used; 0: this area is unused */
+ 160:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   u8_t used;
+ 161:rtos/common/ethernet/lwIP_132/src/core/mem.c **** };
+ 162:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 163:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** All allocated blocks will be MIN_SIZE bytes big, at least!
+ 164:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * MIN_SIZE can be overridden to suit your needs. Smaller values save space,
+ 165:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * larger values could prevent too small blocks to fragment the RAM too much. */
+ 166:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #ifndef MIN_SIZE
+ 167:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define MIN_SIZE             12
+ 168:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* MIN_SIZE */
+ 169:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* some alignment macros: we define them here for better source code layout */
+ 170:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define MIN_SIZE_ALIGNED     LWIP_MEM_ALIGN_SIZE(MIN_SIZE)
+ 171:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define SIZEOF_STRUCT_MEM    LWIP_MEM_ALIGN_SIZE(sizeof(struct mem))
+ 172:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define MEM_SIZE_ALIGNED     LWIP_MEM_ALIGN_SIZE(MEM_SIZE)
+ 173:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 174:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** the heap. we need one struct mem at the end and some room for alignment */
+ 175:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static u8_t ram_heap[MEM_SIZE_ALIGNED + (2*SIZEOF_STRUCT_MEM) + MEM_ALIGNMENT];
+ 176:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** pointer to the heap (ram_heap): for alignment, ram is now a pointer instead of an array */
+ 177:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static u8_t *ram;
+ 178:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** the last entry, always unused! */
+ 179:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static struct mem *ram_end;
+ 180:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** pointer to the lowest free block, this is used for faster search */
+ 181:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static struct mem *lfree;
+ 182:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 183:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /** concurrent access protection */
+ 184:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static sys_sem_t mem_sem;
+ 185:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 186:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 187:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 188:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static volatile u8_t mem_free_count;
+ 189:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 190:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* Allow mem_free from other (e.g. interrupt) context */
+ 191:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_DECL_PROTECT()  SYS_ARCH_DECL_PROTECT(lev_free)
+ 192:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_PROTECT()       SYS_ARCH_PROTECT(lev_free)
+ 193:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_UNPROTECT()     SYS_ARCH_UNPROTECT(lev_free)
+ 194:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_DECL_PROTECT() SYS_ARCH_DECL_PROTECT(lev_alloc)
+ 195:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_PROTECT()      SYS_ARCH_PROTECT(lev_alloc)
+ 196:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_UNPROTECT()    SYS_ARCH_UNPROTECT(lev_alloc)
+ 197:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 198:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #else /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 199:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 200:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* Protect the heap only by using a semaphore */
+ 201:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_DECL_PROTECT()
+ 202:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_PROTECT()    sys_arch_sem_wait(mem_sem, 0)
+ 203:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_FREE_UNPROTECT()  sys_sem_signal(mem_sem)
+ 204:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /* mem_malloc is protected using semaphore AND LWIP_MEM_ALLOC_PROTECT */
+ 205:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_DECL_PROTECT()
+ 206:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_PROTECT()
+ 207:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #define LWIP_MEM_ALLOC_UNPROTECT()
+ 208:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 209:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 210:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 211:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 213:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * "Plug holes" by combining adjacent empty struct mems.
+ 214:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * After this function is through, there should not exist
+ 215:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * one empty struct mem pointing to another empty struct mem.
+ 216:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 217:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param mem this points to a struct mem which just has been freed
+ 218:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @internal this function is only called by mem_free() and mem_realloc()
+ 219:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 220:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * This assumes access to the heap is protected by the calling function
+ 221:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * already.
+ 222:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 223:rtos/common/ethernet/lwIP_132/src/core/mem.c **** static void
+ 224:rtos/common/ethernet/lwIP_132/src/core/mem.c **** plug_holes(struct mem *mem)
+ 225:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 226:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *nmem;
+ 227:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *pmem;
+ 228:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 229:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("plug_holes: mem >= ram", (u8_t *)mem >= ram);
+ 230:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("plug_holes: mem < ram_end", (u8_t *)mem < (u8_t *)ram_end);
+ 231:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("plug_holes: mem->used == 0", mem->used == 0);
+ 232:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 233:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* plug hole forward */
+ 234:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("plug_holes: mem->next <= MEM_SIZE_ALIGNED", mem->next <= MEM_SIZE_ALIGNED);
+ 235:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 236:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   nmem = (struct mem *)&ram[mem->next];
+ 237:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (mem != nmem && nmem->used == 0 && (u8_t *)nmem != (u8_t *)ram_end) {
+ 238:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* if mem->next is unused and not end of ram, combine mem and mem->next */
+ 239:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (lfree == nmem) {
+ 240:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       lfree = mem;
+ 241:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 242:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem->next = nmem->next;
+ 243:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     ((struct mem *)&ram[nmem->next])->prev = (u8_t *)mem - ram;
+ 244:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 245:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 246:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* plug hole backward */
+ 247:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   pmem = (struct mem *)&ram[mem->prev];
+ 248:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (pmem != mem && pmem->used == 0) {
+ 249:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* if mem->prev is unused, combine mem and mem->prev */
+ 250:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (lfree == mem) {
+ 251:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       lfree = pmem;
+ 252:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 253:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     pmem->next = mem->next;
+ 254:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     ((struct mem *)&ram[mem->next])->prev = (u8_t *)pmem - ram;
+ 255:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 256:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 257:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 258:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 259:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Zero the heap and initialize start, end and lowest-free
+ 260:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 261:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void
+ 262:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_init(void)
+ 263:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 264:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *mem;
+ 265:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 266:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("Sanity check alignment",
+ 267:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     (SIZEOF_STRUCT_MEM & (MEM_ALIGNMENT-1)) == 0);
+ 268:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 269:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* align the heap */
+ 270:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ram = LWIP_MEM_ALIGN(ram_heap);
+ 271:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* initialize the start of the heap */
+ 272:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem = (struct mem *)ram;
+ 273:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem->next = MEM_SIZE_ALIGNED;
+ 274:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem->prev = 0;
+ 275:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem->used = 0;
+ 276:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* initialize the end of the heap */
+ 277:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ram_end = (struct mem *)&ram[MEM_SIZE_ALIGNED];
+ 278:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ram_end->used = 1;
+ 279:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ram_end->next = MEM_SIZE_ALIGNED;
+ 280:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ram_end->prev = MEM_SIZE_ALIGNED;
+ 281:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 282:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_sem = sys_sem_new(1);
+ 283:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 284:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* initialize the lowest-free pointer to the start of the heap */
+ 285:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   lfree = (struct mem *)ram;
+ 286:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 287:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   MEM_STATS_AVAIL(avail, MEM_SIZE_ALIGNED);
+ 288:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 289:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 290:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 291:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Put a struct mem back on the heap
+ 292:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 293:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param rmem is the data portion of a struct mem as returned by a previous
+ 294:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *             call to mem_malloc()
+ 295:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 296:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void
+ 297:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_free(void *rmem)
+ 298:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 299:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *mem;
+ 300:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_DECL_PROTECT();
+ 301:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 302:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (rmem == NULL) {
+ 303:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("mem_free(p == NULL) was call
+ 304:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return;
+ 305:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 306:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("mem_free: sanity check alignment", (((mem_ptr_t)rmem) & (MEM_ALIGNMENT-1)) == 0);
+ 307:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 308:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("mem_free: legal memory", (u8_t *)rmem >= (u8_t *)ram &&
+ 309:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     (u8_t *)rmem < (u8_t *)ram_end);
+ 310:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 311:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if ((u8_t *)rmem < (u8_t *)ram || (u8_t *)rmem >= (u8_t *)ram_end) {
+ 312:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_DECL_PROTECT(lev);
+ 313:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_LEVEL_SEVERE, ("mem_free: illegal memory\n"));
+ 314:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* protect mem stats from concurrent access */
+ 315:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_PROTECT(lev);
+ 316:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     MEM_STATS_INC(illegal);
+ 317:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_UNPROTECT(lev);
+ 318:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return;
+ 319:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 320:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* protect the heap from concurrent access */
+ 321:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_PROTECT();
+ 322:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* Get the corresponding struct mem ... */
+ 323:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem = (struct mem *)((u8_t *)rmem - SIZEOF_STRUCT_MEM);
+ 324:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* ... which has to be in a used state ... */
+ 325:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("mem_free: mem->used", mem->used);
+ 326:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* ... and is now unused. */
+ 327:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem->used = 0;
+ 328:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 329:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (mem < lfree) {
+ 330:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* the newly freed struct is now the lowest */
+ 331:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     lfree = mem;
+ 332:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 333:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 334:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   MEM_STATS_DEC_USED(used, mem->next - ((u8_t *)mem - ram));
+ 335:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 336:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* finally, see if prev or next are free also */
+ 337:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   plug_holes(mem);
+ 338:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 339:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_free_count = 1;
+ 340:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 341:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_UNPROTECT();
+ 342:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 343:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 344:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 345:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * In contrast to its name, mem_realloc can only shrink memory, not expand it.
+ 346:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Since the only use (for now) is in pbuf_realloc (which also can only shrink),
+ 347:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * this shouldn't be a problem!
+ 348:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 349:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param rmem pointer to memory allocated by mem_malloc the is to be shrinked
+ 350:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param newsize required size after shrinking (needs to be smaller than or
+ 351:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *                equal to the previous size)
+ 352:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @return for compatibility reasons: is always == rmem, at the moment
+ 353:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *         or NULL if newsize is > old size, in which case rmem is NOT touched
+ 354:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *         or freed!
+ 355:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 356:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void *
+ 357:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_realloc(void *rmem, mem_size_t newsize)
+ 358:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 359:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t size;
+ 360:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t ptr, ptr2;
+ 361:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *mem, *mem2;
+ 362:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* use the FREE_PROTECT here: it protects with sem OR SYS_ARCH_PROTECT */
+ 363:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_DECL_PROTECT();
+ 364:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 365:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* Expand the size of the allocated memory region so that we can
+ 366:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      adjust for alignment. */
+ 367:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   newsize = LWIP_MEM_ALIGN_SIZE(newsize);
+ 368:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 369:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if(newsize < MIN_SIZE_ALIGNED) {
+ 370:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* every data block must be at least MIN_SIZE_ALIGNED long */
+ 371:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     newsize = MIN_SIZE_ALIGNED;
+ 372:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 373:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 374:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (newsize > MEM_SIZE_ALIGNED) {
+ 375:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+ 376:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 377:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 378:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("mem_realloc: legal memory", (u8_t *)rmem >= (u8_t *)ram &&
+ 379:rtos/common/ethernet/lwIP_132/src/core/mem.c ****    (u8_t *)rmem < (u8_t *)ram_end);
+ 380:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 381:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if ((u8_t *)rmem < (u8_t *)ram || (u8_t *)rmem >= (u8_t *)ram_end) {
+ 382:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_DECL_PROTECT(lev);
+ 383:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_LEVEL_SEVERE, ("mem_realloc: illegal memory\n"));
+ 384:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* protect mem stats from concurrent access */
+ 385:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_PROTECT(lev);
+ 386:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     MEM_STATS_INC(illegal);
+ 387:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     SYS_ARCH_UNPROTECT(lev);
+ 388:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return rmem;
+ 389:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 390:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* Get the corresponding struct mem ... */
+ 391:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem = (struct mem *)((u8_t *)rmem - SIZEOF_STRUCT_MEM);
+ 392:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* ... and its offset pointer */
+ 393:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   ptr = (u8_t *)mem - ram;
+ 394:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 395:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   size = mem->next - ptr - SIZEOF_STRUCT_MEM;
+ 396:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_ASSERT("mem_realloc can only shrink memory", newsize <= size);
+ 397:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (newsize > size) {
+ 398:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* not supported */
+ 399:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+ 400:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 401:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (newsize == size) {
+ 402:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* No change in size, simply return */
+ 403:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return rmem;
+ 404:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 405:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 406:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* protect the heap from concurrent access */
+ 407:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_PROTECT();
+ 408:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 409:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   MEM_STATS_DEC_USED(used, (size - newsize));
+ 410:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 411:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem2 = (struct mem *)&ram[mem->next];
+ 412:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if(mem2->used == 0) {
+ 413:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* The next struct is unused, we can simply move it at little */
+ 414:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem_size_t next;
+ 415:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* remember the old next pointer */
+ 416:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     next = mem2->next;
+ 417:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* create new struct mem which is moved directly after the shrinked mem */
+ 418:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     ptr2 = ptr + SIZEOF_STRUCT_MEM + newsize;
+ 419:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (lfree == mem2) {
+ 420:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       lfree = (struct mem *)&ram[ptr2];
+ 421:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 422:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2 = (struct mem *)&ram[ptr2];
+ 423:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->used = 0;
+ 424:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* restore the next pointer */
+ 425:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->next = next;
+ 426:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* link it back to mem */
+ 427:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->prev = ptr;
+ 428:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* link mem to it */
+ 429:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem->next = ptr2;
+ 430:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* last thing to restore linked list: as we have moved mem2,
+ 431:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * let 'mem2->next->prev' point to mem2 again. but only if mem2->next is not
+ 432:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * the end of the heap */
+ 433:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (mem2->next != MEM_SIZE_ALIGNED) {
+ 434:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       ((struct mem *)&ram[mem2->next])->prev = ptr2;
+ 435:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 436:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* no need to plug holes, we've already done that */
+ 437:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   } else if (newsize + SIZEOF_STRUCT_MEM + MIN_SIZE_ALIGNED <= size) {
+ 438:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* Next struct is used but there's room for another struct mem with
+ 439:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * at least MIN_SIZE_ALIGNED of data.
+ 440:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * Old size ('size') must be big enough to contain at least 'newsize' plus a struct mem
+ 441:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * ('SIZEOF_STRUCT_MEM') with some data ('MIN_SIZE_ALIGNED').
+ 442:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * @todo we could leave out MIN_SIZE_ALIGNED. We would create an empty
+ 443:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      *       region that couldn't hold data, but when mem->next gets freed,
+ 444:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      *       the 2 regions would be combined, resulting in more free memory */
+ 445:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     ptr2 = ptr + SIZEOF_STRUCT_MEM + newsize;
+ 446:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2 = (struct mem *)&ram[ptr2];
+ 447:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (mem2 < lfree) {
+ 448:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       lfree = mem2;
+ 449:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 450:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->used = 0;
+ 451:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->next = mem->next;
+ 452:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem2->prev = ptr;
+ 453:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     mem->next = ptr2;
+ 454:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     if (mem2->next != MEM_SIZE_ALIGNED) {
+ 455:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       ((struct mem *)&ram[mem2->next])->prev = ptr2;
+ 456:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 457:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* the original mem->next is used, so no need to plug holes! */
+ 458:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 459:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* else {
+ 460:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     next struct mem is used but size between mem and mem2 is not big enough
+ 461:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     to create another struct mem
+ 462:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     -> don't do anyhting. 
+ 463:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     -> the remaining space stays unused since it is too small
+ 464:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   } */
+ 465:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 466:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_free_count = 1;
+ 467:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 468:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_FREE_UNPROTECT();
+ 469:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   return rmem;
+ 470:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 471:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 472:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 473:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Adam's mem_malloc() plus solution for bug #17922
+ 474:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Allocate a block of memory with a minimum of 'size' bytes.
+ 475:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 476:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param size is the minimum size of the requested block in bytes.
+ 477:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @return pointer to allocated memory or NULL if no free memory was found.
+ 478:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 479:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Note that the returned value will always be aligned (as defined by MEM_ALIGNMENT).
+ 480:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 481:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void *
+ 482:rtos/common/ethernet/lwIP_132/src/core/mem.c **** mem_malloc(mem_size_t size)
+ 483:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+  19              		.loc 1 483 0
+  20 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  21              	.LCFI0:
+  22 0002 5746     		mov	r7, sl
+  23 0004 4E46     		mov	r6, r9
+  24 0006 4546     		mov	r5, r8
+  25 0008 E0B4     		push	{r5, r6, r7}
+  26              	.LCFI1:
+  27              	.LVL0:
+  28 000a 0004     		lsl	r0, r0, #16
+  29              	.LVL1:
+  30 000c 000C     		lsr	r0, r0, #16
+  31              	.LVL2:
+ 484:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   mem_size_t ptr, ptr2;
+ 485:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   struct mem *mem, *mem2;
+ 486:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 487:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   u8_t local_mem_free_count = 0;
+ 488:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 489:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_ALLOC_DECL_PROTECT();
+ 490:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 491:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (size == 0) {
+  32              		.loc 1 491 0
+  33 000e 0028     		cmp	r0, #0
+  34 0010 00D1     		bne	.LCB10
+  35 0012 97E0     		b	.L2	@long jump
+  36              	.LCB10:
+ 492:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+ 493:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 494:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 495:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* Expand the size of the allocated memory region so that we can
+ 496:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      adjust for alignment. */
+ 497:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   size = LWIP_MEM_ALIGN_SIZE(size);
+  37              		.loc 1 497 0
+  38 0014 C21C     		add	r2, r0, #3
+  39 0016 4F4B     		ldr	r3, .L20
+  40 0018 161C     		mov	r6, r2
+  41              	.LVL3:
+  42 001a 1E40     		and	r6, r6, r3
+  43              	.LVL4:
+ 498:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 499:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if(size < MIN_SIZE_ALIGNED) {
+  44              		.loc 1 499 0
+  45 001c 0B2E     		cmp	r6, #11
+  46 001e 01D8     		bhi	.L3
+  47 0020 0C26     		mov	r6, #12
+  48              	.LVL5:
+  49 0022 04E0     		b	.L4
+  50              	.L3:
+ 500:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* every data block must be at least MIN_SIZE_ALIGNED long */
+ 501:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     size = MIN_SIZE_ALIGNED;
+ 502:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 503:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 504:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (size > MEM_SIZE_ALIGNED) {
+  51              		.loc 1 504 0
+  52 0024 8023     		mov	r3, #128
+  53 0026 5B01     		lsl	r3, r3, #5
+  54 0028 9E42     		cmp	r6, r3
+  55 002a 00D9     		bls	.LCB30
+  56 002c 8AE0     		b	.L2	@long jump
+  57              	.LCB30:
+  58              	.L4:
+ 505:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     return NULL;
+ 506:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 507:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 508:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* protect the heap from concurrent access */
+ 509:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   sys_arch_sem_wait(mem_sem, 0);
+  59              		.loc 1 509 0
+  60 002e 4A4B     		ldr	r3, .L20+4
+  61 0030 1868     		ldr	r0, [r3]
+  62 0032 0021     		mov	r1, #0
+  63 0034 FFF7FEFF 		bl	sys_arch_sem_wait
+ 510:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_ALLOC_PROTECT();
+ 511:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 512:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* run as long as a mem_free disturbed mem_malloc */
+ 513:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   do {
+ 514:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     local_mem_free_count = 0;
+ 515:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 516:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 517:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* Scan through the heap searching for a free block that is big enough,
+ 518:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      * beginning with the lowest free block.
+ 519:rtos/common/ethernet/lwIP_132/src/core/mem.c ****      */
+ 520:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     for (ptr = (u8_t *)lfree - ram; ptr < MEM_SIZE_ALIGNED - size;
+  64              		.loc 1 520 0
+  65 0038 484B     		ldr	r3, .L20+8
+  66 003a 1B68     		ldr	r3, [r3]
+  67 003c 9A46     		mov	sl, r3
+  68 003e 484B     		ldr	r3, .L20+12
+  69 0040 1868     		ldr	r0, [r3]
+  70 0042 0304     		lsl	r3, r0, #16
+  71 0044 1B0C     		lsr	r3, r3, #16
+  72 0046 9946     		mov	r9, r3
+  73 0048 5146     		mov	r1, sl
+  74 004a CB1A     		sub	r3, r1, r3
+  75 004c 1B04     		lsl	r3, r3, #16
+  76 004e 190C     		lsr	r1, r3, #16
+  77              	.LVL6:
+  78 0050 8023     		mov	r3, #128
+  79 0052 5B01     		lsl	r3, r3, #5
+  80 0054 9D1B     		sub	r5, r3, r6
+  81 0056 8D42     		cmp	r5, r1
+  82 0058 69DD     		ble	.L5
+ 521:rtos/common/ethernet/lwIP_132/src/core/mem.c ****          ptr = ((struct mem *)&ram[ptr])->next) {
+ 522:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       mem = (struct mem *)&ram[ptr];
+  83              		.loc 1 522 0
+  84 005a 8446     		mov	ip, r0
+ 523:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 524:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       mem_free_count = 0;
+ 525:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       LWIP_MEM_ALLOC_UNPROTECT();
+ 526:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       /* allow mem_free to run */
+ 527:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       LWIP_MEM_ALLOC_PROTECT();
+ 528:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       if (mem_free_count != 0) {
+ 529:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         local_mem_free_count = mem_free_count;
+ 530:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       }
+ 531:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       mem_free_count = 0;
+ 532:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 533:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 534:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       if ((!mem->used) &&
+  85              		.loc 1 534 0
+  86 005c B046     		mov	r8, r6
+  87              	.LVL7:
+  88              	.L17:
+  89              		.loc 1 522 0
+  90 005e 6746     		mov	r7, ip
+  91 0060 4418     		add	r4, r0, r1
+  92              		.loc 1 534 0
+  93 0062 2379     		ldrb	r3, [r4, #4]
+  94 0064 002B     		cmp	r3, #0
+  95 0066 5FD1     		bne	.L6
+  96 0068 2388     		ldrh	r3, [r4]
+  97 006a 083B     		sub	r3, r3, #8
+  98 006c 5A1A     		sub	r2, r3, r1
+  99              	.LVL8:
+ 100 006e 4346     		mov	r3, r8
+ 101 0070 B242     		cmp	r2, r6
+ 102 0072 59D3     		bcc	.L6
+ 535:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           (mem->next - (ptr + SIZEOF_STRUCT_MEM)) >= size) {
+ 536:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         /* mem is not used and at least perfect fit is possible:
+ 537:rtos/common/ethernet/lwIP_132/src/core/mem.c ****          * mem->next - (ptr + SIZEOF_STRUCT_MEM) gives us the 'user data size' of mem */
+ 538:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 539:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         if (mem->next - (ptr + SIZEOF_STRUCT_MEM) >= (size + SIZEOF_STRUCT_MEM + MIN_SIZE_ALIGNED))
+ 103              		.loc 1 539 0
+ 104 0074 1433     		add	r3, r3, #20
+ 105 0076 9342     		cmp	r3, r2
+ 106 0078 23D8     		bhi	.L7
+ 540:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           /* (in addition to the above, we test if another struct mem (SIZEOF_STRUCT_MEM) containin
+ 541:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * at least MIN_SIZE_ALIGNED of data also fits in the 'user data space' of 'mem')
+ 542:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * -> split large block, create empty remainder,
+ 543:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * remainder must be large enough to contain MIN_SIZE_ALIGNED data: if
+ 544:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * mem->next - (ptr + (2*SIZEOF_STRUCT_MEM)) == size,
+ 545:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * struct mem would fit in but no data between mem2 and mem2->next
+ 546:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * @todo we could leave out MIN_SIZE_ALIGNED. We would create an empty
+ 547:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            *       region that couldn't hold data, but when mem->next gets freed,
+ 548:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            *       the 2 regions would be combined, resulting in more free memory
+ 549:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            */
+ 550:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           ptr2 = ptr + SIZEOF_STRUCT_MEM + size;
+ 107              		.loc 1 550 0
+ 108 007a 331C     		mov	r3, r6
+ 109 007c 0833     		add	r3, r3, #8
+ 110 007e CB18     		add	r3, r1, r3
+ 111              	.LVL9:
+ 112 0080 1B04     		lsl	r3, r3, #16
+ 113 0082 180C     		lsr	r0, r3, #16
+ 114              	.LVL10:
+ 551:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           /* create mem2 struct */
+ 552:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem2 = (struct mem *)&ram[ptr2];
+ 115              		.loc 1 552 0
+ 116 0084 3A18     		add	r2, r7, r0
+ 117              	.LVL11:
+ 553:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem2->used = 0;
+ 118              		.loc 1 553 0
+ 119 0086 0023     		mov	r3, #0
+ 120 0088 1371     		strb	r3, [r2, #4]
+ 554:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem2->next = mem->next;
+ 121              		.loc 1 554 0
+ 122 008a 2388     		ldrh	r3, [r4]
+ 123 008c 1380     		strh	r3, [r2]
+ 555:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem2->prev = ptr;
+ 124              		.loc 1 555 0
+ 125 008e 5180     		strh	r1, [r2, #2]
+ 556:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           /* and insert it between mem and mem->next */
+ 557:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem->next = ptr2;
+ 126              		.loc 1 557 0
+ 127 0090 2080     		strh	r0, [r4]
+ 558:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem->used = 1;
+ 128              		.loc 1 558 0
+ 129 0092 0123     		mov	r3, #1
+ 130 0094 2371     		strb	r3, [r4, #4]
+ 559:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 560:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           if (mem2->next != MEM_SIZE_ALIGNED) {
+ 131              		.loc 1 560 0
+ 132 0096 1288     		ldrh	r2, [r2]
+ 133              	.LVL12:
+ 134 0098 8023     		mov	r3, #128
+ 135 009a 5B01     		lsl	r3, r3, #5
+ 136 009c 9A42     		cmp	r2, r3
+ 137 009e 01D0     		beq	.L8
+ 561:rtos/common/ethernet/lwIP_132/src/core/mem.c ****             ((struct mem *)&ram[mem2->next])->prev = ptr2;
+ 138              		.loc 1 561 0
+ 139 00a0 BB18     		add	r3, r7, r2
+ 140 00a2 5880     		strh	r0, [r3, #2]
+ 141              	.L8:
+ 562:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           }
+ 563:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           MEM_STATS_INC_USED(used, (size + SIZEOF_STRUCT_MEM));
+ 142              		.loc 1 563 0
+ 143 00a4 2F4A     		ldr	r2, .L20+16
+ 144 00a6 AA21     		mov	r1, #170
+ 145              	.LVL13:
+ 146 00a8 535A     		ldrh	r3, [r2, r1]
+ 147 00aa 0833     		add	r3, r3, #8
+ 148 00ac F318     		add	r3, r6, r3
+ 149 00ae 1B04     		lsl	r3, r3, #16
+ 150 00b0 180C     		lsr	r0, r3, #16
+ 151              	.LVL14:
+ 152 00b2 5052     		strh	r0, [r2, r1]
+ 153 00b4 AC23     		mov	r3, #172
+ 154 00b6 D35A     		ldrh	r3, [r2, r3]
+ 155 00b8 8342     		cmp	r3, r0
+ 156 00ba 14D2     		bcs	.L9
+ 157 00bc AC23     		mov	r3, #172
+ 158 00be D052     		strh	r0, [r2, r3]
+ 159 00c0 11E0     		b	.L9
+ 160              	.L7:
+ 564:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         } else {
+ 565:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           /* (a mem2 struct does no fit into the user data space of mem and mem->next will always
+ 566:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * be used at this point: if not we have 2 unused structs in a row, plug_holes should hav
+ 567:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * take care of this).
+ 568:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * -> near fit or excact fit: do not split, no mem2 creation
+ 569:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * also can't move mem->next directly behind mem, since mem->next
+ 570:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            * will always be used at this point!
+ 571:rtos/common/ethernet/lwIP_132/src/core/mem.c ****            */
+ 572:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           mem->used = 1;
+ 161              		.loc 1 572 0
+ 162 00c2 0123     		mov	r3, #1
+ 163 00c4 2371     		strb	r3, [r4, #4]
+ 573:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           MEM_STATS_INC_USED(used, mem->next - ((u8_t *)mem - ram));
+ 164              		.loc 1 573 0
+ 165 00c6 2749     		ldr	r1, .L20+16
+ 166 00c8 AA20     		mov	r0, #170
+ 167 00ca 2388     		ldrh	r3, [r4]
+ 168 00cc 0A5A     		ldrh	r2, [r1, r0]
+ 169 00ce 9B18     		add	r3, r3, r2
+ 170 00d0 4B44     		add	r3, r3, r9
+ 171 00d2 1B1B     		sub	r3, r3, r4
+ 172 00d4 1B04     		lsl	r3, r3, #16
+ 173 00d6 1D0C     		lsr	r5, r3, #16
+ 174 00d8 0D52     		strh	r5, [r1, r0]
+ 175 00da AC23     		mov	r3, #172
+ 176 00dc CB5A     		ldrh	r3, [r1, r3]
+ 177 00de AB42     		cmp	r3, r5
+ 178 00e0 01D2     		bcs	.L9
+ 179 00e2 AC23     		mov	r3, #172
+ 180 00e4 CD52     		strh	r5, [r1, r3]
+ 181              	.L9:
+ 574:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         }
+ 575:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 576:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         if (mem == lfree) {
+ 182              		.loc 1 576 0
+ 183 00e6 A245     		cmp	sl, r4
+ 184 00e8 17D1     		bne	.L10
+ 577:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           /* Find next free block after mem and update lowest free pointer */
+ 578:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           while (lfree->used && lfree != ram_end) {
+ 185              		.loc 1 578 0
+ 186 00ea 5246     		mov	r2, sl
+ 187 00ec 1379     		ldrb	r3, [r2, #4]
+ 188 00ee 002B     		cmp	r3, #0
+ 189 00f0 13D0     		beq	.L10
+ 190 00f2 1D4B     		ldr	r3, .L20+20
+ 191 00f4 1A68     		ldr	r2, [r3]
+ 192 00f6 9245     		cmp	sl, r2
+ 193 00f8 0FD0     		beq	.L10
+ 194              	.L16:
+ 579:rtos/common/ethernet/lwIP_132/src/core/mem.c ****             LWIP_MEM_ALLOC_UNPROTECT();
+ 580:rtos/common/ethernet/lwIP_132/src/core/mem.c ****             /* prevent high interrupt latency... */
+ 581:rtos/common/ethernet/lwIP_132/src/core/mem.c ****             LWIP_MEM_ALLOC_PROTECT();
+ 582:rtos/common/ethernet/lwIP_132/src/core/mem.c ****             lfree = (struct mem *)&ram[lfree->next];
+ 195              		.loc 1 582 0
+ 196 00fa 5146     		mov	r1, sl
+ 197 00fc 0B88     		ldrh	r3, [r1]
+ 198 00fe DB19     		add	r3, r3, r7
+ 199 0100 9A46     		mov	sl, r3
+ 200              		.loc 1 578 0
+ 201 0102 1B79     		ldrb	r3, [r3, #4]
+ 202 0104 002B     		cmp	r3, #0
+ 203 0106 05D0     		beq	.L11
+ 204 0108 5245     		cmp	r2, sl
+ 205 010a F6D1     		bne	.L16
+ 206 010c 134B     		ldr	r3, .L20+8
+ 207 010e 5246     		mov	r2, sl
+ 208 0110 1A60     		str	r2, [r3]
+ 209 0112 02E0     		b	.L10
+ 210              	.L11:
+ 211 0114 114B     		ldr	r3, .L20+8
+ 212 0116 5146     		mov	r1, sl
+ 213 0118 1960     		str	r1, [r3]
+ 214              	.L10:
+ 583:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           }
+ 584:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           LWIP_ASSERT("mem_malloc: !lfree->used", ((lfree == ram_end) || (!lfree->used)));
+ 585:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         }
+ 586:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         LWIP_MEM_ALLOC_UNPROTECT();
+ 587:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         sys_sem_signal(mem_sem);
+ 215              		.loc 1 587 0
+ 216 011a 0F4B     		ldr	r3, .L20+4
+ 217 011c 1868     		ldr	r0, [r3]
+ 218 011e FFF7FEFF 		bl	sys_sem_signal
+ 588:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         LWIP_ASSERT("mem_malloc: allocated memory not above ram_end.",
+ 589:rtos/common/ethernet/lwIP_132/src/core/mem.c ****          (mem_ptr_t)mem + SIZEOF_STRUCT_MEM + size <= (mem_ptr_t)ram_end);
+ 590:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         LWIP_ASSERT("mem_malloc: allocated memory properly aligned.",
+ 591:rtos/common/ethernet/lwIP_132/src/core/mem.c ****          ((mem_ptr_t)mem + SIZEOF_STRUCT_MEM) % MEM_ALIGNMENT == 0);
+ 592:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         LWIP_ASSERT("mem_malloc: sanity check alignment",
+ 593:rtos/common/ethernet/lwIP_132/src/core/mem.c ****           (((mem_ptr_t)mem) & (MEM_ALIGNMENT-1)) == 0);
+ 594:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 595:rtos/common/ethernet/lwIP_132/src/core/mem.c ****         return (u8_t *)mem + SIZEOF_STRUCT_MEM;
+ 219              		.loc 1 595 0
+ 220 0122 201C     		mov	r0, r4
+ 221 0124 0830     		add	r0, r0, #8
+ 222 0126 0EE0     		b	.L13
+ 223              	.LVL15:
+ 224              	.L6:
+ 225              		.loc 1 521 0
+ 226 0128 2188     		ldrh	r1, [r4]
+ 227              	.LVL16:
+ 228              		.loc 1 520 0
+ 229 012a A942     		cmp	r1, r5
+ 230 012c 97DB     		blt	.L17
+ 231              	.L5:
+ 596:rtos/common/ethernet/lwIP_132/src/core/mem.c ****       }
+ 597:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     }
+ 598:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #if LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT
+ 599:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* if we got interrupted by a mem_free, try again */
+ 600:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   } while(local_mem_free_count != 0);
+ 601:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* LWIP_ALLOW_MEM_FREE_FROM_OTHER_CONTEXT */
+ 602:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("mem_malloc: could not allocate %"S16_F" bytes\n
+ 603:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   MEM_STATS_INC(err);
+ 232              		.loc 1 603 0
+ 233 012e 0D49     		ldr	r1, .L20+16
+ 234              	.LVL17:
+ 235 0130 AE22     		mov	r2, #174
+ 236 0132 8B5A     		ldrh	r3, [r1, r2]
+ 237 0134 0133     		add	r3, r3, #1
+ 238 0136 8B52     		strh	r3, [r1, r2]
+ 604:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   LWIP_MEM_ALLOC_UNPROTECT();
+ 605:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   sys_sem_signal(mem_sem);
+ 239              		.loc 1 605 0
+ 240 0138 074B     		ldr	r3, .L20+4
+ 241 013a 1868     		ldr	r0, [r3]
+ 242 013c FFF7FEFF 		bl	sys_sem_signal
+ 243 0140 0020     		mov	r0, #0
+ 244 0142 00E0     		b	.L13
+ 245              	.LVL18:
+ 246              	.L2:
+ 606:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   return NULL;
+ 247              		.loc 1 606 0
+ 248 0144 0020     		mov	r0, #0
+ 249              	.LVL19:
+ 250              	.L13:
+ 607:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 251              		.loc 1 607 0
+ 252              		@ sp needed for prologue
+ 253              	.LVL20:
+ 254              	.LVL21:
+ 255 0146 1CBC     		pop	{r2, r3, r4}
+ 256 0148 9046     		mov	r8, r2
+ 257 014a 9946     		mov	r9, r3
+ 258 014c A246     		mov	sl, r4
+ 259 014e F0BC     		pop	{r4, r5, r6, r7}
+ 260 0150 02BC     		pop	{r1}
+ 261 0152 0847     		bx	r1
+ 262              	.L21:
+ 263              		.align	2
+ 264              	.L20:
+ 265 0154 FCFF0000 		.word	65532
+ 266 0158 20100000 		.word	mem_sem
+ 267 015c 1C100000 		.word	lfree
+ 268 0160 14100000 		.word	ram
+ 269 0164 00000000 		.word	lwip_stats
+ 270 0168 18100000 		.word	ram_end
+ 271              	.LFE294:
+ 273              		.align	2
+ 274              		.global	mem_calloc
+ 275              		.code	16
+ 276              		.thumb_func
+ 278              	mem_calloc:
+ 279              	.LFB295:
+ 608:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 609:rtos/common/ethernet/lwIP_132/src/core/mem.c **** #endif /* MEM_USE_POOLS */
+ 610:rtos/common/ethernet/lwIP_132/src/core/mem.c **** /**
+ 611:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * Contiguously allocates enough space for count objects that are size bytes
+ 612:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * of memory each and returns a pointer to the allocated memory.
+ 613:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 614:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * The allocated memory is filled with bytes of value zero.
+ 615:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  *
+ 616:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param count number of objects to allocate
+ 617:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @param size size of the objects to allocate
+ 618:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  * @return pointer to allocated memory / NULL pointer if there is an error
+ 619:rtos/common/ethernet/lwIP_132/src/core/mem.c ****  */
+ 620:rtos/common/ethernet/lwIP_132/src/core/mem.c **** void *mem_calloc(mem_size_t count, mem_size_t size)
+ 621:rtos/common/ethernet/lwIP_132/src/core/mem.c **** {
+ 280              		.loc 1 621 0
+ 281 016c 70B5     		push	{r4, r5, r6, lr}
+ 282              	.LCFI2:
+ 283              	.LVL22:
+ 284 016e 0004     		lsl	r0, r0, #16
+ 285              	.LVL23:
+ 286 0170 060C     		lsr	r6, r0, #16
+ 287              	.LVL24:
+ 288 0172 0904     		lsl	r1, r1, #16
+ 289              	.LVL25:
+ 290 0174 0D0C     		lsr	r5, r1, #16
+ 291              	.LVL26:
+ 622:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   void *p;
+ 623:rtos/common/ethernet/lwIP_132/src/core/mem.c **** 
+ 624:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   /* allocate 'count' objects of size 'size' */
+ 625:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   p = mem_malloc(count * size);
+ 292              		.loc 1 625 0
+ 293 0176 301C     		mov	r0, r6
+ 294 0178 6843     		mul	r0, r5
+ 295 017a 0004     		lsl	r0, r0, #16
+ 296 017c 000C     		lsr	r0, r0, #16
+ 297 017e FFF7FEFF 		bl	mem_malloc
+ 298 0182 041C     		mov	r4, r0
+ 299              	.LVL27:
+ 626:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   if (p) {
+ 300              		.loc 1 626 0
+ 301 0184 0028     		cmp	r0, #0
+ 302 0186 04D0     		beq	.L23
+ 303              	.LVL28:
+ 627:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     /* zero the memory */
+ 628:rtos/common/ethernet/lwIP_132/src/core/mem.c ****     memset(p, 0, count * size);
+ 304              		.loc 1 628 0
+ 305 0188 321C     		mov	r2, r6
+ 306 018a 6A43     		mul	r2, r5
+ 307 018c 0021     		mov	r1, #0
+ 308 018e FFF7FEFF 		bl	memset
+ 309              	.LVL29:
+ 310              	.L23:
+ 629:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   }
+ 630:rtos/common/ethernet/lwIP_132/src/core/mem.c ****   return p;
+ 631:rtos/common/ethernet/lwIP_132/src/core/mem.c **** }
+ 311              		.loc 1 631 0
+ 312 0192 201C     		mov	r0, r4
+ 313              		@ sp needed for prologue
+ 314              	.LVL30:
+ 315              	.LVL31:
+ 316              	.LVL32:
+ 317 0194 70BC     		pop	{r4, r5, r6}
+ 318 0196 02BC     		pop	{r1}
+ 319 0198 0847     		bx	r1
+ 320              	.LFE295:
+ 322 019a C046     		.align	2
+ 323              		.global	mem_realloc
+ 324              		.code	16
+ 325              		.thumb_func
+ 327              	mem_realloc:
+ 328              	.LFB293:
+ 329              		.loc 1 358 0
+ 330 019c F0B5     		push	{r4, r5, r6, r7, lr}
+ 331              	.LCFI3:
+ 332 019e 4746     		mov	r7, r8
+ 333 01a0 80B4     		push	{r7}
+ 334              	.LCFI4:
+ 335              	.LVL33:
+ 336 01a2 051C     		mov	r5, r0
+ 337 01a4 0904     		lsl	r1, r1, #16
+ 338              	.LVL34:
+ 339              		.loc 1 367 0
+ 340 01a6 C022     		mov	r2, #192
+ 341 01a8 9202     		lsl	r2, r2, #10
+ 342 01aa 8918     		add	r1, r1, r2
+ 343 01ac 090C     		lsr	r1, r1, #16
+ 344 01ae 444B     		ldr	r3, .L37
+ 345 01b0 0C1C     		mov	r4, r1
+ 346              	.LVL35:
+ 347 01b2 1C40     		and	r4, r4, r3
+ 348              	.LVL36:
+ 349              		.loc 1 369 0
+ 350 01b4 0B2C     		cmp	r4, #11
+ 351 01b6 01D8     		bhi	.L26
+ 352              	.LVL37:
+ 353 01b8 0C24     		mov	r4, #12
+ 354              	.LVL38:
+ 355 01ba 03E0     		b	.L27
+ 356              	.L26:
+ 357              		.loc 1 374 0
+ 358 01bc 8023     		mov	r3, #128
+ 359 01be 5B01     		lsl	r3, r3, #5
+ 360 01c0 9C42     		cmp	r4, r3
+ 361 01c2 76D8     		bhi	.L28
+ 362              	.L27:
+ 363              		.loc 1 381 0
+ 364 01c4 3F4B     		ldr	r3, .L37+4
+ 365 01c6 1A68     		ldr	r2, [r3]
+ 366 01c8 9542     		cmp	r5, r2
+ 367 01ca 03D3     		bcc	.L29
+ 368 01cc 3E4B     		ldr	r3, .L37+8
+ 369 01ce 1B68     		ldr	r3, [r3]
+ 370 01d0 9D42     		cmp	r5, r3
+ 371 01d2 09D3     		bcc	.L30
+ 372              	.LVL39:
+ 373              	.L29:
+ 374              	.LBB2:
+ 375              		.loc 1 385 0
+ 376 01d4 FFF7FEFF 		bl	sys_arch_protect
+ 377              	.LVL40:
+ 378              		.loc 1 386 0
+ 379 01d8 3C49     		ldr	r1, .L37+12
+ 380 01da B022     		mov	r2, #176
+ 381 01dc 8B5A     		ldrh	r3, [r1, r2]
+ 382 01de 0133     		add	r3, r3, #1
+ 383 01e0 8B52     		strh	r3, [r1, r2]
+ 384              		.loc 1 387 0
+ 385 01e2 FFF7FEFF 		bl	sys_arch_unprotect
+ 386 01e6 65E0     		b	.L31
+ 387              	.LVL41:
+ 388              	.L30:
+ 389              	.LBE2:
+ 390              		.loc 1 391 0
+ 391 01e8 2F1C     		mov	r7, r5
+ 392              	.LVL42:
+ 393 01ea 083F     		sub	r7, r7, #8
+ 394              		.loc 1 393 0
+ 395 01ec BB1A     		sub	r3, r7, r2
+ 396 01ee 1B04     		lsl	r3, r3, #16
+ 397 01f0 1B0C     		lsr	r3, r3, #16
+ 398 01f2 9846     		mov	r8, r3
+ 399              	.LVL43:
+ 400              		.loc 1 395 0
+ 401 01f4 3B88     		ldrh	r3, [r7]
+ 402 01f6 083B     		sub	r3, r3, #8
+ 403 01f8 4246     		mov	r2, r8
+ 404 01fa 9B1A     		sub	r3, r3, r2
+ 405 01fc 1B04     		lsl	r3, r3, #16
+ 406 01fe 1E0C     		lsr	r6, r3, #16
+ 407              	.LVL44:
+ 408              		.loc 1 397 0
+ 409 0200 A642     		cmp	r6, r4
+ 410 0202 56D3     		bcc	.L28
+ 411              	.LVL45:
+ 412              		.loc 1 401 0
+ 413 0204 B442     		cmp	r4, r6
+ 414 0206 55D0     		beq	.L31
+ 415              		.loc 1 407 0
+ 416 0208 314B     		ldr	r3, .L37+16
+ 417 020a 1868     		ldr	r0, [r3]
+ 418 020c 0021     		mov	r1, #0
+ 419 020e FFF7FEFF 		bl	sys_arch_sem_wait
+ 420              		.loc 1 409 0
+ 421 0212 2E49     		ldr	r1, .L37+12
+ 422 0214 AA22     		mov	r2, #170
+ 423 0216 8B5A     		ldrh	r3, [r1, r2]
+ 424 0218 9B1B     		sub	r3, r3, r6
+ 425 021a E318     		add	r3, r4, r3
+ 426 021c 8B52     		strh	r3, [r1, r2]
+ 427              		.loc 1 411 0
+ 428 021e 294B     		ldr	r3, .L37+4
+ 429 0220 1868     		ldr	r0, [r3]
+ 430 0222 3B88     		ldrh	r3, [r7]
+ 431 0224 C218     		add	r2, r0, r3
+ 432              	.LVL46:
+ 433              		.loc 1 412 0
+ 434 0226 1379     		ldrb	r3, [r2, #4]
+ 435 0228 002B     		cmp	r3, #0
+ 436 022a 1DD1     		bne	.L32
+ 437              	.LBB3:
+ 438              		.loc 1 416 0
+ 439 022c 1688     		ldrh	r6, [r2]
+ 440              	.LVL47:
+ 441              		.loc 1 418 0
+ 442 022e 4346     		mov	r3, r8
+ 443 0230 0833     		add	r3, r3, #8
+ 444 0232 E318     		add	r3, r4, r3
+ 445 0234 1B04     		lsl	r3, r3, #16
+ 446 0236 190C     		lsr	r1, r3, #16
+ 447              	.LVL48:
+ 448              		.loc 1 419 0
+ 449 0238 264B     		ldr	r3, .L37+20
+ 450 023a 1B68     		ldr	r3, [r3]
+ 451 023c 9342     		cmp	r3, r2
+ 452 023e 02D1     		bne	.L33
+ 453              		.loc 1 420 0
+ 454 0240 244A     		ldr	r2, .L37+20
+ 455              	.LVL49:
+ 456 0242 4318     		add	r3, r0, r1
+ 457 0244 1360     		str	r3, [r2]
+ 458              	.LVL50:
+ 459              	.L33:
+ 460              		.loc 1 422 0
+ 461 0246 4218     		add	r2, r0, r1
+ 462              	.LVL51:
+ 463              		.loc 1 423 0
+ 464 0248 0023     		mov	r3, #0
+ 465 024a 1371     		strb	r3, [r2, #4]
+ 466              		.loc 1 425 0
+ 467 024c 1680     		strh	r6, [r2]
+ 468              		.loc 1 427 0
+ 469 024e 4346     		mov	r3, r8
+ 470              	.LVL52:
+ 471 0250 5380     		strh	r3, [r2, #2]
+ 472              		.loc 1 429 0
+ 473 0252 3980     		strh	r1, [r7]
+ 474              		.loc 1 433 0
+ 475 0254 1288     		ldrh	r2, [r2]
+ 476              	.LVL53:
+ 477 0256 8023     		mov	r3, #128
+ 478 0258 5B01     		lsl	r3, r3, #5
+ 479 025a 9A42     		cmp	r2, r3
+ 480 025c 24D0     		beq	.L34
+ 481              		.loc 1 434 0
+ 482 025e 194B     		ldr	r3, .L37+4
+ 483 0260 1B68     		ldr	r3, [r3]
+ 484 0262 9B18     		add	r3, r3, r2
+ 485 0264 5980     		strh	r1, [r3, #2]
+ 486 0266 1FE0     		b	.L34
+ 487              	.LVL54:
+ 488              	.L32:
+ 489              	.LBE3:
+ 490              		.loc 1 437 0
+ 491 0268 231C     		mov	r3, r4
+ 492 026a 1433     		add	r3, r3, #20
+ 493 026c B342     		cmp	r3, r6
+ 494 026e 1BD8     		bhi	.L34
+ 495              		.loc 1 445 0
+ 496 0270 4346     		mov	r3, r8
+ 497 0272 0833     		add	r3, r3, #8
+ 498 0274 E318     		add	r3, r4, r3
+ 499 0276 1B04     		lsl	r3, r3, #16
+ 500 0278 190C     		lsr	r1, r3, #16
+ 501              	.LVL55:
+ 502              		.loc 1 446 0
+ 503 027a 4218     		add	r2, r0, r1
+ 504              	.LVL56:
+ 505              		.loc 1 447 0
+ 506 027c 154B     		ldr	r3, .L37+20
+ 507 027e 1B68     		ldr	r3, [r3]
+ 508 0280 9A42     		cmp	r2, r3
+ 509 0282 01D2     		bcs	.L35
+ 510              		.loc 1 448 0
+ 511 0284 134B     		ldr	r3, .L37+20
+ 512 0286 1A60     		str	r2, [r3]
+ 513              	.L35:
+ 514              		.loc 1 450 0
+ 515 0288 0023     		mov	r3, #0
+ 516 028a 1371     		strb	r3, [r2, #4]
+ 517              		.loc 1 451 0
+ 518 028c 3B88     		ldrh	r3, [r7]
+ 519 028e 1380     		strh	r3, [r2]
+ 520              		.loc 1 452 0
+ 521 0290 4346     		mov	r3, r8
+ 522              	.LVL57:
+ 523 0292 5380     		strh	r3, [r2, #2]
+ 524              		.loc 1 453 0
+ 525 0294 3980     		strh	r1, [r7]
+ 526              		.loc 1 454 0
+ 527 0296 1288     		ldrh	r2, [r2]
+ 528              	.LVL58:
+ 529 0298 8023     		mov	r3, #128
+ 530 029a 5B01     		lsl	r3, r3, #5
+ 531 029c 9A42     		cmp	r2, r3
+ 532 029e 03D0     		beq	.L34
+ 533              		.loc 1 455 0
+ 534 02a0 084B     		ldr	r3, .L37+4
+ 535 02a2 1B68     		ldr	r3, [r3]
+ 536 02a4 9B18     		add	r3, r3, r2
+ 537 02a6 5980     		strh	r1, [r3, #2]
+ 538              	.LVL59:
+ 539              	.L34:
+ 540              		.loc 1 468 0
+ 541 02a8 094B     		ldr	r3, .L37+16
+ 542 02aa 1868     		ldr	r0, [r3]
+ 543 02ac FFF7FEFF 		bl	sys_sem_signal
+ 544              	.LVL60:
+ 545 02b0 00E0     		b	.L31
+ 546              	.LVL61:
+ 547              	.L28:
+ 548              		.loc 1 469 0
+ 549 02b2 0025     		mov	r5, #0
+ 550              	.LVL62:
+ 551              	.L31:
+ 552              		.loc 1 470 0
+ 553 02b4 281C     		mov	r0, r5
+ 554              		@ sp needed for prologue
+ 555              	.LVL63:
+ 556              	.LVL64:
+ 557              	.LVL65:
+ 558              	.LVL66:
+ 559              	.LVL67:
+ 560 02b6 04BC     		pop	{r2}
+ 561 02b8 9046     		mov	r8, r2
+ 562 02ba F0BC     		pop	{r4, r5, r6, r7}
+ 563 02bc 02BC     		pop	{r1}
+ 564 02be 0847     		bx	r1
+ 565              	.L38:
+ 566              		.align	2
+ 567              	.L37:
+ 568 02c0 FCFF0000 		.word	65532
+ 569 02c4 14100000 		.word	ram
+ 570 02c8 18100000 		.word	ram_end
+ 571 02cc 00000000 		.word	lwip_stats
+ 572 02d0 20100000 		.word	mem_sem
+ 573 02d4 1C100000 		.word	lfree
+ 574              	.LFE293:
+ 576              		.align	2
+ 577              		.global	mem_free
+ 578              		.code	16
+ 579              		.thumb_func
+ 581              	mem_free:
+ 582              	.LFB292:
+ 583              		.loc 1 298 0
+ 584 02d8 70B5     		push	{r4, r5, r6, lr}
+ 585              	.LCFI5:
+ 586              	.LVL68:
+ 587 02da 041C     		mov	r4, r0
+ 588              		.loc 1 302 0
+ 589 02dc 0028     		cmp	r0, #0
+ 590 02de 60D0     		beq	.L48
+ 591              		.loc 1 311 0
+ 592 02e0 314B     		ldr	r3, .L49
+ 593 02e2 1B68     		ldr	r3, [r3]
+ 594 02e4 9842     		cmp	r0, r3
+ 595 02e6 03D3     		bcc	.L41
+ 596 02e8 304B     		ldr	r3, .L49+4
+ 597 02ea 1B68     		ldr	r3, [r3]
+ 598 02ec 9842     		cmp	r0, r3
+ 599 02ee 09D3     		bcc	.L42
+ 600              	.LVL69:
+ 601              	.L41:
+ 602              	.LBB7:
+ 603              		.loc 1 315 0
+ 604 02f0 FFF7FEFF 		bl	sys_arch_protect
+ 605              		.loc 1 316 0
+ 606 02f4 2E49     		ldr	r1, .L49+8
+ 607 02f6 B022     		mov	r2, #176
+ 608 02f8 8B5A     		ldrh	r3, [r1, r2]
+ 609 02fa 0133     		add	r3, r3, #1
+ 610 02fc 8B52     		strh	r3, [r1, r2]
+ 611              		.loc 1 317 0
+ 612 02fe FFF7FEFF 		bl	sys_arch_unprotect
+ 613 0302 4EE0     		b	.L48
+ 614              	.L42:
+ 615              	.LBE7:
+ 616              		.loc 1 321 0
+ 617 0304 2B4B     		ldr	r3, .L49+12
+ 618 0306 1868     		ldr	r0, [r3]
+ 619 0308 0021     		mov	r1, #0
+ 620 030a FFF7FEFF 		bl	sys_arch_sem_wait
+ 621              		.loc 1 323 0
+ 622 030e 251C     		mov	r5, r4
+ 623              	.LVL70:
+ 624 0310 083D     		sub	r5, r5, #8
+ 625              		.loc 1 327 0
+ 626 0312 0023     		mov	r3, #0
+ 627 0314 2B71     		strb	r3, [r5, #4]
+ 628              		.loc 1 329 0
+ 629 0316 284B     		ldr	r3, .L49+16
+ 630 0318 1B68     		ldr	r3, [r3]
+ 631 031a 9D42     		cmp	r5, r3
+ 632 031c 01D2     		bcs	.L43
+ 633              		.loc 1 331 0
+ 634 031e 264B     		ldr	r3, .L49+16
+ 635 0320 1D60     		str	r5, [r3]
+ 636              	.L43:
+ 637              		.loc 1 334 0
+ 638 0322 2B04     		lsl	r3, r5, #16
+ 639 0324 1E0C     		lsr	r6, r3, #16
+ 640 0326 204B     		ldr	r3, .L49
+ 641 0328 1C68     		ldr	r4, [r3]
+ 642              	.LVL71:
+ 643 032a 2148     		ldr	r0, .L49+8
+ 644 032c AA21     		mov	r1, #170
+ 645 032e 435A     		ldrh	r3, [r0, r1]
+ 646 0330 2A88     		ldrh	r2, [r5]
+ 647 0332 9B1A     		sub	r3, r3, r2
+ 648 0334 1B1B     		sub	r3, r3, r4
+ 649 0336 F318     		add	r3, r6, r3
+ 650 0338 4352     		strh	r3, [r0, r1]
+ 651              	.LBB8:
+ 652              	.LBB9:
+ 653              		.loc 1 236 0
+ 654 033a 2B88     		ldrh	r3, [r5]
+ 655 033c E418     		add	r4, r4, r3
+ 656              	.LVL72:
+ 657              		.loc 1 237 0
+ 658 033e A542     		cmp	r5, r4
+ 659 0340 14D0     		beq	.L44
+ 660 0342 2379     		ldrb	r3, [r4, #4]
+ 661 0344 002B     		cmp	r3, #0
+ 662 0346 11D1     		bne	.L44
+ 663 0348 184B     		ldr	r3, .L49+4
+ 664 034a 1B68     		ldr	r3, [r3]
+ 665 034c 9C42     		cmp	r4, r3
+ 666 034e 0DD0     		beq	.L44
+ 667              		.loc 1 239 0
+ 668 0350 194B     		ldr	r3, .L49+16
+ 669 0352 1B68     		ldr	r3, [r3]
+ 670 0354 9C42     		cmp	r4, r3
+ 671 0356 01D1     		bne	.L45
+ 672              		.loc 1 240 0
+ 673 0358 174B     		ldr	r3, .L49+16
+ 674 035a 1D60     		str	r5, [r3]
+ 675              	.L45:
+ 676              		.loc 1 242 0
+ 677 035c 2388     		ldrh	r3, [r4]
+ 678 035e 2B80     		strh	r3, [r5]
+ 679              		.loc 1 243 0
+ 680 0360 114B     		ldr	r3, .L49
+ 681 0362 1A68     		ldr	r2, [r3]
+ 682 0364 2388     		ldrh	r3, [r4]
+ 683 0366 D318     		add	r3, r2, r3
+ 684 0368 B21A     		sub	r2, r6, r2
+ 685 036a 5A80     		strh	r2, [r3, #2]
+ 686              	.L44:
+ 687              		.loc 1 247 0
+ 688 036c 0E4B     		ldr	r3, .L49
+ 689 036e 6A88     		ldrh	r2, [r5, #2]
+ 690 0370 1B68     		ldr	r3, [r3]
+ 691 0372 9918     		add	r1, r3, r2
+ 692              	.LVL73:
+ 693              		.loc 1 248 0
+ 694 0374 8D42     		cmp	r5, r1
+ 695 0376 10D0     		beq	.L46
+ 696 0378 0B79     		ldrb	r3, [r1, #4]
+ 697 037a 002B     		cmp	r3, #0
+ 698 037c 0DD1     		bne	.L46
+ 699              		.loc 1 250 0
+ 700 037e 0E4B     		ldr	r3, .L49+16
+ 701 0380 1B68     		ldr	r3, [r3]
+ 702 0382 9D42     		cmp	r5, r3
+ 703 0384 01D1     		bne	.L47
+ 704              		.loc 1 251 0
+ 705 0386 0C4B     		ldr	r3, .L49+16
+ 706 0388 1960     		str	r1, [r3]
+ 707              	.L47:
+ 708              		.loc 1 253 0
+ 709 038a 2B88     		ldrh	r3, [r5]
+ 710 038c 0B80     		strh	r3, [r1]
+ 711              		.loc 1 254 0
+ 712 038e 064B     		ldr	r3, .L49
+ 713 0390 1A68     		ldr	r2, [r3]
+ 714 0392 2B88     		ldrh	r3, [r5]
+ 715 0394 D318     		add	r3, r2, r3
+ 716 0396 8A1A     		sub	r2, r1, r2
+ 717 0398 5A80     		strh	r2, [r3, #2]
+ 718              	.L46:
+ 719              	.LBE9:
+ 720              	.LBE8:
+ 721              		.loc 1 341 0
+ 722 039a 064B     		ldr	r3, .L49+12
+ 723 039c 1868     		ldr	r0, [r3]
+ 724 039e FFF7FEFF 		bl	sys_sem_signal
+ 725              	.LVL74:
+ 726              	.L48:
+ 727              		.loc 1 342 0
+ 728              		@ sp needed for prologue
+ 729              	.LVL75:
+ 730              	.LVL76:
+ 731 03a2 70BC     		pop	{r4, r5, r6}
+ 732 03a4 01BC     		pop	{r0}
+ 733 03a6 0047     		bx	r0
+ 734              	.L50:
+ 735              		.align	2
+ 736              	.L49:
+ 737 03a8 14100000 		.word	ram
+ 738 03ac 18100000 		.word	ram_end
+ 739 03b0 00000000 		.word	lwip_stats
+ 740 03b4 20100000 		.word	mem_sem
+ 741 03b8 1C100000 		.word	lfree
+ 742              	.LFE292:
+ 744              		.align	2
+ 745              		.global	mem_init
+ 746              		.code	16
+ 747              		.thumb_func
+ 749              	mem_init:
+ 750              	.LFB291:
+ 751              		.loc 1 263 0
+ 752 03bc 30B5     		push	{r4, r5, lr}
+ 753              	.LCFI6:
+ 754              		.loc 1 270 0
+ 755 03be 114A     		ldr	r2, .L53
+ 756 03c0 0323     		mov	r3, #3
+ 757 03c2 9A43     		bic	r2, r2, r3
+ 758 03c4 104D     		ldr	r5, .L53+4
+ 759 03c6 2A60     		str	r2, [r5]
+ 760              		.loc 1 273 0
+ 761 03c8 8024     		mov	r4, #128
+ 762 03ca 6401     		lsl	r4, r4, #5
+ 763 03cc 1480     		strh	r4, [r2]
+ 764              		.loc 1 274 0
+ 765 03ce 0023     		mov	r3, #0
+ 766 03d0 5380     		strh	r3, [r2, #2]
+ 767              		.loc 1 275 0
+ 768 03d2 1371     		strb	r3, [r2, #4]
+ 769              		.loc 1 277 0
+ 770 03d4 2B68     		ldr	r3, [r5]
+ 771 03d6 1B19     		add	r3, r3, r4
+ 772 03d8 0C49     		ldr	r1, .L53+8
+ 773 03da 0B60     		str	r3, [r1]
+ 774              		.loc 1 278 0
+ 775 03dc 0122     		mov	r2, #1
+ 776 03de 1A71     		strb	r2, [r3, #4]
+ 777              		.loc 1 279 0
+ 778 03e0 0B68     		ldr	r3, [r1]
+ 779 03e2 1C80     		strh	r4, [r3]
+ 780              		.loc 1 280 0
+ 781 03e4 0B68     		ldr	r3, [r1]
+ 782 03e6 5C80     		strh	r4, [r3, #2]
+ 783              		.loc 1 282 0
+ 784 03e8 0120     		mov	r0, #1
+ 785 03ea FFF7FEFF 		bl	sys_sem_new
+ 786 03ee 084B     		ldr	r3, .L53+12
+ 787 03f0 1860     		str	r0, [r3]
+ 788              		.loc 1 285 0
+ 789 03f2 084A     		ldr	r2, .L53+16
+ 790 03f4 2B68     		ldr	r3, [r5]
+ 791 03f6 1360     		str	r3, [r2]
+ 792              		.loc 1 287 0
+ 793 03f8 074A     		ldr	r2, .L53+20
+ 794 03fa A823     		mov	r3, #168
+ 795 03fc D452     		strh	r4, [r2, r3]
+ 796              		.loc 1 288 0
+ 797              		@ sp needed for prologue
+ 798 03fe 30BC     		pop	{r4, r5}
+ 799 0400 01BC     		pop	{r0}
+ 800 0402 0047     		bx	r0
+ 801              	.L54:
+ 802              		.align	2
+ 803              	.L53:
+ 804 0404 03000000 		.word	ram_heap+3
+ 805 0408 14100000 		.word	ram
+ 806 040c 18100000 		.word	ram_end
+ 807 0410 20100000 		.word	mem_sem
+ 808 0414 1C100000 		.word	lfree
+ 809 0418 00000000 		.word	lwip_stats
+ 810              	.LFE291:
+ 812              		.bss
+ 813              	ram_heap:
+ 814 0000 00000000 		.space	4116
+ 814      00000000 
+ 814      00000000 
+ 814      00000000 
+ 814      00000000 
+ 815              		.align	2
+ 816              	ram:
+ 817 1014 00000000 		.space	4
+ 818              		.align	2
+ 819              	ram_end:
+ 820 1018 00000000 		.space	4
+ 821              		.align	2
+ 822              	lfree:
+ 823 101c 00000000 		.space	4
+ 824              		.align	2
+ 825              	mem_sem:
+ 826 1020 00000000 		.space	4
+ 961              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 mem.c
+     /tmp/ccigGPAt.s:1      .text:00000000 $t
+     /tmp/ccigGPAt.s:16     .text:00000000 mem_malloc
+     /tmp/ccigGPAt.s:265    .text:00000154 $d
+     /tmp/ccigGPAt.s:825    .bss:00001020 mem_sem
+     /tmp/ccigGPAt.s:822    .bss:0000101c lfree
+     /tmp/ccigGPAt.s:816    .bss:00001014 ram
+     /tmp/ccigGPAt.s:819    .bss:00001018 ram_end
+     /tmp/ccigGPAt.s:278    .text:0000016c mem_calloc
+     /tmp/ccigGPAt.s:275    .text:0000016c $t
+     /tmp/ccigGPAt.s:327    .text:0000019c mem_realloc
+     /tmp/ccigGPAt.s:568    .text:000002c0 $d
+     /tmp/ccigGPAt.s:581    .text:000002d8 mem_free
+     /tmp/ccigGPAt.s:578    .text:000002d8 $t
+     /tmp/ccigGPAt.s:737    .text:000003a8 $d
+     /tmp/ccigGPAt.s:749    .text:000003bc mem_init
+     /tmp/ccigGPAt.s:746    .text:000003bc $t
+     /tmp/ccigGPAt.s:804    .text:00000404 $d
+     /tmp/ccigGPAt.s:813    .bss:00000000 ram_heap
+
+UNDEFINED SYMBOLS
+sys_arch_sem_wait
+sys_sem_signal
+lwip_stats
+memset
+sys_arch_protect
+sys_arch_unprotect
+sys_sem_new

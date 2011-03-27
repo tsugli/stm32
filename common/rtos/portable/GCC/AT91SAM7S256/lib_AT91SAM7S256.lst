@@ -1,0 +1,10 @@
+   1              		.code	16
+   2              		.file	"lib_AT91SAM7S256.c"
+  10              	.Ltext0:
+  11              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 lib_AT91SAM7S256.c
+     /tmp/ccQkoe1j.s:1      .text:00000000 $t
+     /tmp/ccQkoe1j.s:13     .debug_info:00000000 $d
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,3529 @@
+   1              		.code	16
+   2              		.file	"fsm.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	fsm_init
+  13              		.code	16
+  14              		.thumb_func
+  16              	fsm_init:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*****************************************************************************
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * fsm.c - Network Control Protocol Finite State Machine program file.
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * Copyright (c) 2003 by Marc Boucher, Services Informatiques (MBSI) inc.
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * portions Copyright (c) 1997 by Global Election Systems Inc.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * The authors hereby grant permission to use, copy, modify, distribute,
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * and license this software and its documentation for any purpose, provided
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * that existing copyright notices are retained in all copies and that this
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * notice and the following disclaimer are included verbatim in any
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * distributions. No written agreement, license, or royalty fee is required
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * for any of the authorized uses.
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * THIS SOFTWARE IS PROVIDED BY THE CONTRIBUTORS *AS IS* AND ANY EXPRESS OR
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** ******************************************************************************
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * REVISION HISTORY
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * 03-01-01 Marc Boucher <marc@mbsi.ca>
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *   Ported to lwIP.
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** * 97-12-01 Guy Lancaster <lancasterg@acm.org>, Global Election Systems Inc.
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *   Original based on BSD fsm.c.
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** *****************************************************************************/
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm.c - {Link, IP} Control Protocol Finite State Machine.
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Copyright (c) 1989 Carnegie Mellon University.
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * All rights reserved.
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Redistribution and use in source and binary forms are permitted
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * provided that the above copyright notice and this paragraph are
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * duplicated in all such forms and that any documentation,
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * advertising materials, and other materials related to such
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * distribution and use acknowledge that the software was developed
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * by Carnegie Mellon University.  The name of the
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * University may not be used to endorse or promote products derived
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * from this software without specific prior written permission.
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * TODO:
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Randomize fsm id on link/init.
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Deal with variable outgoing MTU.
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #include "lwip/opt.h"
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #include "ppp.h"
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #include "pppdebug.h"
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #include "fsm.h"
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #include <string.h>
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*************************/
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** LOCAL DEFINITIONS ***/
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*************************/
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #if PPP_DEBUG
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static const char *ppperr_strerr[] = {
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_INITIAL",  /* LS_INITIAL  0 */
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_STARTING", /* LS_STARTING 1 */
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_CLOSED",   /* LS_CLOSED   2 */
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_STOPPED",  /* LS_STOPPED  3 */
+  81:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_CLOSING",  /* LS_CLOSING  4 */
+  82:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_STOPPING", /* LS_STOPPING 5 */
+  83:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_REQSENT",  /* LS_REQSENT  6 */
+  84:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_ACKRCVD",  /* LS_ACKRCVD  7 */
+  85:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_ACKSENT",  /* LS_ACKSENT  8 */
+  86:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****            "LS_OPENED"    /* LS_OPENED   9 */
+  87:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** };
+  88:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  89:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #endif /* PPP_DEBUG */
+  90:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  91:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /************************/
+  92:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** LOCAL DATA TYPES ***/
+  93:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /************************/
+  94:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  95:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+  96:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /***********************************/
+  97:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** LOCAL FUNCTION DECLARATIONS ***/
+  98:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /***********************************/
+  99:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_timeout (void *);
+ 100:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rconfreq (fsm *, u_char, u_char *, int);
+ 101:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rconfack (fsm *, int, u_char *, int);
+ 102:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rconfnakrej (fsm *, int, int, u_char *, int);
+ 103:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rtermreq (fsm *, int, u_char *, int);
+ 104:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rtermack (fsm *);
+ 105:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_rcoderej (fsm *, u_char *, int);
+ 106:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void fsm_sconfreq (fsm *, int);
+ 107:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 108:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** #define PROTO_NAME(f) ((f)->callbacks->proto_name)
+ 109:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 110:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 111:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /******************************/
+ 112:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** PUBLIC DATA STRUCTURES ***/
+ 113:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /******************************/
+ 114:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 115:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 116:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*****************************/
+ 117:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** LOCAL DATA STRUCTURES ***/
+ 118:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*****************************/
+ 119:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** int peer_mru[NUM_PPP];
+ 120:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 121:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 122:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /***********************************/
+ 123:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** PUBLIC FUNCTION DEFINITIONS ***/
+ 124:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /***********************************/
+ 125:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 126:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 127:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_init - Initialize fsm.
+ 128:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+ 129:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Initialize fsm state.
+ 130:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 131:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 132:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_init(fsm *f)
+ 133:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+  19              		.loc 1 133 0
+  20              	.LVL0:
+ 134:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->state = LS_INITIAL;
+  21              		.loc 1 134 0
+  22 0000 0022     		mov	r2, #0
+  23 0002 8260     		str	r2, [r0, #8]
+ 135:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->flags = 0;
+  24              		.loc 1 135 0
+  25 0004 C260     		str	r2, [r0, #12]
+ 136:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->id = 0;        /* XXX Start with random id? */
+  26              		.loc 1 136 0
+  27 0006 0274     		strb	r2, [r0, #16]
+ 137:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->timeouttime = FSM_DEFTIMEOUT;
+  28              		.loc 1 137 0
+  29 0008 0A23     		mov	r3, #10
+  30 000a 4361     		str	r3, [r0, #20]
+ 138:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->maxconfreqtransmits = FSM_DEFMAXCONFREQS;
+  31              		.loc 1 138 0
+  32 000c 8361     		str	r3, [r0, #24]
+ 139:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->maxtermtransmits = FSM_DEFMAXTERMREQS;
+  33              		.loc 1 139 0
+  34 000e 0223     		mov	r3, #2
+  35 0010 0362     		str	r3, [r0, #32]
+ 140:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->maxnakloops = FSM_DEFMAXNAKLOOPS;
+  36              		.loc 1 140 0
+  37 0012 0523     		mov	r3, #5
+  38 0014 8362     		str	r3, [r0, #40]
+ 141:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->term_reason_len = 0;
+  39              		.loc 1 141 0
+  40 0016 4263     		str	r2, [r0, #52]
+ 142:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+  41              		.loc 1 142 0
+  42              		@ sp needed for prologue
+  43 0018 7047     		bx	lr
+  44              	.LFE290:
+  46              		.section	.rodata.str1.4,"aMS",%progbits,1
+  47              		.align	2
+  48              	.LC2:
+  49 0000 25733A20 		.ascii	"%s: Down event in state %d (%s)!\012\000"
+  49      446F776E 
+  49      20657665 
+  49      6E742069 
+  49      6E207374 
+  50 0022 0000     		.align	2
+  51              	.LC5:
+  52 0024 25733A20 		.ascii	"%s: lowerdown state %d (%s) -> %d (%s)\012\000"
+  52      6C6F7765 
+  52      72646F77 
+  52      6E207374 
+  52      61746520 
+  53              		.text
+  54 001a C046     		.align	2
+  55              		.global	fsm_lowerdown
+  56              		.code	16
+  57              		.thumb_func
+  59              	fsm_lowerdown:
+  60              	.LFB292:
+ 143:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 144:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 145:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 146:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_lowerup - The lower layer is up.
+ 147:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 148:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 149:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_lowerup(fsm *f)
+ 150:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 151:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int oldState = f->state;
+ 152:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 153:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   LWIP_UNUSED_ARG(oldState);
+ 154:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 155:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+ 156:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_INITIAL:
+ 157:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSED;
+ 158:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 159:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 160:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STARTING:
+ 161:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->flags & OPT_SILENT ) {
+ 162:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_STOPPED;
+ 163:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 164:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         /* Send an initial configure-request */
+ 165:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sconfreq(f, 0);
+ 166:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_REQSENT;
+ 167:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 168:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     break;
+ 169:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 170:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     default:
+ 171:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       FSMDEBUG((LOG_INFO, "%s: Up event in state %d (%s)!\n",
+ 172:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 173:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 174:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 175:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "%s: lowerup state %d (%s) -> %d (%s)\n",
+ 176:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       PROTO_NAME(f), oldState, ppperr_strerr[oldState], f->state, ppperr_strerr[f->state]));
+ 177:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 178:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 179:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 180:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 181:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_lowerdown - The lower layer is down.
+ 182:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+ 183:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Cancel all timeouts and inform upper layers.
+ 184:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 185:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 186:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_lowerdown(fsm *f)
+ 187:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+  61              		.loc 1 187 0
+  62 001c 30B5     		push	{r4, r5, lr}
+  63              	.LCFI0:
+  64              	.LVL1:
+  65 001e 83B0     		sub	sp, sp, #12
+  66              	.LCFI1:
+  67 0020 041C     		mov	r4, r0
+ 188:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int oldState = f->state;
+  68              		.loc 1 188 0
+  69 0022 8568     		ldr	r5, [r0, #8]
+  70              	.LVL2:
+ 189:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 190:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   LWIP_UNUSED_ARG(oldState);
+ 191:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 192:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+  71              		.loc 1 192 0
+  72 0024 092D     		cmp	r5, #9
+  73 0026 26D8     		bhi	.L4
+  74 0028 AB00     		lsl	r3, r5, #2
+  75 002a 224A     		ldr	r2, .L14
+  76 002c D358     		ldr	r3, [r2, r3]
+  77 002e 9F46     		mov	pc, r3
+  78              		.section	.rodata
+  79              		.align	2
+  80              	.L10:
+  81 0000 76000000 		.word	.L4
+  82 0004 76000000 		.word	.L4
+  83 0008 30000000 		.word	.L5
+  84 000c 36000000 		.word	.L6
+  85 0010 48000000 		.word	.L7
+  86 0014 56000000 		.word	.L8
+  87 0018 56000000 		.word	.L8
+  88 001c 56000000 		.word	.L8
+  89 0020 56000000 		.word	.L8
+  90 0024 64000000 		.word	.L9
+  91              		.text
+  92              	.L5:
+ 193:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 194:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_INITIAL;
+  93              		.loc 1 194 0
+  94 0030 0023     		mov	r3, #0
+  95 0032 8360     		str	r3, [r0, #8]
+  96 0034 2AE0     		b	.L11
+  97              	.L6:
+ 195:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 196:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 197:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 198:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STARTING;
+  98              		.loc 1 198 0
+  99 0036 0123     		mov	r3, #1
+ 100 0038 8360     		str	r3, [r0, #8]
+ 199:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->starting ) {
+ 101              		.loc 1 199 0
+ 102 003a C36A     		ldr	r3, [r0, #44]
+ 103 003c 5B6A     		ldr	r3, [r3, #36]
+ 104 003e 002B     		cmp	r3, #0
+ 105 0040 24D0     		beq	.L11
+ 200:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->starting)(f);
+ 106              		.loc 1 200 0
+ 107 0042 00F008FE 		bl	.L16
+ 108              	.LVL3:
+ 109 0046 21E0     		b	.L11
+ 110              	.LVL4:
+ 111              	.L7:
+ 201:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 202:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 203:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 204:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 205:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_INITIAL;
+ 112              		.loc 1 205 0
+ 113 0048 0023     		mov	r3, #0
+ 114 004a 8360     		str	r3, [r0, #8]
+ 206:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 115              		.loc 1 206 0
+ 116 004c 1A48     		ldr	r0, .L14+4
+ 117              	.LVL5:
+ 118 004e 211C     		mov	r1, r4
+ 119 0050 FFF7FEFF 		bl	sys_untimeout
+ 120 0054 1AE0     		b	.L11
+ 121              	.LVL6:
+ 122              	.L8:
+ 207:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 208:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 209:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 210:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 211:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 212:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 213:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STARTING;
+ 123              		.loc 1 213 0
+ 124 0056 0123     		mov	r3, #1
+ 125 0058 8360     		str	r3, [r0, #8]
+ 214:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 126              		.loc 1 214 0
+ 127 005a 1748     		ldr	r0, .L14+4
+ 128              	.LVL7:
+ 129 005c 211C     		mov	r1, r4
+ 130 005e FFF7FEFF 		bl	sys_untimeout
+ 131 0062 13E0     		b	.L11
+ 132              	.LVL8:
+ 133              	.L9:
+ 215:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 216:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 217:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 218:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->down ) {
+ 134              		.loc 1 218 0
+ 135 0064 C36A     		ldr	r3, [r0, #44]
+ 136 0066 1B6A     		ldr	r3, [r3, #32]
+ 137 0068 002B     		cmp	r3, #0
+ 138 006a 01D0     		beq	.L12
+ 219:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);
+ 139              		.loc 1 219 0
+ 140 006c 00F0F3FD 		bl	.L16
+ 141              	.LVL9:
+ 142              	.L12:
+ 220:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 221:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STARTING;
+ 143              		.loc 1 221 0
+ 144 0070 0123     		mov	r3, #1
+ 145 0072 A360     		str	r3, [r4, #8]
+ 146 0074 0AE0     		b	.L11
+ 147              	.LVL10:
+ 148              	.L4:
+ 222:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 223:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 224:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     default:
+ 225:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       FSMDEBUG((LOG_INFO, "%s: Down event in state %d (%s)!\n",
+ 149              		.loc 1 225 0
+ 150 0076 1149     		ldr	r1, .L14+8
+ 151 0078 E36A     		ldr	r3, [r4, #44]
+ 152 007a 9A6B     		ldr	r2, [r3, #56]
+ 153 007c 1048     		ldr	r0, .L14+12
+ 154              	.LVL11:
+ 155 007e AB00     		lsl	r3, r5, #2
+ 156 0080 1B58     		ldr	r3, [r3, r0]
+ 157 0082 0093     		str	r3, [sp]
+ 158 0084 0520     		mov	r0, #5
+ 159 0086 2B1C     		mov	r3, r5
+ 160 0088 FFF7FEFF 		bl	ppp_trace
+ 161              	.LVL12:
+ 162              	.L11:
+ 226:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 227:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 228:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 229:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "%s: lowerdown state %d (%s) -> %d (%s)\n",
+ 163              		.loc 1 229 0
+ 164 008c A068     		ldr	r0, [r4, #8]
+ 165 008e 0D49     		ldr	r1, .L14+16
+ 166 0090 E36A     		ldr	r3, [r4, #44]
+ 167 0092 9A6B     		ldr	r2, [r3, #56]
+ 168 0094 0A4C     		ldr	r4, .L14+12
+ 169              	.LVL13:
+ 170 0096 AB00     		lsl	r3, r5, #2
+ 171 0098 1B59     		ldr	r3, [r3, r4]
+ 172 009a 0093     		str	r3, [sp]
+ 173 009c 0190     		str	r0, [sp, #4]
+ 174 009e 8000     		lsl	r0, r0, #2
+ 175 00a0 0359     		ldr	r3, [r0, r4]
+ 176 00a2 0293     		str	r3, [sp, #8]
+ 177 00a4 0520     		mov	r0, #5
+ 178 00a6 2B1C     		mov	r3, r5
+ 179 00a8 FFF7FEFF 		bl	ppp_trace
+ 230:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       PROTO_NAME(f), oldState, ppperr_strerr[oldState], f->state, ppperr_strerr[f->state]));
+ 231:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 180              		.loc 1 231 0
+ 181 00ac 03B0     		add	sp, sp, #12
+ 182              		@ sp needed for prologue
+ 183              	.LVL14:
+ 184 00ae 30BC     		pop	{r4, r5}
+ 185 00b0 01BC     		pop	{r0}
+ 186 00b2 0047     		bx	r0
+ 187              	.L15:
+ 188              		.align	2
+ 189              	.L14:
+ 190 00b4 00000000 		.word	.L10
+ 191 00b8 00000000 		.word	fsm_timeout
+ 192 00bc 00000000 		.word	.LC2
+ 193 00c0 38010000 		.word	ppperr_strerr
+ 194 00c4 24000000 		.word	.LC5
+ 195              	.LFE292:
+ 197              		.section	.rodata.str1.4
+ 198              		.align	2
+ 199              	.LC9:
+ 200 004c 66736D5F 		.ascii	"fsm_sdata(%s): Sent code %d,%d,%d.\012\000"
+ 200      73646174 
+ 200      61282573 
+ 200      293A2053 
+ 200      656E7420 
+ 201              		.text
+ 202              		.align	2
+ 203              		.global	fsm_sdata
+ 204              		.code	16
+ 205              		.thumb_func
+ 207              	fsm_sdata:
+ 208              	.LFB295:
+ 232:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 233:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 234:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 235:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_open - Link is allowed to come up.
+ 236:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 237:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 238:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_open(fsm *f)
+ 239:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 240:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int oldState = f->state;
+ 241:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 242:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   LWIP_UNUSED_ARG(oldState);
+ 243:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 244:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+ 245:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_INITIAL:
+ 246:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STARTING;
+ 247:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->starting ) {
+ 248:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->starting)(f);
+ 249:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 250:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 251:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 252:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 253:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->flags & OPT_SILENT ) {
+ 254:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_STOPPED;
+ 255:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 256:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         /* Send an initial configure-request */
+ 257:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sconfreq(f, 0);
+ 258:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_REQSENT;
+ 259:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 260:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 261:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 262:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 263:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STOPPING;
+ 264:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* fall through */
+ 265:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 266:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 267:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->flags & OPT_RESTART ) {
+ 268:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_lowerdown(f);
+ 269:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_lowerup(f);
+ 270:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 271:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 272:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 273:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 274:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "%s: open state %d (%s) -> %d (%s)\n",
+ 275:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       PROTO_NAME(f), oldState, ppperr_strerr[oldState], f->state, ppperr_strerr[f->state]));
+ 276:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 277:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 278:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 279:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 280:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_close - Start closing connection.
+ 281:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+ 282:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Cancel timeouts and either initiate close or possibly go directly to
+ 283:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * the LS_CLOSED state.
+ 284:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 285:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 286:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_close(fsm *f, char *reason)
+ 287:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 288:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int oldState = f->state;
+ 289:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 290:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   LWIP_UNUSED_ARG(oldState);
+ 291:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 292:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->term_reason = reason;
+ 293:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->term_reason_len = (reason == NULL? 0: strlen(reason));
+ 294:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+ 295:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STARTING:
+ 296:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_INITIAL;
+ 297:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 298:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 299:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSED;
+ 300:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 301:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 302:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSING;
+ 303:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 304:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 305:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 306:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 307:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 308:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 309:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->state != LS_OPENED ) {
+ 310:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 311:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else if( f->callbacks->down ) {
+ 312:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers we're down */
+ 313:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 314:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Init restart counter, send Terminate-Request */
+ 315:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->retransmits = f->maxtermtransmits;
+ 316:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sdata(f, TERMREQ, f->reqid = ++f->id,
+ 317:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****             (u_char *) f->term_reason, f->term_reason_len);
+ 318:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       TIMEOUT(fsm_timeout, f, f->timeouttime);
+ 319:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       --f->retransmits;
+ 320:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 321:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSING;
+ 322:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 323:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 324:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 325:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "%s: close reason=%s state %d (%s) -> %d (%s)\n",
+ 326:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       PROTO_NAME(f), reason, oldState, ppperr_strerr[oldState], f->state, ppperr_strerr[f->state]))
+ 327:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 328:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 329:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 330:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 331:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_sdata - Send some data.
+ 332:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+ 333:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Used for all packets sent to our peer by this module.
+ 334:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 335:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 336:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_sdata( fsm *f, u_char code, u_char id, u_char *data, int datalen)
+ 337:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 209              		.loc 1 337 0
+ 210 00c8 F0B5     		push	{r4, r5, r6, r7, lr}
+ 211              	.LCFI2:
+ 212 00ca 5746     		mov	r7, sl
+ 213 00cc 4E46     		mov	r6, r9
+ 214 00ce 4546     		mov	r5, r8
+ 215 00d0 E0B4     		push	{r5, r6, r7}
+ 216              	.LCFI3:
+ 217              	.LVL15:
+ 218 00d2 82B0     		sub	sp, sp, #8
+ 219              	.LCFI4:
+ 220 00d4 061C     		mov	r6, r0
+ 221 00d6 1F1C     		mov	r7, r3
+ 222 00d8 0A9C     		ldr	r4, [sp, #40]
+ 223 00da 0906     		lsl	r1, r1, #24
+ 224              	.LVL16:
+ 225 00dc 090E     		lsr	r1, r1, #24
+ 226 00de 8946     		mov	r9, r1
+ 227              	.LVL17:
+ 228 00e0 1206     		lsl	r2, r2, #24
+ 229              	.LVL18:
+ 230 00e2 120E     		lsr	r2, r2, #24
+ 231 00e4 9246     		mov	sl, r2
+ 232              	.LVL19:
+ 338:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   u_char *outp;
+ 339:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int outlen;
+ 340:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 341:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /* Adjust length to be smaller than MTU */
+ 342:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   outp = outpacket_buf[f->unit];
+ 233              		.loc 1 342 0
+ 234 00e6 2749     		ldr	r1, .L21
+ 235 00e8 8846     		mov	r8, r1
+ 236 00ea 0268     		ldr	r2, [r0]
+ 237 00ec 5300     		lsl	r3, r2, #1
+ 238              	.LVL20:
+ 239 00ee 9B18     		add	r3, r3, r2
+ 240 00f0 1B01     		lsl	r3, r3, #4
+ 241 00f2 9B1A     		sub	r3, r3, r2
+ 242 00f4 5B01     		lsl	r3, r3, #5
+ 243 00f6 CD18     		add	r5, r1, r3
+ 244              	.LVL21:
+ 343:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (datalen > peer_mru[f->unit] - (int)HEADERLEN) {
+ 245              		.loc 1 343 0
+ 246 00f8 234B     		ldr	r3, .L21+4
+ 247 00fa 9200     		lsl	r2, r2, #2
+ 248 00fc D258     		ldr	r2, [r2, r3]
+ 249 00fe 131F     		sub	r3, r2, #4
+ 250 0100 A342     		cmp	r3, r4
+ 251 0102 00DA     		bge	.L18
+ 252              	.LVL22:
+ 344:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     datalen = peer_mru[f->unit] - HEADERLEN;
+ 253              		.loc 1 344 0
+ 254 0104 1C1C     		mov	r4, r3
+ 255              	.LVL23:
+ 256              	.L18:
+ 345:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 346:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (datalen && data != outp + PPP_HDRLEN + HEADERLEN) {
+ 257              		.loc 1 346 0
+ 258 0106 002C     		cmp	r4, #0
+ 259 0108 08D0     		beq	.L19
+ 260 010a 2B1C     		mov	r3, r5
+ 261 010c 0833     		add	r3, r3, #8
+ 262 010e 9F42     		cmp	r7, r3
+ 263 0110 04D0     		beq	.L19
+ 347:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     BCOPY(data, outp + PPP_HDRLEN + HEADERLEN, datalen);
+ 264              		.loc 1 347 0
+ 265 0112 181C     		mov	r0, r3
+ 266              	.LVL24:
+ 267 0114 391C     		mov	r1, r7
+ 268 0116 221C     		mov	r2, r4
+ 269 0118 FFF7FEFF 		bl	memcpy
+ 270              	.LVL25:
+ 271              	.L19:
+ 348:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 349:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   outlen = datalen + HEADERLEN;
+ 272              		.loc 1 349 0
+ 273 011c 0434     		add	r4, r4, #4
+ 274              	.LVL26:
+ 350:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   MAKEHEADER(outp, f->protocol);
+ 275              		.loc 1 350 0
+ 276 011e 0123     		mov	r3, #1
+ 277 0120 5B42     		neg	r3, r3
+ 278 0122 2B70     		strb	r3, [r5]
+ 279 0124 6B1C     		add	r3, r5, #1
+ 280              	.LVL27:
+ 281 0126 0322     		mov	r2, #3
+ 282 0128 1A70     		strb	r2, [r3]
+ 283 012a 0133     		add	r3, r3, #1
+ 284              	.LVL28:
+ 285 012c B288     		ldrh	r2, [r6, #4]
+ 286 012e 120A     		lsr	r2, r2, #8
+ 287 0130 1A70     		strb	r2, [r3]
+ 288 0132 0133     		add	r3, r3, #1
+ 289              	.LVL29:
+ 290 0134 B288     		ldrh	r2, [r6, #4]
+ 291 0136 1A70     		strb	r2, [r3]
+ 292 0138 0133     		add	r3, r3, #1
+ 293              	.LVL30:
+ 351:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   PUTCHAR(code, outp);
+ 294              		.loc 1 351 0
+ 295 013a 4A46     		mov	r2, r9
+ 296              	.LVL31:
+ 297 013c 1A70     		strb	r2, [r3]
+ 298 013e 0133     		add	r3, r3, #1
+ 299              	.LVL32:
+ 352:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   PUTCHAR(id, outp);
+ 300              		.loc 1 352 0
+ 301 0140 5146     		mov	r1, sl
+ 302              	.LVL33:
+ 303 0142 1970     		strb	r1, [r3]
+ 304 0144 0133     		add	r3, r3, #1
+ 305              	.LVL34:
+ 353:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   PUTSHORT(outlen, outp);
+ 306              		.loc 1 353 0
+ 307 0146 2212     		asr	r2, r4, #8
+ 308 0148 1A70     		strb	r2, [r3]
+ 309 014a 5C70     		strb	r4, [r3, #1]
+ 354:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   pppWrite(f->unit, outpacket_buf[f->unit], outlen + PPP_HDRLEN);
+ 310              		.loc 1 354 0
+ 311 014c 3068     		ldr	r0, [r6]
+ 312 014e 4100     		lsl	r1, r0, #1
+ 313 0150 0918     		add	r1, r1, r0
+ 314 0152 0901     		lsl	r1, r1, #4
+ 315 0154 091A     		sub	r1, r1, r0
+ 316 0156 4901     		lsl	r1, r1, #5
+ 317 0158 4144     		add	r1, r1, r8
+ 318 015a 221D     		add	r2, r4, #4
+ 319 015c FFF7FEFF 		bl	pppWrite
+ 320              	.LVL35:
+ 355:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_sdata(%s): Sent code %d,%d,%d.\n",
+ 321              		.loc 1 355 0
+ 322 0160 0A49     		ldr	r1, .L21+8
+ 323 0162 F36A     		ldr	r3, [r6, #44]
+ 324 0164 9A6B     		ldr	r2, [r3, #56]
+ 325 0166 5346     		mov	r3, sl
+ 326              	.LVL36:
+ 327 0168 0093     		str	r3, [sp]
+ 328 016a 0194     		str	r4, [sp, #4]
+ 329 016c 0520     		mov	r0, #5
+ 330 016e 4B46     		mov	r3, r9
+ 331              	.LVL37:
+ 332 0170 FFF7FEFF 		bl	ppp_trace
+ 356:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), code, id, outlen));
+ 357:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 333              		.loc 1 357 0
+ 334 0174 02B0     		add	sp, sp, #8
+ 335              		@ sp needed for prologue
+ 336              	.LVL38:
+ 337              	.LVL39:
+ 338              	.LVL40:
+ 339              	.LVL41:
+ 340              	.LVL42:
+ 341 0176 1CBC     		pop	{r2, r3, r4}
+ 342 0178 9046     		mov	r8, r2
+ 343 017a 9946     		mov	r9, r3
+ 344 017c A246     		mov	sl, r4
+ 345 017e F0BC     		pop	{r4, r5, r6, r7}
+ 346 0180 01BC     		pop	{r0}
+ 347 0182 0047     		bx	r0
+ 348              	.L22:
+ 349              		.align	2
+ 350              	.L21:
+ 351 0184 00000000 		.word	outpacket_buf
+ 352 0188 00000000 		.word	peer_mru
+ 353 018c 4C000000 		.word	.LC9
+ 354              	.LFE295:
+ 356              		.section	.rodata.str1.4
+ 357              		.align	2
+ 358              	.LC13:
+ 359 0070 25733A20 		.ascii	"%s: Protocol-reject event in state %d (%s)!\012\000"
+ 359      50726F74 
+ 359      6F636F6C 
+ 359      2D72656A 
+ 359      65637420 
+ 360              		.text
+ 361              		.align	2
+ 362              		.global	fsm_protreject
+ 363              		.code	16
+ 364              		.thumb_func
+ 366              	fsm_protreject:
+ 367              	.LFB297:
+ 358:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 359:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 360:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 361:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_input - Input packet.
+ 362:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 363:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 364:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_input(fsm *f, u_char *inpacket, int l)
+ 365:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 366:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   u_char *inp = inpacket;
+ 367:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   u_char code, id;
+ 368:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int len;
+ 369:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 370:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /*
+ 371:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   * Parse header (code, id and length).
+ 372:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   * If packet too short, drop it.
+ 373:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   */
+ 374:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (l < HEADERLEN) {
+ 375:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_WARNING, "fsm_input(%x): Rcvd short header.\n",
+ 376:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           f->protocol));
+ 377:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 378:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 379:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   GETCHAR(code, inp);
+ 380:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   GETCHAR(id, inp);
+ 381:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   GETSHORT(len, inp);
+ 382:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (len < HEADERLEN) {
+ 383:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "fsm_input(%x): Rcvd illegal length.\n",
+ 384:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->protocol));
+ 385:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 386:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 387:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (len > l) {
+ 388:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "fsm_input(%x): Rcvd short packet.\n",
+ 389:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->protocol));
+ 390:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 391:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 392:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   len -= HEADERLEN;    /* subtract header length */
+ 393:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 394:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( f->state == LS_INITIAL || f->state == LS_STARTING ) {
+ 395:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "fsm_input(%x): Rcvd packet in state %d (%s).\n",
+ 396:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->protocol, f->state, ppperr_strerr[f->state]));
+ 397:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 398:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 399:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_input(%s):%d,%d,%d\n", PROTO_NAME(f), code, id, l));
+ 400:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /*
+ 401:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****    * Action depends on code.
+ 402:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****    */
+ 403:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (code) {
+ 404:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case CONFREQ:
+ 405:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rconfreq(f, id, inp, len);
+ 406:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 407:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 408:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case CONFACK:
+ 409:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rconfack(f, id, inp, len);
+ 410:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 411:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 412:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case CONFNAK:
+ 413:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case CONFREJ:
+ 414:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rconfnakrej(f, code, id, inp, len);
+ 415:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 416:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 417:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case TERMREQ:
+ 418:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rtermreq(f, id, inp, len);
+ 419:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 420:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 421:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case TERMACK:
+ 422:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rtermack(f);
+ 423:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 424:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 425:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case CODEREJ:
+ 426:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_rcoderej(f, inp, len);
+ 427:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 428:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 429:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     default:
+ 430:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( !f->callbacks->extcode ||
+ 431:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           !(*f->callbacks->extcode)(f, code, id, inp, len) ) {
+ 432:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sdata(f, CODEREJ, ++f->id, inpacket, len + HEADERLEN);
+ 433:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 434:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 435:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 436:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 437:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 438:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 439:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 440:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_protreject - Peer doesn't speak this protocol.
+ 441:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  *
+ 442:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * Treat this as a catastrophic error (RXJ-).
+ 443:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 444:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** void
+ 445:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_protreject(fsm *f)
+ 446:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 368              		.loc 1 446 0
+ 369 0190 30B5     		push	{r4, r5, lr}
+ 370              	.LCFI5:
+ 371              	.LVL43:
+ 372 0192 81B0     		sub	sp, sp, #4
+ 373              	.LCFI6:
+ 374 0194 051C     		mov	r5, r0
+ 447:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+ 375              		.loc 1 447 0
+ 376 0196 8468     		ldr	r4, [r0, #8]
+ 377 0198 092C     		cmp	r4, #9
+ 378 019a 49D8     		bhi	.L24
+ 379 019c A300     		lsl	r3, r4, #2
+ 380 019e 2C4A     		ldr	r2, .L34
+ 381 01a0 D358     		ldr	r3, [r2, r3]
+ 382 01a2 9F46     		mov	pc, r3
+ 383              		.section	.rodata
+ 384              		.align	2
+ 385              	.L30:
+ 386 0028 30020000 		.word	.L24
+ 387 002c 30020000 		.word	.L24
+ 388 0030 AC010000 		.word	.L25
+ 389 0034 C8010000 		.word	.L26
+ 390 0038 A4010000 		.word	.L27
+ 391 003c C0010000 		.word	.L28
+ 392 0040 C0010000 		.word	.L28
+ 393 0044 C0010000 		.word	.L28
+ 394 0048 C0010000 		.word	.L28
+ 395 004c DC010000 		.word	.L29
+ 396              		.text
+ 397              	.L27:
+ 448:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 449:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 398              		.loc 1 449 0
+ 399 01a4 2B48     		ldr	r0, .L34+4
+ 400              	.LVL44:
+ 401 01a6 291C     		mov	r1, r5
+ 402 01a8 FFF7FEFF 		bl	sys_untimeout
+ 403              	.LVL45:
+ 404              	.L25:
+ 450:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* fall through */
+ 451:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 452:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSED;
+ 405              		.loc 1 452 0
+ 406 01ac 0223     		mov	r3, #2
+ 407 01ae AB60     		str	r3, [r5, #8]
+ 453:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->finished ) {
+ 408              		.loc 1 453 0
+ 409 01b0 EB6A     		ldr	r3, [r5, #44]
+ 410 01b2 9B6A     		ldr	r3, [r3, #40]
+ 411 01b4 002B     		cmp	r3, #0
+ 412 01b6 46D0     		beq	.L33
+ 454:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->finished)(f);
+ 413              		.loc 1 454 0
+ 414 01b8 281C     		mov	r0, r5
+ 415 01ba 00F04CFD 		bl	.L16
+ 416 01be 42E0     		b	.L33
+ 417              	.LVL46:
+ 418              	.L28:
+ 455:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 456:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 457:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 458:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 459:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 460:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 461:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 462:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 419              		.loc 1 462 0
+ 420 01c0 2448     		ldr	r0, .L34+4
+ 421              	.LVL47:
+ 422 01c2 291C     		mov	r1, r5
+ 423 01c4 FFF7FEFF 		bl	sys_untimeout
+ 424              	.LVL48:
+ 425              	.L26:
+ 463:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* fall through */
+ 464:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 465:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STOPPED;
+ 426              		.loc 1 465 0
+ 427 01c8 0323     		mov	r3, #3
+ 428 01ca AB60     		str	r3, [r5, #8]
+ 466:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->finished ) {
+ 429              		.loc 1 466 0
+ 430 01cc EB6A     		ldr	r3, [r5, #44]
+ 431 01ce 9B6A     		ldr	r3, [r3, #40]
+ 432 01d0 002B     		cmp	r3, #0
+ 433 01d2 38D0     		beq	.L33
+ 467:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->finished)(f);
+ 434              		.loc 1 467 0
+ 435 01d4 281C     		mov	r0, r5
+ 436 01d6 00F03EFD 		bl	.L16
+ 437 01da 34E0     		b	.L33
+ 438              	.LVL49:
+ 439              	.L29:
+ 468:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 469:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 470:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 471:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 472:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->down ) {
+ 440              		.loc 1 472 0
+ 441 01dc C36A     		ldr	r3, [r0, #44]
+ 442 01de 1B6A     		ldr	r3, [r3, #32]
+ 443 01e0 002B     		cmp	r3, #0
+ 444 01e2 01D0     		beq	.L32
+ 473:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);
+ 445              		.loc 1 473 0
+ 446 01e4 00F037FD 		bl	.L16
+ 447              	.LVL50:
+ 448              	.L32:
+ 474:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 475:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Init restart counter, send Terminate-Request */
+ 476:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->retransmits = f->maxtermtransmits;
+ 449              		.loc 1 476 0
+ 450 01e8 2B6A     		ldr	r3, [r5, #32]
+ 451 01ea EB61     		str	r3, [r5, #28]
+ 477:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sdata(f, TERMREQ, f->reqid = ++f->id,
+ 452              		.loc 1 477 0
+ 453 01ec 2A7C     		ldrb	r2, [r5, #16]
+ 454 01ee 0132     		add	r2, r2, #1
+ 455 01f0 1206     		lsl	r2, r2, #24
+ 456 01f2 120E     		lsr	r2, r2, #24
+ 457 01f4 2A74     		strb	r2, [r5, #16]
+ 458 01f6 6A74     		strb	r2, [r5, #17]
+ 459 01f8 2B6B     		ldr	r3, [r5, #48]
+ 460 01fa 696B     		ldr	r1, [r5, #52]
+ 461 01fc 0091     		str	r1, [sp]
+ 462 01fe 281C     		mov	r0, r5
+ 463 0200 0521     		mov	r1, #5
+ 464 0202 FFF7FEFF 		bl	fsm_sdata
+ 478:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****             (u_char *) f->term_reason, f->term_reason_len);
+ 479:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       TIMEOUT(fsm_timeout, f, f->timeouttime);
+ 465              		.loc 1 479 0
+ 466 0206 134C     		ldr	r4, .L34+4
+ 467 0208 201C     		mov	r0, r4
+ 468 020a 291C     		mov	r1, r5
+ 469 020c FFF7FEFF 		bl	sys_untimeout
+ 470 0210 6B69     		ldr	r3, [r5, #20]
+ 471 0212 5801     		lsl	r0, r3, #5
+ 472 0214 C01A     		sub	r0, r0, r3
+ 473 0216 8000     		lsl	r0, r0, #2
+ 474 0218 C018     		add	r0, r0, r3
+ 475 021a C000     		lsl	r0, r0, #3
+ 476 021c 211C     		mov	r1, r4
+ 477 021e 2A1C     		mov	r2, r5
+ 478 0220 FFF7FEFF 		bl	sys_timeout
+ 480:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       --f->retransmits;
+ 479              		.loc 1 480 0
+ 480 0224 EB69     		ldr	r3, [r5, #28]
+ 481 0226 013B     		sub	r3, r3, #1
+ 482 0228 EB61     		str	r3, [r5, #28]
+ 481:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STOPPING;
+ 483              		.loc 1 482 0
+ 484 022a 0523     		mov	r3, #5
+ 485 022c AB60     		str	r3, [r5, #8]
+ 486 022e 0AE0     		b	.L33
+ 487              	.LVL51:
+ 488              	.L24:
+ 483:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 484:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 485:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     default:
+ 486:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       FSMDEBUG((LOG_INFO, "%s: Protocol-reject event in state %d (%s)!\n",
+ 489              		.loc 1 486 0
+ 490 0230 0949     		ldr	r1, .L34+8
+ 491 0232 EB6A     		ldr	r3, [r5, #44]
+ 492 0234 9A6B     		ldr	r2, [r3, #56]
+ 493 0236 0948     		ldr	r0, .L34+12
+ 494              	.LVL52:
+ 495 0238 A300     		lsl	r3, r4, #2
+ 496 023a 1B58     		ldr	r3, [r3, r0]
+ 497 023c 0093     		str	r3, [sp]
+ 498 023e 0520     		mov	r0, #5
+ 499 0240 231C     		mov	r3, r4
+ 500 0242 FFF7FEFF 		bl	ppp_trace
+ 501              	.LVL53:
+ 502              	.L33:
+ 487:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****             PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 488:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 489:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 503              		.loc 1 489 0
+ 504 0246 01B0     		add	sp, sp, #4
+ 505              		@ sp needed for prologue
+ 506              	.LVL54:
+ 507 0248 30BC     		pop	{r4, r5}
+ 508 024a 01BC     		pop	{r0}
+ 509 024c 0047     		bx	r0
+ 510              	.L35:
+ 511 024e C046     		.align	2
+ 512              	.L34:
+ 513 0250 28000000 		.word	.L30
+ 514 0254 00000000 		.word	fsm_timeout
+ 515 0258 70000000 		.word	.LC13
+ 516 025c 38010000 		.word	ppperr_strerr
+ 517              	.LFE297:
+ 519              		.section	.rodata.str1.4
+ 520 009d 000000   		.align	2
+ 521              	.LC19:
+ 522 00a0 25733A20 		.ascii	"%s: sending Configure-Request, id %d\012\000"
+ 522      73656E64 
+ 522      696E6720 
+ 522      436F6E66 
+ 522      69677572 
+ 523              		.text
+ 524              		.align	2
+ 525              		.code	16
+ 526              		.thumb_func
+ 528              	fsm_sconfreq:
+ 529              	.LFB305:
+ 490:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 491:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 492:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 493:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 494:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 495:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /**********************************/
+ 496:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*** LOCAL FUNCTION DEFINITIONS ***/
+ 497:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /**********************************/
+ 498:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 499:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 500:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_timeout - Timeout expired.
+ 501:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 502:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 503:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_timeout(void *arg)
+ 504:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 505:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   fsm *f = (fsm *) arg;
+ 506:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 507:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (f->state) {
+ 508:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 509:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 510:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->retransmits <= 0 ) {
+ 511:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_WARNING, "%s: timeout sending Terminate-Request state=%d (%s)\n",
+ 512:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****              PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 513:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         /*
+ 514:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****          * We've waited for an ack long enough.  Peer probably heard us.
+ 515:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****          */
+ 516:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = (f->state == LS_CLOSING)? LS_CLOSED: LS_STOPPED;
+ 517:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         if( f->callbacks->finished ) {
+ 518:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           (*f->callbacks->finished)(f);
+ 519:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         }
+ 520:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 521:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_WARNING, "%s: timeout resending Terminate-Requests state=%d (%s)\n",
+ 522:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****              PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 523:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         /* Send Terminate-Request */
+ 524:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sdata(f, TERMREQ, f->reqid = ++f->id,
+ 525:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****             (u_char *) f->term_reason, f->term_reason_len);
+ 526:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         TIMEOUT(fsm_timeout, f, f->timeouttime);
+ 527:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         --f->retransmits;
+ 528:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 529:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 530:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 531:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 532:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 533:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 534:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->retransmits <= 0) {
+ 535:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_WARNING, "%s: timeout sending Config-Requests state=%d (%s)\n",
+ 536:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****          PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 537:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_STOPPED;
+ 538:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         if( (f->flags & OPT_PASSIVE) == 0 && f->callbacks->finished ) {
+ 539:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           (*f->callbacks->finished)(f);
+ 540:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         }
+ 541:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 542:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_WARNING, "%s: timeout resending Config-Request state=%d (%s)\n",
+ 543:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****          PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 544:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         /* Retransmit the configure-request */
+ 545:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         if (f->callbacks->retransmit) {
+ 546:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           (*f->callbacks->retransmit)(f);
+ 547:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         }
+ 548:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sconfreq(f, 1);    /* Re-send Configure-Request */
+ 549:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         if( f->state == LS_ACKRCVD ) {
+ 550:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           f->state = LS_REQSENT;
+ 551:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         }
+ 552:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 553:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 554:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 555:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     default:
+ 556:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       FSMDEBUG((LOG_INFO, "%s: UNHANDLED timeout event in state %d (%s)!\n",
+ 557:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 558:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 559:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 560:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 561:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 562:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 563:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rconfreq - Receive Configure-Request.
+ 564:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 565:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 566:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rconfreq(fsm *f, u_char id, u_char *inp, int len)
+ 567:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 568:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int code, reject_if_disagree;
+ 569:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 570:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rconfreq(%s): Rcvd id %d state=%d (%s)\n",
+ 571:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), id, f->state, ppperr_strerr[f->state]));
+ 572:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch( f->state ) {
+ 573:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 574:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Go away, we're closed */
+ 575:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sdata(f, TERMACK, id, NULL, 0);
+ 576:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       return;
+ 577:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 578:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 579:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       return;
+ 580:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 581:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 582:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Go down and restart negotiation */
+ 583:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->down ) {
+ 584:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers */
+ 585:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 586:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);    /* Send initial Configure-Request */
+ 587:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 588:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 589:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 590:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Negotiation started by our peer */
+ 591:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);    /* Send initial Configure-Request */
+ 592:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 593:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 594:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 595:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 596:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /*
+ 597:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   * Pass the requested configuration options
+ 598:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   * to protocol-specific code for checking.
+ 599:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   */
+ 600:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (f->callbacks->reqci) {    /* Check CI */
+ 601:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     reject_if_disagree = (f->nakloops >= f->maxnakloops);
+ 602:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     code = (*f->callbacks->reqci)(f, inp, &len, reject_if_disagree);
+ 603:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   } else if (len) {
+ 604:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     code = CONFREJ;      /* Reject all CI */
+ 605:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   } else {
+ 606:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     code = CONFACK;
+ 607:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 608:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 609:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /* send the Ack, Nak or Rej to the peer */
+ 610:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   fsm_sdata(f, (u_char)code, id, inp, len);
+ 611:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 612:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (code == CONFACK) {
+ 613:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if (f->state == LS_ACKRCVD) {
+ 614:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 615:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_OPENED;
+ 616:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->up) {
+ 617:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->up)(f);  /* Inform upper layers */
+ 618:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 619:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     } else {
+ 620:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_ACKSENT;
+ 621:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 622:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     f->nakloops = 0;
+ 623:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   } else {
+ 624:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     /* we sent CONFACK or CONFREJ */
+ 625:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if (f->state != LS_ACKRCVD) {
+ 626:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 627:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 628:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if( code == CONFNAK ) {
+ 629:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       ++f->nakloops;
+ 630:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 631:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 632:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 633:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 634:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 635:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 636:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rconfack - Receive Configure-Ack.
+ 637:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 638:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 639:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rconfack(fsm *f, int id, u_char *inp, int len)
+ 640:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 641:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rconfack(%s): Rcvd id %d state=%d (%s)\n",
+ 642:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), id, f->state, ppperr_strerr[f->state]));
+ 643:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 644:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (id != f->reqid || f->seen_ack) {   /* Expected id? */
+ 645:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return; /* Nope, toss... */
+ 646:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 647:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( !(f->callbacks->ackci? (*f->callbacks->ackci)(f, inp, len): (len == 0)) ) {
+ 648:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     /* Ack is bad - ignore it */
+ 649:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "%s: received bad Ack (length %d)\n",
+ 650:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           PROTO_NAME(f), len));
+ 651:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 652:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 653:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->seen_ack = 1;
+ 654:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 655:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (f->state) {
+ 656:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 657:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 658:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sdata(f, TERMACK, (u_char)id, NULL, 0);
+ 659:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 660:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 661:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 662:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_ACKRCVD;
+ 663:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->retransmits = f->maxconfreqtransmits;
+ 664:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 665:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 666:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 667:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Huh? an extra valid Ack? oh well... */
+ 668:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 669:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);
+ 670:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 671:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 672:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 673:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 674:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 675:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_OPENED;
+ 676:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->retransmits = f->maxconfreqtransmits;
+ 677:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->up) {
+ 678:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->up)(f);  /* Inform upper layers */
+ 679:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 680:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 681:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 682:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 683:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Go down and restart negotiation */
+ 684:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->down) {
+ 685:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers */
+ 686:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 687:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);    /* Send initial Configure-Request */
+ 688:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 689:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 690:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 691:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 692:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 693:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 694:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 695:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rconfnakrej - Receive Configure-Nak or Configure-Reject.
+ 696:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 697:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 698:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rconfnakrej(fsm *f, int code, int id, u_char *inp, int len)
+ 699:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 700:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int (*proc) (fsm *, u_char *, int);
+ 701:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int ret;
+ 702:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 703:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rconfnakrej(%s): Rcvd id %d state=%d (%s)\n",
+ 704:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), id, f->state, ppperr_strerr[f->state]));
+ 705:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 706:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (id != f->reqid || f->seen_ack) { /* Expected id? */
+ 707:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;        /* Nope, toss... */
+ 708:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 709:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   proc = (code == CONFNAK)? f->callbacks->nakci: f->callbacks->rejci;
+ 710:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (!proc || !((ret = proc(f, inp, len)))) {
+ 711:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     /* Nak/reject is bad - ignore it */
+ 712:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "%s: received bad %s (length %d)\n",
+ 713:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****           PROTO_NAME(f), (code==CONFNAK? "Nak": "reject"), len));
+ 714:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 715:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 716:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->seen_ack = 1;
+ 717:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 718:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (f->state) {
+ 719:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSED:
+ 720:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPED:
+ 721:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sdata(f, TERMACK, (u_char)id, NULL, 0);
+ 722:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 723:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 724:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_REQSENT:
+ 725:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 726:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* They didn't agree to what we wanted - try another request */
+ 727:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 728:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (ret < 0) {
+ 729:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         f->state = LS_STOPPED;    /* kludge for stopping CCP */
+ 730:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 731:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         fsm_sconfreq(f, 0);    /* Send Configure-Request */
+ 732:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 733:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 734:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 735:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 736:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Got a Nak/reject when we had already had an Ack?? oh well... */
+ 737:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);  /* Cancel timeout */
+ 738:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);
+ 739:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 740:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 741:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 742:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 743:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       /* Go down and restart negotiation */
+ 744:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->down) {
+ 745:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers */
+ 746:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 747:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);    /* Send initial Configure-Request */
+ 748:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 749:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 750:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 751:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 752:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 753:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 754:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 755:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rtermreq - Receive Terminate-Req.
+ 756:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 757:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 758:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rtermreq(fsm *f, int id, u_char *p, int len)
+ 759:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 760:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   LWIP_UNUSED_ARG(p);
+ 761:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 762:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rtermreq(%s): Rcvd id %d state=%d (%s)\n",
+ 763:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), id, f->state, ppperr_strerr[f->state]));
+ 764:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 765:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (f->state) {
+ 766:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 767:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKSENT:
+ 768:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;    /* Start over but keep trying */
+ 769:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 770:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 771:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 772:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (len > 0) {
+ 773:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_INFO, "%s terminated by peer (%x)\n", PROTO_NAME(f), p));
+ 774:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       } else {
+ 775:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         FSMDEBUG((LOG_INFO, "%s terminated by peer\n", PROTO_NAME(f)));
+ 776:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 777:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->down) {
+ 778:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers */
+ 779:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 780:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->retransmits = 0;
+ 781:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STOPPING;
+ 782:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       TIMEOUT(fsm_timeout, f, f->timeouttime);
+ 783:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 784:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 785:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 786:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   fsm_sdata(f, TERMACK, (u_char)id, NULL, 0);
+ 787:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 788:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 789:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 790:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 791:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rtermack - Receive Terminate-Ack.
+ 792:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 793:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 794:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rtermack(fsm *f)
+ 795:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 796:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rtermack(%s): state=%d (%s)\n",
+ 797:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 798:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 799:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   switch (f->state) {
+ 800:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_CLOSING:
+ 801:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);
+ 802:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_CLOSED;
+ 803:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->finished ) {
+ 804:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->finished)(f);
+ 805:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 806:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 807:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 808:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_STOPPING:
+ 809:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       UNTIMEOUT(fsm_timeout, f);
+ 810:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_STOPPED;
+ 811:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if( f->callbacks->finished ) {
+ 812:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->finished)(f);
+ 813:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 814:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 815:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 816:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_ACKRCVD:
+ 817:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       f->state = LS_REQSENT;
+ 818:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 819:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 820:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     case LS_OPENED:
+ 821:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       if (f->callbacks->down) {
+ 822:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         (*f->callbacks->down)(f);  /* Inform upper layers */
+ 823:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       }
+ 824:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       fsm_sconfreq(f, 0);
+ 825:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       break;
+ 826:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 827:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 828:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 829:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 830:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 831:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_rcoderej - Receive an Code-Reject.
+ 832:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 833:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 834:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_rcoderej(fsm *f, u_char *inp, int len)
+ 835:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 836:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   u_char code, id;
+ 837:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 838:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "fsm_rcoderej(%s): state=%d (%s)\n",
+ 839:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), f->state, ppperr_strerr[f->state]));
+ 840:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 841:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if (len < HEADERLEN) {
+ 842:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     FSMDEBUG((LOG_INFO, "fsm_rcoderej: Rcvd short Code-Reject packet!\n"));
+ 843:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     return;
+ 844:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 845:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   GETCHAR(code, inp);
+ 846:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   GETCHAR(id, inp);
+ 847:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_WARNING, "%s: Rcvd Code-Reject for code %d, id %d\n",
+ 848:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), code, id));
+ 849:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 850:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( f->state == LS_ACKRCVD ) {
+ 851:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     f->state = LS_REQSENT;
+ 852:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 853:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 854:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 855:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 856:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** /*
+ 857:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  * fsm_sconfreq - Send a Configure-Request.
+ 858:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****  */
+ 859:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** static void
+ 860:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** fsm_sconfreq(fsm *f, int retransmit)
+ 861:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** {
+ 530              		.loc 1 861 0
+ 531 0260 30B5     		push	{r4, r5, lr}
+ 532              	.LCFI7:
+ 533              	.LVL55:
+ 534 0262 82B0     		sub	sp, sp, #8
+ 535              	.LCFI8:
+ 536 0264 051C     		mov	r5, r0
+ 537 0266 0C1C     		mov	r4, r1
+ 862:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   u_char *outp;
+ 863:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   int cilen;
+ 864:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 865:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( f->state != LS_REQSENT && f->state != LS_ACKRCVD && f->state != LS_ACKSENT ) {
+ 538              		.loc 1 865 0
+ 539 0268 8368     		ldr	r3, [r0, #8]
+ 540 026a 063B     		sub	r3, r3, #6
+ 541 026c 022B     		cmp	r3, #2
+ 542 026e 07D9     		bls	.L37
+ 543              	.LVL56:
+ 866:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     /* Not currently negotiating - reset options */
+ 867:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if( f->callbacks->resetci ) {
+ 544              		.loc 1 867 0
+ 545 0270 C36A     		ldr	r3, [r0, #44]
+ 546 0272 1B68     		ldr	r3, [r3]
+ 547 0274 002B     		cmp	r3, #0
+ 548 0276 01D0     		beq	.L38
+ 868:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       (*f->callbacks->resetci)(f);
+ 549              		.loc 1 868 0
+ 550 0278 00F0EDFC 		bl	.L16
+ 551              	.LVL57:
+ 552              	.L38:
+ 869:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 870:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     f->nakloops = 0;
+ 553              		.loc 1 870 0
+ 554 027c 0023     		mov	r3, #0
+ 555 027e 6B62     		str	r3, [r5, #36]
+ 556              	.LVL58:
+ 557              	.L37:
+ 871:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 872:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 873:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( !retransmit ) {
+ 558              		.loc 1 873 0
+ 559 0280 002C     		cmp	r4, #0
+ 560 0282 07D1     		bne	.L39
+ 874:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     /* New request - reset retransmission counter, use new ID */
+ 875:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     f->retransmits = f->maxconfreqtransmits;
+ 561              		.loc 1 875 0
+ 562 0284 AB69     		ldr	r3, [r5, #24]
+ 563 0286 EB61     		str	r3, [r5, #28]
+ 876:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     f->reqid = ++f->id;
+ 564              		.loc 1 876 0
+ 565 0288 2B7C     		ldrb	r3, [r5, #16]
+ 566 028a 0133     		add	r3, r3, #1
+ 567 028c 1B06     		lsl	r3, r3, #24
+ 568 028e 1B0E     		lsr	r3, r3, #24
+ 569 0290 2B74     		strb	r3, [r5, #16]
+ 570 0292 6B74     		strb	r3, [r5, #17]
+ 571              	.L39:
+ 877:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 878:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 879:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   f->seen_ack = 0;
+ 572              		.loc 1 879 0
+ 573 0294 0023     		mov	r3, #0
+ 574 0296 AB74     		strb	r3, [r5, #18]
+ 880:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 881:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /*
+ 882:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****    * Make up the request packet
+ 883:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****    */
+ 884:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   outp = outpacket_buf[f->unit] + PPP_HDRLEN + HEADERLEN;
+ 575              		.loc 1 884 0
+ 576 0298 2A68     		ldr	r2, [r5]
+ 577 029a BC23     		mov	r3, #188
+ 578 029c 5343     		mul	r3, r2
+ 579 029e 0133     		add	r3, r3, #1
+ 580 02a0 DB00     		lsl	r3, r3, #3
+ 581 02a2 234A     		ldr	r2, .L44
+ 582 02a4 D418     		add	r4, r2, r3
+ 583              	.LVL59:
+ 885:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   if( f->callbacks->cilen && f->callbacks->addci ) {
+ 584              		.loc 1 885 0
+ 585 02a6 EB6A     		ldr	r3, [r5, #44]
+ 586 02a8 5A68     		ldr	r2, [r3, #4]
+ 587 02aa 002A     		cmp	r2, #0
+ 588 02ac 18D0     		beq	.L40
+ 589              	.LVL60:
+ 590 02ae 9B68     		ldr	r3, [r3, #8]
+ 591 02b0 002B     		cmp	r3, #0
+ 592 02b2 15D0     		beq	.L40
+ 886:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     cilen = (*f->callbacks->cilen)(f);
+ 593              		.loc 1 886 0
+ 594 02b4 281C     		mov	r0, r5
+ 595 02b6 00F0CDFC 		bl	.L46
+ 596              	.LVL61:
+ 597 02ba 0190     		str	r0, [sp, #4]
+ 598              	.LVL62:
+ 887:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if( cilen > peer_mru[f->unit] - (int)HEADERLEN ) {
+ 599              		.loc 1 887 0
+ 600 02bc 1D4A     		ldr	r2, .L44+4
+ 601 02be 2B68     		ldr	r3, [r5]
+ 602 02c0 9B00     		lsl	r3, r3, #2
+ 603 02c2 9A58     		ldr	r2, [r3, r2]
+ 604 02c4 131F     		sub	r3, r2, #4
+ 605 02c6 9842     		cmp	r0, r3
+ 606 02c8 00DD     		ble	.L41
+ 888:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       cilen = peer_mru[f->unit] - HEADERLEN;
+ 607              		.loc 1 888 0
+ 608 02ca 0193     		str	r3, [sp, #4]
+ 609              	.LVL63:
+ 610              	.L41:
+ 889:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 890:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     if (f->callbacks->addci) {
+ 611              		.loc 1 890 0
+ 612 02cc EB6A     		ldr	r3, [r5, #44]
+ 613 02ce 9B68     		ldr	r3, [r3, #8]
+ 614 02d0 002B     		cmp	r3, #0
+ 615 02d2 07D0     		beq	.L42
+ 891:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****       (*f->callbacks->addci)(f, outp, &cilen);
+ 616              		.loc 1 891 0
+ 617 02d4 281C     		mov	r0, r5
+ 618 02d6 211C     		mov	r1, r4
+ 619 02d8 01AA     		add	r2, sp, #4
+ 620 02da 00F0BCFC 		bl	.L16
+ 621 02de 01E0     		b	.L42
+ 622              	.LVL64:
+ 623              	.L40:
+ 892:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     }
+ 893:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   } else {
+ 894:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****     cilen = 0;
+ 624              		.loc 1 894 0
+ 625 02e0 0023     		mov	r3, #0
+ 626 02e2 0193     		str	r3, [sp, #4]
+ 627              	.LVL65:
+ 628              	.L42:
+ 895:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   }
+ 896:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 897:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /* send the request to our peer */
+ 898:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   fsm_sdata(f, CONFREQ, f->reqid, outp, cilen);
+ 629              		.loc 1 898 0
+ 630 02e4 6A7C     		ldrb	r2, [r5, #17]
+ 631 02e6 019B     		ldr	r3, [sp, #4]
+ 632 02e8 0093     		str	r3, [sp]
+ 633 02ea 281C     		mov	r0, r5
+ 634 02ec 0121     		mov	r1, #1
+ 635              	.LVL66:
+ 636 02ee 231C     		mov	r3, r4
+ 637 02f0 FFF7FEFF 		bl	fsm_sdata
+ 899:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 900:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   /* start the retransmit timer */
+ 901:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   --f->retransmits;
+ 638              		.loc 1 901 0
+ 639 02f4 EB69     		ldr	r3, [r5, #28]
+ 640 02f6 013B     		sub	r3, r3, #1
+ 641 02f8 EB61     		str	r3, [r5, #28]
+ 902:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   TIMEOUT(fsm_timeout, f, f->timeouttime);
+ 642              		.loc 1 902 0
+ 643 02fa 0F4C     		ldr	r4, .L44+8
+ 644              	.LVL67:
+ 645 02fc 201C     		mov	r0, r4
+ 646 02fe 291C     		mov	r1, r5
+ 647 0300 FFF7FEFF 		bl	sys_untimeout
+ 648 0304 6B69     		ldr	r3, [r5, #20]
+ 649 0306 5801     		lsl	r0, r3, #5
+ 650 0308 C01A     		sub	r0, r0, r3
+ 651 030a 8000     		lsl	r0, r0, #2
+ 652 030c C018     		add	r0, r0, r3
+ 653 030e C000     		lsl	r0, r0, #3
+ 654 0310 211C     		mov	r1, r4
+ 655 0312 2A1C     		mov	r2, r5
+ 656 0314 FFF7FEFF 		bl	sys_timeout
+ 903:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** 
+ 904:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****   FSMDEBUG((LOG_INFO, "%s: sending Configure-Request, id %d\n",
+ 657              		.loc 1 904 0
+ 658 0318 0849     		ldr	r1, .L44+12
+ 659 031a EB6A     		ldr	r3, [r5, #44]
+ 660 031c 9A6B     		ldr	r2, [r3, #56]
+ 661 031e 6B7C     		ldrb	r3, [r5, #17]
+ 662 0320 0520     		mov	r0, #5
+ 663 0322 FFF7FEFF 		bl	ppp_trace
+ 905:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c ****         PROTO_NAME(f), f->reqid));
+ 906:rtos/common/ethernet/lwIP_132/src/netif/ppp/fsm.c **** }
+ 664              		.loc 1 906 0
+ 665 0326 02B0     		add	sp, sp, #8
+ 666              		@ sp needed for prologue
+ 667              	.LVL68:
+ 668 0328 30BC     		pop	{r4, r5}
+ 669 032a 01BC     		pop	{r0}
+ 670 032c 0047     		bx	r0
+ 671              	.L45:
+ 672 032e C046     		.align	2
+ 673              	.L44:
+ 674 0330 00000000 		.word	outpacket_buf
+ 675 0334 00000000 		.word	peer_mru
+ 676 0338 00000000 		.word	fsm_timeout
+ 677 033c A0000000 		.word	.LC19
+ 678              	.LFE305:
+ 680              		.section	.rodata.str1.4
+ 681 00c6 0000     		.align	2
+ 682              	.LC21:
+ 683 00c8 25733A20 		.ascii	"%s: Up event in state %d (%s)!\012\000"
+ 683      55702065 
+ 683      76656E74 
+ 683      20696E20 
+ 683      73746174 
+ 684              		.align	2
+ 685              	.LC24:
+ 686 00e8 25733A20 		.ascii	"%s: lowerup state %d (%s) -> %d (%s)\012\000"
+ 686      6C6F7765 
+ 686      72757020 
+ 686      73746174 
+ 686      65202564 
+ 687              		.text
+ 688              		.align	2
+ 689              		.global	fsm_lowerup
+ 690              		.code	16
+ 691              		.thumb_func
+ 693              	fsm_lowerup:
+ 694              	.LFB291:
+ 695              		.loc 1 150 0
+ 696 0340 30B5     		push	{r4, r5, lr}
+ 697              	.LCFI9:
+ 698              	.LVL69:
+ 699 0342 83B0     		sub	sp, sp, #12
+ 700              	.LCFI10:
+ 701 0344 041C     		mov	r4, r0
+ 702              		.loc 1 151 0
+ 703 0346 8568     		ldr	r5, [r0, #8]
+ 704              	.LVL70:
+ 705              		.loc 1 155 0
+ 706 0348 002D     		cmp	r5, #0
+ 707 034a 02D0     		beq	.L49
+ 708 034c 012D     		cmp	r5, #1
+ 709 034e 0FD1     		bne	.L54
+ 710 0350 02E0     		b	.L55
+ 711              	.L49:
+ 712              		.loc 1 157 0
+ 713 0352 0223     		mov	r3, #2
+ 714 0354 8360     		str	r3, [r0, #8]
+ 715 0356 16E0     		b	.L51
+ 716              	.L55:
+ 717              		.loc 1 161 0
+ 718 0358 C368     		ldr	r3, [r0, #12]
+ 719 035a 5A07     		lsl	r2, r3, #29
+ 720 035c 02D5     		bpl	.L52
+ 721              		.loc 1 162 0
+ 722 035e 0323     		mov	r3, #3
+ 723 0360 8360     		str	r3, [r0, #8]
+ 724 0362 10E0     		b	.L51
+ 725              	.L52:
+ 726              		.loc 1 165 0
+ 727 0364 0021     		mov	r1, #0
+ 728 0366 FFF77BFF 		bl	fsm_sconfreq
+ 729              	.LVL71:
+ 730              		.loc 1 166 0
+ 731 036a 0623     		mov	r3, #6
+ 732 036c A360     		str	r3, [r4, #8]
+ 733 036e 0AE0     		b	.L51
+ 734              	.LVL72:
+ 735              	.L54:
+ 736              		.loc 1 171 0
+ 737 0370 0F49     		ldr	r1, .L56
+ 738 0372 C36A     		ldr	r3, [r0, #44]
+ 739 0374 9A6B     		ldr	r2, [r3, #56]
+ 740 0376 0F48     		ldr	r0, .L56+4
+ 741              	.LVL73:
+ 742 0378 AB00     		lsl	r3, r5, #2
+ 743 037a 1B58     		ldr	r3, [r3, r0]
+ 744 037c 0093     		str	r3, [sp]
+ 745 037e 0520     		mov	r0, #5
+ 746 0380 2B1C     		mov	r3, r5
+ 747 0382 FFF7FEFF 		bl	ppp_trace
+ 748              	.LVL74:
+ 749              	.L51:
+ 750              		.loc 1 175 0
+ 751 0386 A068     		ldr	r0, [r4, #8]
+ 752 0388 0B49     		ldr	r1, .L56+8
+ 753 038a E36A     		ldr	r3, [r4, #44]
+ 754 038c 9A6B     		ldr	r2, [r3, #56]
+ 755 038e 094C     		ldr	r4, .L56+4
+ 756              	.LVL75:
+ 757 0390 AB00     		lsl	r3, r5, #2
+ 758 0392 1B59     		ldr	r3, [r3, r4]
+ 759 0394 0093     		str	r3, [sp]
+ 760 0396 0190     		str	r0, [sp, #4]
+ 761 0398 8000     		lsl	r0, r0, #2
+ 762 039a 0359     		ldr	r3, [r0, r4]
+ 763 039c 0293     		str	r3, [sp, #8]
+ 764 039e 0520     		mov	r0, #5
+ 765 03a0 2B1C     		mov	r3, r5
+ 766 03a2 FFF7FEFF 		bl	ppp_trace
+ 767              		.loc 1 177 0
+ 768 03a6 03B0     		add	sp, sp, #12
+ 769              		@ sp needed for prologue
+ 770              	.LVL76:
+ 771 03a8 30BC     		pop	{r4, r5}
+ 772 03aa 01BC     		pop	{r0}
+ 773 03ac 0047     		bx	r0
+ 774              	.L57:
+ 775 03ae C046     		.align	2
+ 776              	.L56:
+ 777 03b0 C8000000 		.word	.LC21
+ 778 03b4 38010000 		.word	ppperr_strerr
+ 779 03b8 E8000000 		.word	.LC24
+ 780              	.LFE291:
+ 782              		.section	.rodata.str1.4
+ 783 010e 0000     		.align	2
+ 784              	.LC27:
+ 785 0110 25733A20 		.ascii	"%s: open state %d (%s) -> %d (%s)\012\000"
+ 785      6F70656E 
+ 785      20737461 
+ 785      74652025 
+ 785      64202825 
+ 786              		.text
+ 787              		.align	2
+ 788              		.global	fsm_open
+ 789              		.code	16
+ 790              		.thumb_func
+ 792              	fsm_open:
+ 793              	.LFB293:
+ 794              		.loc 1 239 0
+ 795 03bc 30B5     		push	{r4, r5, lr}
+ 796              	.LCFI11:
+ 797              	.LVL77:
+ 798 03be 83B0     		sub	sp, sp, #12
+ 799              	.LCFI12:
+ 800 03c0 041C     		mov	r4, r0
+ 801              		.loc 1 240 0
+ 802 03c2 8568     		ldr	r5, [r0, #8]
+ 803              	.LVL78:
+ 804              		.loc 1 244 0
+ 805 03c4 092D     		cmp	r5, #9
+ 806 03c6 23D8     		bhi	.L59
+ 807 03c8 AB00     		lsl	r3, r5, #2
+ 808 03ca 1B4A     		ldr	r2, .L67
+ 809 03cc D358     		ldr	r3, [r2, r3]
+ 810 03ce 9F46     		mov	pc, r3
+ 811              		.section	.rodata
+ 812              		.align	2
+ 813              	.L64:
+ 814 0050 D0030000 		.word	.L60
+ 815 0054 10040000 		.word	.L59
+ 816 0058 E2030000 		.word	.L61
+ 817 005c FE030000 		.word	.L62
+ 818 0060 FA030000 		.word	.L63
+ 819 0064 10040000 		.word	.L59
+ 820 0068 10040000 		.word	.L59
+ 821 006c 10040000 		.word	.L59
+ 822 0070 10040000 		.word	.L59
+ 823 0074 FE030000 		.word	.L62
+ 824              		.text
+ 825              	.L60:
+ 826              		.loc 1 246 0
+ 827 03d0 0123     		mov	r3, #1
+ 828 03d2 8360     		str	r3, [r0, #8]
+ 829              		.loc 1 247 0
+ 830 03d4 C36A     		ldr	r3, [r0, #44]
+ 831 03d6 5B6A     		ldr	r3, [r3, #36]
+ 832 03d8 002B     		cmp	r3, #0
+ 833 03da 19D0     		beq	.L59
+ 834              		.loc 1 248 0
+ 835 03dc 00F03BFC 		bl	.L16
+ 836              	.LVL79:
+ 837 03e0 16E0     		b	.L59
+ 838              	.LVL80:
+ 839              	.L61:
+ 840              		.loc 1 253 0
+ 841 03e2 C368     		ldr	r3, [r0, #12]
+ 842 03e4 5A07     		lsl	r2, r3, #29
+ 843 03e6 02D5     		bpl	.L65
+ 844              		.loc 1 254 0
+ 845 03e8 0323     		mov	r3, #3
+ 846 03ea 8360     		str	r3, [r0, #8]
+ 847 03ec 10E0     		b	.L59
+ 848              	.L65:
+ 849              		.loc 1 257 0
+ 850 03ee 0021     		mov	r1, #0
+ 851 03f0 FFF736FF 		bl	fsm_sconfreq
+ 852              	.LVL81:
+ 853              		.loc 1 258 0
+ 854 03f4 0623     		mov	r3, #6
+ 855 03f6 A360     		str	r3, [r4, #8]
+ 856 03f8 0AE0     		b	.L59
+ 857              	.LVL82:
+ 858              	.L63:
+ 859              		.loc 1 263 0
+ 860 03fa 0523     		mov	r3, #5
+ 861 03fc 8360     		str	r3, [r0, #8]
+ 862              	.L62:
+ 863              		.loc 1 267 0
+ 864 03fe E368     		ldr	r3, [r4, #12]
+ 865 0400 9A07     		lsl	r2, r3, #30
+ 866 0402 05D5     		bpl	.L59
+ 867              	.LVL83:
+ 868              		.loc 1 268 0
+ 869 0404 201C     		mov	r0, r4
+ 870 0406 FFF7FEFF 		bl	fsm_lowerdown
+ 871              		.loc 1 269 0
+ 872 040a 201C     		mov	r0, r4
+ 873 040c FFF7FEFF 		bl	fsm_lowerup
+ 874              	.LVL84:
+ 875              	.L59:
+ 876              		.loc 1 274 0
+ 877 0410 A068     		ldr	r0, [r4, #8]
+ 878 0412 0A49     		ldr	r1, .L67+4
+ 879 0414 E36A     		ldr	r3, [r4, #44]
+ 880 0416 9A6B     		ldr	r2, [r3, #56]
+ 881 0418 094C     		ldr	r4, .L67+8
+ 882              	.LVL85:
+ 883 041a AB00     		lsl	r3, r5, #2
+ 884 041c 1B59     		ldr	r3, [r3, r4]
+ 885 041e 0093     		str	r3, [sp]
+ 886 0420 0190     		str	r0, [sp, #4]
+ 887 0422 8000     		lsl	r0, r0, #2
+ 888 0424 0359     		ldr	r3, [r0, r4]
+ 889 0426 0293     		str	r3, [sp, #8]
+ 890 0428 0520     		mov	r0, #5
+ 891 042a 2B1C     		mov	r3, r5
+ 892 042c FFF7FEFF 		bl	ppp_trace
+ 893              		.loc 1 276 0
+ 894 0430 03B0     		add	sp, sp, #12
+ 895              		@ sp needed for prologue
+ 896              	.LVL86:
+ 897 0432 30BC     		pop	{r4, r5}
+ 898 0434 01BC     		pop	{r0}
+ 899 0436 0047     		bx	r0
+ 900              	.L68:
+ 901              		.align	2
+ 902              	.L67:
+ 903 0438 50000000 		.word	.L64
+ 904 043c 10010000 		.word	.LC27
+ 905 0440 38010000 		.word	ppperr_strerr
+ 906              	.LFE293:
+ 908              		.section	.rodata.str1.4
+ 909 0133 00       		.align	2
+ 910              	.LC30:
+ 911 0134 25733A20 		.ascii	"%s: timeout sending Terminate-Request state=%d (%s)"
+ 911      74696D65 
+ 911      6F757420 
+ 911      73656E64 
+ 911      696E6720 
+ 912 0167 0A00     		.ascii	"\012\000"
+ 913 0169 000000   		.align	2
+ 914              	.LC33:
+ 915 016c 25733A20 		.ascii	"%s: timeout resending Terminate-Requests state=%d ("
+ 915      74696D65 
+ 915      6F757420 
+ 915      72657365 
+ 915      6E64696E 
+ 916 019f 2573290A 		.ascii	"%s)\012\000"
+ 916      00
+ 917              		.align	2
+ 918              	.LC36:
+ 919 01a4 25733A20 		.ascii	"%s: timeout sending Config-Requests state=%d (%s)\012"
+ 919      74696D65 
+ 919      6F757420 
+ 919      73656E64 
+ 919      696E6720 
+ 920 01d6 00       		.ascii	"\000"
+ 921 01d7 00       		.align	2
+ 922              	.LC38:
+ 923 01d8 25733A20 		.ascii	"%s: timeout resending Config-Request state=%d (%s)\012"
+ 923      74696D65 
+ 923      6F757420 
+ 923      72657365 
+ 923      6E64696E 
+ 924 020b 00       		.ascii	"\000"
+ 925              		.align	2
+ 926              	.LC40:
+ 927 020c 25733A20 		.ascii	"%s: UNHANDLED timeout event in state %d (%s)!\012\000"
+ 927      554E4841 
+ 927      4E444C45 
+ 927      44207469 
+ 927      6D656F75 
+ 928              		.text
+ 929              		.align	2
+ 930              		.code	16
+ 931              		.thumb_func
+ 933              	fsm_timeout:
+ 934              	.LFB298:
+ 935              		.loc 1 504 0
+ 936 0444 30B5     		push	{r4, r5, lr}
+ 937              	.LCFI13:
+ 938              	.LVL87:
+ 939 0446 81B0     		sub	sp, sp, #4
+ 940              	.LCFI14:
+ 941 0448 051C     		mov	r5, r0
+ 942              	.LVL88:
+ 943              		.loc 1 507 0
+ 944 044a 8468     		ldr	r4, [r0, #8]
+ 945 044c 042C     		cmp	r4, #4
+ 946 044e 00DA     		bge	.LCB791
+ 947 0450 83E0     		b	.L70	@long jump
+ 948              	.LCB791:
+ 949              	.LVL89:
+ 950 0452 052C     		cmp	r4, #5
+ 951 0454 02DD     		ble	.L71
+ 952 0456 082C     		cmp	r4, #8
+ 953 0458 7FDC     		bgt	.L70
+ 954 045a 47E0     		b	.L81
+ 955              	.L71:
+ 956              		.loc 1 510 0
+ 957 045c C369     		ldr	r3, [r0, #28]
+ 958 045e 002B     		cmp	r3, #0
+ 959 0460 19DC     		bgt	.L73
+ 960              		.loc 1 511 0
+ 961 0462 4549     		ldr	r1, .L82
+ 962 0464 C36A     		ldr	r3, [r0, #44]
+ 963 0466 9A6B     		ldr	r2, [r3, #56]
+ 964 0468 4448     		ldr	r0, .L82+4
+ 965              	.LVL90:
+ 966 046a A300     		lsl	r3, r4, #2
+ 967 046c 1B58     		ldr	r3, [r3, r0]
+ 968 046e 0093     		str	r3, [sp]
+ 969 0470 0320     		mov	r0, #3
+ 970 0472 231C     		mov	r3, r4
+ 971 0474 FFF7FEFF 		bl	ppp_trace
+ 972              		.loc 1 516 0
+ 973 0478 AB68     		ldr	r3, [r5, #8]
+ 974 047a 042B     		cmp	r3, #4
+ 975 047c 01D0     		beq	.L74
+ 976 047e 0323     		mov	r3, #3
+ 977 0480 00E0     		b	.L75
+ 978              	.L74:
+ 979 0482 0223     		mov	r3, #2
+ 980              	.L75:
+ 981 0484 AB60     		str	r3, [r5, #8]
+ 982              		.loc 1 517 0
+ 983 0486 EB6A     		ldr	r3, [r5, #44]
+ 984 0488 9B6A     		ldr	r3, [r3, #40]
+ 985 048a 002B     		cmp	r3, #0
+ 986 048c 70D0     		beq	.L79
+ 987              		.loc 1 518 0
+ 988 048e 281C     		mov	r0, r5
+ 989 0490 00F0E1FB 		bl	.L16
+ 990 0494 6CE0     		b	.L79
+ 991              	.LVL91:
+ 992              	.L73:
+ 993              		.loc 1 521 0
+ 994 0496 3A49     		ldr	r1, .L82+8
+ 995 0498 C36A     		ldr	r3, [r0, #44]
+ 996 049a 9A6B     		ldr	r2, [r3, #56]
+ 997 049c 3748     		ldr	r0, .L82+4
+ 998              	.LVL92:
+ 999 049e A300     		lsl	r3, r4, #2
+ 1000 04a0 1B58     		ldr	r3, [r3, r0]
+ 1001 04a2 0093     		str	r3, [sp]
+ 1002 04a4 0320     		mov	r0, #3
+ 1003 04a6 231C     		mov	r3, r4
+ 1004 04a8 FFF7FEFF 		bl	ppp_trace
+ 1005              		.loc 1 524 0
+ 1006 04ac 2A7C     		ldrb	r2, [r5, #16]
+ 1007 04ae 0132     		add	r2, r2, #1
+ 1008 04b0 1206     		lsl	r2, r2, #24
+ 1009 04b2 120E     		lsr	r2, r2, #24
+ 1010 04b4 2A74     		strb	r2, [r5, #16]
+ 1011 04b6 6A74     		strb	r2, [r5, #17]
+ 1012 04b8 2B6B     		ldr	r3, [r5, #48]
+ 1013 04ba 696B     		ldr	r1, [r5, #52]
+ 1014 04bc 0091     		str	r1, [sp]
+ 1015 04be 281C     		mov	r0, r5
+ 1016 04c0 0521     		mov	r1, #5
+ 1017 04c2 FFF7FEFF 		bl	fsm_sdata
+ 1018              		.loc 1 526 0
+ 1019 04c6 2F4C     		ldr	r4, .L82+12
+ 1020 04c8 201C     		mov	r0, r4
+ 1021 04ca 291C     		mov	r1, r5
+ 1022 04cc FFF7FEFF 		bl	sys_untimeout
+ 1023 04d0 6B69     		ldr	r3, [r5, #20]
+ 1024 04d2 5801     		lsl	r0, r3, #5
+ 1025 04d4 C01A     		sub	r0, r0, r3
+ 1026 04d6 8000     		lsl	r0, r0, #2
+ 1027 04d8 C018     		add	r0, r0, r3
+ 1028 04da C000     		lsl	r0, r0, #3
+ 1029 04dc 211C     		mov	r1, r4
+ 1030 04de 2A1C     		mov	r2, r5
+ 1031 04e0 FFF7FEFF 		bl	sys_timeout
+ 1032              		.loc 1 527 0
+ 1033 04e4 EB69     		ldr	r3, [r5, #28]
+ 1034 04e6 013B     		sub	r3, r3, #1
+ 1035 04e8 EB61     		str	r3, [r5, #28]
+ 1036 04ea 41E0     		b	.L79
+ 1037              	.LVL93:
+ 1038              	.L81:
+ 1039              		.loc 1 534 0
+ 1040 04ec C369     		ldr	r3, [r0, #28]
+ 1041 04ee 002B     		cmp	r3, #0
+ 1042 04f0 17DC     		bgt	.L77
+ 1043              		.loc 1 535 0
+ 1044 04f2 2549     		ldr	r1, .L82+16
+ 1045 04f4 C36A     		ldr	r3, [r0, #44]
+ 1046 04f6 9A6B     		ldr	r2, [r3, #56]
+ 1047 04f8 2048     		ldr	r0, .L82+4
+ 1048              	.LVL94:
+ 1049 04fa A300     		lsl	r3, r4, #2
+ 1050 04fc 1B58     		ldr	r3, [r3, r0]
+ 1051 04fe 0093     		str	r3, [sp]
+ 1052 0500 0320     		mov	r0, #3
+ 1053 0502 231C     		mov	r3, r4
+ 1054 0504 FFF7FEFF 		bl	ppp_trace
+ 1055              		.loc 1 537 0
+ 1056 0508 0323     		mov	r3, #3
+ 1057 050a AB60     		str	r3, [r5, #8]
+ 1058              		.loc 1 538 0
+ 1059 050c EB68     		ldr	r3, [r5, #12]
+ 1060 050e DA07     		lsl	r2, r3, #31
+ 1061 0510 2ED4     		bmi	.L79
+ 1062 0512 EB6A     		ldr	r3, [r5, #44]
+ 1063 0514 9B6A     		ldr	r3, [r3, #40]
+ 1064 0516 002B     		cmp	r3, #0
+ 1065 0518 2AD0     		beq	.L79
+ 1066              		.loc 1 539 0
+ 1067 051a 281C     		mov	r0, r5
+ 1068 051c 00F09BFB 		bl	.L16
+ 1069 0520 26E0     		b	.L79
+ 1070              	.LVL95:
+ 1071              	.L77:
+ 1072              		.loc 1 542 0
+ 1073 0522 1A49     		ldr	r1, .L82+20
+ 1074 0524 C36A     		ldr	r3, [r0, #44]
+ 1075 0526 9A6B     		ldr	r2, [r3, #56]
+ 1076 0528 1448     		ldr	r0, .L82+4
+ 1077              	.LVL96:
+ 1078 052a A300     		lsl	r3, r4, #2
+ 1079 052c 1B58     		ldr	r3, [r3, r0]
+ 1080 052e 0093     		str	r3, [sp]
+ 1081 0530 0320     		mov	r0, #3
+ 1082 0532 231C     		mov	r3, r4
+ 1083 0534 FFF7FEFF 		bl	ppp_trace
+ 1084              		.loc 1 545 0
+ 1085 0538 EB6A     		ldr	r3, [r5, #44]
+ 1086 053a 1B6B     		ldr	r3, [r3, #48]
+ 1087 053c 002B     		cmp	r3, #0
+ 1088 053e 02D0     		beq	.L78
+ 1089              		.loc 1 546 0
+ 1090 0540 281C     		mov	r0, r5
+ 1091 0542 00F088FB 		bl	.L16
+ 1092              	.L78:
+ 1093              		.loc 1 548 0
+ 1094 0546 281C     		mov	r0, r5
+ 1095 0548 0121     		mov	r1, #1
+ 1096 054a FFF789FE 		bl	fsm_sconfreq
+ 1097              		.loc 1 549 0
+ 1098 054e AB68     		ldr	r3, [r5, #8]
+ 1099 0550 072B     		cmp	r3, #7
+ 1100 0552 0DD1     		bne	.L79
+ 1101              		.loc 1 550 0
+ 1102 0554 0623     		mov	r3, #6
+ 1103 0556 AB60     		str	r3, [r5, #8]
+ 1104 0558 0AE0     		b	.L79
+ 1105              	.LVL97:
+ 1106              	.L70:
+ 1107              		.loc 1 556 0
+ 1108 055a 0D49     		ldr	r1, .L82+24
+ 1109 055c EB6A     		ldr	r3, [r5, #44]
+ 1110 055e 9A6B     		ldr	r2, [r3, #56]
+ 1111 0560 0648     		ldr	r0, .L82+4
+ 1112              	.LVL98:
+ 1113 0562 A300     		lsl	r3, r4, #2
+ 1114 0564 1B58     		ldr	r3, [r3, r0]
+ 1115 0566 0093     		str	r3, [sp]
+ 1116 0568 0520     		mov	r0, #5
+ 1117 056a 231C     		mov	r3, r4
+ 1118 056c FFF7FEFF 		bl	ppp_trace
+ 1119              	.L79:
+ 1120              		.loc 1 559 0
+ 1121 0570 01B0     		add	sp, sp, #4
+ 1122              		@ sp needed for prologue
+ 1123              	.LVL99:
+ 1124 0572 30BC     		pop	{r4, r5}
+ 1125 0574 01BC     		pop	{r0}
+ 1126 0576 0047     		bx	r0
+ 1127              	.L83:
+ 1128              		.align	2
+ 1129              	.L82:
+ 1130 0578 34010000 		.word	.LC30
+ 1131 057c 38010000 		.word	ppperr_strerr
+ 1132 0580 6C010000 		.word	.LC33
+ 1133 0584 00000000 		.word	fsm_timeout
+ 1134 0588 A4010000 		.word	.LC36
+ 1135 058c D8010000 		.word	.LC38
+ 1136 0590 0C020000 		.word	.LC40
+ 1137              	.LFE298:
+ 1139              		.section	.rodata.str1.4
+ 1140 023b 00       		.align	2
+ 1141              	.LC42:
+ 1142 023c 66736D5F 		.ascii	"fsm_input(%x): Rcvd short header.\012\000"
+ 1142      696E7075 
+ 1142      74282578 
+ 1142      293A2052 
+ 1142      63766420 
+ 1143 025f 00       		.align	2
+ 1144              	.LC44:
+ 1145 0260 66736D5F 		.ascii	"fsm_input(%x): Rcvd illegal length.\012\000"
+ 1145      696E7075 
+ 1145      74282578 
+ 1145      293A2052 
+ 1145      63766420 
+ 1146 0285 000000   		.align	2
+ 1147              	.LC46:
+ 1148 0288 66736D5F 		.ascii	"fsm_input(%x): Rcvd short packet.\012\000"
+ 1148      696E7075 
+ 1148      74282578 
+ 1148      293A2052 
+ 1148      63766420 
+ 1149 02ab 00       		.align	2
+ 1150              	.LC48:
+ 1151 02ac 66736D5F 		.ascii	"fsm_input(%x): Rcvd packet in state %d (%s).\012\000"
+ 1151      696E7075 
+ 1151      74282578 
+ 1151      293A2052 
+ 1151      63766420 
+ 1152 02da 0000     		.align	2
+ 1153              	.LC51:
+ 1154 02dc 66736D5F 		.ascii	"fsm_input(%s):%d,%d,%d\012\000"
+ 1154      696E7075 
+ 1154      74282573 
+ 1154      293A2564 
+ 1154      2C25642C 
+ 1155              		.align	2
+ 1156              	.LC54:
+ 1157 02f4 66736D5F 		.ascii	"fsm_rconfreq(%s): Rcvd id %d state=%d (%s)\012\000"
+ 1157      72636F6E 
+ 1157      66726571 
+ 1157      28257329 
+ 1157      3A205263 
+ 1158              		.align	2
+ 1159              	.LC58:
+ 1160 0320 66736D5F 		.ascii	"fsm_rconfack(%s): Rcvd id %d state=%d (%s)\012\000"
+ 1160      72636F6E 
+ 1160      6661636B 
+ 1160      28257329 
+ 1160      3A205263 
+ 1161              		.align	2
+ 1162              	.LC60:
+ 1163 034c 25733A20 		.ascii	"%s: received bad Ack (length %d)\012\000"
+ 1163      72656365 
+ 1163      69766564 
+ 1163      20626164 
+ 1163      2041636B 
+ 1164 036e 0000     		.align	2
+ 1165              	.LC63:
+ 1166 0370 66736D5F 		.ascii	"fsm_rconfnakrej(%s): Rcvd id %d state=%d (%s)\012\000"
+ 1166      72636F6E 
+ 1166      666E616B 
+ 1166      72656A28 
+ 1166      2573293A 
+ 1167 039f 00       		.align	2
+ 1168              	.LC65:
+ 1169 03a0 72656A65 		.ascii	"reject\000"
+ 1169      637400
+ 1170 03a7 00       		.align	2
+ 1171              	.LC67:
+ 1172 03a8 4E616B00 		.ascii	"Nak\000"
+ 1173              		.align	2
+ 1174              	.LC69:
+ 1175 03ac 25733A20 		.ascii	"%s: received bad %s (length %d)\012\000"
+ 1175      72656365 
+ 1175      69766564 
+ 1175      20626164 
+ 1175      20257320 
+ 1176 03cd 000000   		.align	2
+ 1177              	.LC72:
+ 1178 03d0 66736D5F 		.ascii	"fsm_rtermreq(%s): Rcvd id %d state=%d (%s)\012\000"
+ 1178      72746572 
+ 1178      6D726571 
+ 1178      28257329 
+ 1178      3A205263 
+ 1179              		.align	2
+ 1180              	.LC74:
+ 1181 03fc 25732074 		.ascii	"%s terminated by peer (%x)\012\000"
+ 1181      65726D69 
+ 1181      6E617465 
+ 1181      64206279 
+ 1181      20706565 
+ 1182              		.align	2
+ 1183              	.LC76:
+ 1184 0418 25732074 		.ascii	"%s terminated by peer\012\000"
+ 1184      65726D69 
+ 1184      6E617465 
+ 1184      64206279 
+ 1184      20706565 
+ 1185 042f 00       		.align	2
+ 1186              	.LC78:
+ 1187 0430 66736D5F 		.ascii	"fsm_rtermack(%s): state=%d (%s)\012\000"
+ 1187      72746572 
+ 1187      6D61636B 
+ 1187      28257329 
+ 1187      3A207374 
+ 1188 0451 000000   		.align	2
+ 1189              	.LC80:
+ 1190 0454 66736D5F 		.ascii	"fsm_rcoderej(%s): state=%d (%s)\012\000"
+ 1190      72636F64 
+ 1190      6572656A 
+ 1190      28257329 
+ 1190      3A207374 
+ 1191 0475 000000   		.align	2
+ 1192              	.LC82:
+ 1193 0478 66736D5F 		.ascii	"fsm_rcoderej: Rcvd short Code-Reject packet!\012\000"
+ 1193      72636F64 
+ 1193      6572656A 
+ 1193      3A205263 
+ 1193      76642073 
+ 1194 04a6 0000     		.align	2
+ 1195              	.LC84:
+ 1196 04a8 25733A20 		.ascii	"%s: Rcvd Code-Reject for code %d, id %d\012\000"
+ 1196      52637664 
+ 1196      20436F64 
+ 1196      652D5265 
+ 1196      6A656374 
+ 1197              		.text
+ 1198              		.align	2
+ 1199              		.global	fsm_input
+ 1200              		.code	16
+ 1201              		.thumb_func
+ 1203              	fsm_input:
+ 1204              	.LFB296:
+ 1205              		.loc 1 365 0
+ 1206 0594 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1207              	.LCFI15:
+ 1208 0596 5F46     		mov	r7, fp
+ 1209 0598 5646     		mov	r6, sl
+ 1210 059a 4D46     		mov	r5, r9
+ 1211 059c 4446     		mov	r4, r8
+ 1212 059e F0B4     		push	{r4, r5, r6, r7}
+ 1213              	.LCFI16:
+ 1214              	.LVL100:
+ 1215 05a0 85B0     		sub	sp, sp, #20
+ 1216              	.LCFI17:
+ 1217 05a2 8046     		mov	r8, r0
+ 1218 05a4 0F1C     		mov	r7, r1
+ 1219 05a6 101C     		mov	r0, r2
+ 1220              	.LVL101:
+ 1221              		.loc 1 374 0
+ 1222 05a8 032A     		cmp	r2, #3
+ 1223 05aa 06D8     		bhi	.L85
+ 1224              	.LVL102:
+ 1225              		.loc 1 375 0
+ 1226 05ac D449     		ldr	r1, .L155
+ 1227 05ae 4046     		mov	r0, r8
+ 1228 05b0 8288     		ldrh	r2, [r0, #4]
+ 1229              	.LVL103:
+ 1230 05b2 0320     		mov	r0, #3
+ 1231 05b4 FFF7FEFF 		bl	ppp_trace
+ 1232 05b8 C4E2     		b	.L149
+ 1233              	.LVL104:
+ 1234              	.L85:
+ 1235              		.loc 1 379 0
+ 1236 05ba 0E78     		ldrb	r6, [r1]
+ 1237              	.LVL105:
+ 1238 05bc 4B1C     		add	r3, r1, #1
+ 1239              	.LVL106:
+ 1240              		.loc 1 380 0
+ 1241 05be 1A78     		ldrb	r2, [r3]
+ 1242              	.LVL107:
+ 1243 05c0 9446     		mov	ip, r2
+ 1244              	.LVL108:
+ 1245 05c2 0133     		add	r3, r3, #1
+ 1246              	.LVL109:
+ 1247              		.loc 1 381 0
+ 1248 05c4 1A78     		ldrb	r2, [r3]
+ 1249              	.LVL110:
+ 1250 05c6 591C     		add	r1, r3, #1
+ 1251              	.LVL111:
+ 1252 05c8 1202     		lsl	r2, r2, #8
+ 1253              	.LVL112:
+ 1254 05ca 0B78     		ldrb	r3, [r1]
+ 1255 05cc 1D1C     		mov	r5, r3
+ 1256              	.LVL113:
+ 1257 05ce 1543     		orr	r5, r5, r2
+ 1258              		.loc 1 382 0
+ 1259 05d0 2B1C     		mov	r3, r5
+ 1260 05d2 032D     		cmp	r5, #3
+ 1261 05d4 06D8     		bhi	.L87
+ 1262              		.loc 1 383 0
+ 1263 05d6 CB49     		ldr	r1, .L155+4
+ 1264              	.LVL114:
+ 1265 05d8 4346     		mov	r3, r8
+ 1266 05da 9A88     		ldrh	r2, [r3, #4]
+ 1267 05dc 0520     		mov	r0, #5
+ 1268              	.LVL115:
+ 1269 05de FFF7FEFF 		bl	ppp_trace
+ 1270              	.LVL116:
+ 1271 05e2 AFE2     		b	.L149
+ 1272              	.LVL117:
+ 1273              	.L87:
+ 1274              		.loc 1 387 0
+ 1275 05e4 A842     		cmp	r0, r5
+ 1276 05e6 06DA     		bge	.L88
+ 1277              		.loc 1 388 0
+ 1278 05e8 C749     		ldr	r1, .L155+8
+ 1279              	.LVL118:
+ 1280 05ea 4446     		mov	r4, r8
+ 1281 05ec A288     		ldrh	r2, [r4, #4]
+ 1282 05ee 0520     		mov	r0, #5
+ 1283              	.LVL119:
+ 1284 05f0 FFF7FEFF 		bl	ppp_trace
+ 1285              	.LVL120:
+ 1286 05f4 A6E2     		b	.L149
+ 1287              	.LVL121:
+ 1288              	.L88:
+ 1289              		.loc 1 394 0
+ 1290 05f6 4246     		mov	r2, r8
+ 1291 05f8 9468     		ldr	r4, [r2, #8]
+ 1292 05fa 012C     		cmp	r4, #1
+ 1293 05fc 0AD8     		bhi	.L89
+ 1294              		.loc 1 395 0
+ 1295 05fe C349     		ldr	r1, .L155+12
+ 1296              	.LVL122:
+ 1297 0600 9288     		ldrh	r2, [r2, #4]
+ 1298 0602 C348     		ldr	r0, .L155+16
+ 1299              	.LVL123:
+ 1300 0604 A300     		lsl	r3, r4, #2
+ 1301 0606 1B58     		ldr	r3, [r3, r0]
+ 1302 0608 0093     		str	r3, [sp]
+ 1303 060a 0520     		mov	r0, #5
+ 1304 060c 231C     		mov	r3, r4
+ 1305 060e FFF7FEFF 		bl	ppp_trace
+ 1306              	.LVL124:
+ 1307 0612 97E2     		b	.L149
+ 1308              	.LVL125:
+ 1309              	.L89:
+ 1310              		.loc 1 381 0
+ 1311 0614 0131     		add	r1, r1, #1
+ 1312              	.LVL126:
+ 1313 0616 0291     		str	r1, [sp, #8]
+ 1314              	.LVL127:
+ 1315              		.loc 1 392 0
+ 1316 0618 043B     		sub	r3, r3, #4
+ 1317 061a 9A46     		mov	sl, r3
+ 1318 061c 0393     		str	r3, [sp, #12]
+ 1319              	.LVL128:
+ 1320              		.loc 1 399 0
+ 1321 061e B346     		mov	fp, r6
+ 1322 0620 E146     		mov	r9, ip
+ 1323 0622 BC49     		ldr	r1, .L155+20
+ 1324 0624 4246     		mov	r2, r8
+ 1325 0626 D36A     		ldr	r3, [r2, #44]
+ 1326 0628 9A6B     		ldr	r2, [r3, #56]
+ 1327 062a 6346     		mov	r3, ip
+ 1328              	.LVL129:
+ 1329 062c 0093     		str	r3, [sp]
+ 1330 062e 0190     		str	r0, [sp, #4]
+ 1331 0630 0520     		mov	r0, #5
+ 1332              	.LVL130:
+ 1333 0632 331C     		mov	r3, r6
+ 1334 0634 FFF7FEFF 		bl	ppp_trace
+ 1335              		.loc 1 403 0
+ 1336 0638 072E     		cmp	r6, #7
+ 1337 063a 00D9     		bls	.LCB1119
+ 1338 063c 54E2     		b	.L90	@long jump
+ 1339              	.LCB1119:
+ 1340 063e B300     		lsl	r3, r6, #2
+ 1341 0640 B54A     		ldr	r2, .L155+24
+ 1342 0642 D358     		ldr	r3, [r2, r3]
+ 1343 0644 9F46     		mov	pc, r3
+ 1344              		.section	.rodata
+ 1345              		.align	2
+ 1346              	.L97:
+ 1347 0078 E80A0000 		.word	.L90
+ 1348 007c 46060000 		.word	.L91
+ 1349 0080 40070000 		.word	.L92
+ 1350 0084 30080000 		.word	.L93
+ 1351 0088 30080000 		.word	.L93
+ 1352 008c 66090000 		.word	.L94
+ 1353 0090 0C0A0000 		.word	.L95
+ 1354 0094 9E0A0000 		.word	.L96
+ 1355              		.text
+ 1356              	.L91:
+ 1357              		.loc 1 405 0
+ 1358 0646 039C     		ldr	r4, [sp, #12]
+ 1359 0648 0494     		str	r4, [sp, #16]
+ 1360              	.LVL131:
+ 1361              	.LBB14:
+ 1362              	.LBB16:
+ 1363              		.loc 1 570 0
+ 1364 064a 4246     		mov	r2, r8
+ 1365 064c 9068     		ldr	r0, [r2, #8]
+ 1366 064e B349     		ldr	r1, .L155+28
+ 1367 0650 D36A     		ldr	r3, [r2, #44]
+ 1368 0652 9A6B     		ldr	r2, [r3, #56]
+ 1369 0654 0090     		str	r0, [sp]
+ 1370 0656 AE4B     		ldr	r3, .L155+16
+ 1371 0658 8000     		lsl	r0, r0, #2
+ 1372 065a C358     		ldr	r3, [r0, r3]
+ 1373 065c 0193     		str	r3, [sp, #4]
+ 1374 065e 0520     		mov	r0, #5
+ 1375 0660 4B46     		mov	r3, r9
+ 1376 0662 FFF7FEFF 		bl	ppp_trace
+ 1377              		.loc 1 572 0
+ 1378 0666 4446     		mov	r4, r8
+ 1379 0668 A368     		ldr	r3, [r4, #8]
+ 1380 066a 092B     		cmp	r3, #9
+ 1381 066c 1ED8     		bhi	.L98
+ 1382              	.LVL132:
+ 1383 066e 9B00     		lsl	r3, r3, #2
+ 1384 0670 AB4A     		ldr	r2, .L155+32
+ 1385 0672 D358     		ldr	r3, [r2, r3]
+ 1386 0674 9F46     		mov	pc, r3
+ 1387              		.section	.rodata
+ 1388              		.align	2
+ 1389              	.L102:
+ 1390 0098 AC060000 		.word	.L98
+ 1391 009c AC060000 		.word	.L98
+ 1392 00a0 76060000 		.word	.L99
+ 1393 00a4 9E060000 		.word	.L100
+ 1394 00a8 440B0000 		.word	.L149
+ 1395 00ac 440B0000 		.word	.L149
+ 1396 00b0 AC060000 		.word	.L98
+ 1397 00b4 AC060000 		.word	.L98
+ 1398 00b8 AC060000 		.word	.L98
+ 1399 00bc 86060000 		.word	.L101
+ 1400              		.text
+ 1401              	.L99:
+ 1402              		.loc 1 575 0
+ 1403 0676 0023     		mov	r3, #0
+ 1404 0678 0093     		str	r3, [sp]
+ 1405 067a 4046     		mov	r0, r8
+ 1406 067c 0621     		mov	r1, #6
+ 1407 067e 4A46     		mov	r2, r9
+ 1408 0680 FFF7FEFF 		bl	fsm_sdata
+ 1409 0684 5EE2     		b	.L149
+ 1410              	.L101:
+ 1411              		.loc 1 583 0
+ 1412 0686 4046     		mov	r0, r8
+ 1413 0688 C36A     		ldr	r3, [r0, #44]
+ 1414 068a 1B6A     		ldr	r3, [r3, #32]
+ 1415 068c 002B     		cmp	r3, #0
+ 1416 068e 01D0     		beq	.L103
+ 1417              		.loc 1 584 0
+ 1418 0690 00F0E1FA 		bl	.L16
+ 1419              	.L103:
+ 1420              		.loc 1 586 0
+ 1421 0694 4046     		mov	r0, r8
+ 1422 0696 0021     		mov	r1, #0
+ 1423 0698 FFF7E2FD 		bl	fsm_sconfreq
+ 1424 069c 06E0     		b	.L98
+ 1425              	.L100:
+ 1426              		.loc 1 591 0
+ 1427 069e 4046     		mov	r0, r8
+ 1428 06a0 0021     		mov	r1, #0
+ 1429 06a2 FFF7DDFD 		bl	fsm_sconfreq
+ 1430              		.loc 1 592 0
+ 1431 06a6 0623     		mov	r3, #6
+ 1432 06a8 4246     		mov	r2, r8
+ 1433 06aa 9360     		str	r3, [r2, #8]
+ 1434              	.L98:
+ 1435              		.loc 1 600 0
+ 1436 06ac 4446     		mov	r4, r8
+ 1437 06ae E36A     		ldr	r3, [r4, #44]
+ 1438 06b0 9C69     		ldr	r4, [r3, #24]
+ 1439 06b2 002C     		cmp	r4, #0
+ 1440 06b4 18D0     		beq	.L104
+ 1441              	.LBE16:
+ 1442              		.loc 1 602 0
+ 1443 06b6 4246     		mov	r2, r8
+ 1444 06b8 506A     		ldr	r0, [r2, #36]
+ 1445 06ba 916A     		ldr	r1, [r2, #40]
+ 1446 06bc C317     		asr	r3, r0, #31
+ 1447 06be CA0F     		lsr	r2, r1, #31
+ 1448 06c0 8842     		cmp	r0, r1
+ 1449 06c2 5341     		adc	r3, r3, r2
+ 1450 06c4 4046     		mov	r0, r8
+ 1451 06c6 0299     		ldr	r1, [sp, #8]
+ 1452 06c8 04AA     		add	r2, sp, #16
+ 1453 06ca 00F0C5FA 		bl	.L159
+ 1454 06ce 041C     		mov	r4, r0
+ 1455              	.LVL133:
+ 1456              	.LBB15:
+ 1457              		.loc 1 610 0
+ 1458 06d0 0106     		lsl	r1, r0, #24
+ 1459 06d2 090E     		lsr	r1, r1, #24
+ 1460 06d4 049B     		ldr	r3, [sp, #16]
+ 1461 06d6 0093     		str	r3, [sp]
+ 1462 06d8 4046     		mov	r0, r8
+ 1463 06da 4A46     		mov	r2, r9
+ 1464 06dc 029B     		ldr	r3, [sp, #8]
+ 1465 06de FFF7FEFF 		bl	fsm_sdata
+ 1466              		.loc 1 612 0
+ 1467 06e2 022C     		cmp	r4, #2
+ 1468 06e4 1ED1     		bne	.L106
+ 1469              	.LVL134:
+ 1470 06e6 04E0     		b	.L105
+ 1471              	.LVL135:
+ 1472              	.L104:
+ 1473              		.loc 1 603 0
+ 1474 06e8 049B     		ldr	r3, [sp, #16]
+ 1475 06ea 002B     		cmp	r3, #0
+ 1476 06ec 00D0     		beq	.LCB1239
+ 1477 06ee 20E2     		b	.L107	@long jump
+ 1478              	.LCB1239:
+ 1479              	.LVL136:
+ 1480 06f0 16E2     		b	.L151
+ 1481              	.LVL137:
+ 1482              	.L105:
+ 1483              		.loc 1 613 0
+ 1484 06f2 4446     		mov	r4, r8
+ 1485              	.LVL138:
+ 1486 06f4 A368     		ldr	r3, [r4, #8]
+ 1487 06f6 072B     		cmp	r3, #7
+ 1488 06f8 0DD1     		bne	.L109
+ 1489              		.loc 1 614 0
+ 1490 06fa 8A48     		ldr	r0, .L155+36
+ 1491 06fc 4146     		mov	r1, r8
+ 1492 06fe FFF7FEFF 		bl	sys_untimeout
+ 1493              		.loc 1 615 0
+ 1494 0702 0923     		mov	r3, #9
+ 1495 0704 A360     		str	r3, [r4, #8]
+ 1496              		.loc 1 616 0
+ 1497 0706 E36A     		ldr	r3, [r4, #44]
+ 1498 0708 DB69     		ldr	r3, [r3, #28]
+ 1499 070a 002B     		cmp	r3, #0
+ 1500 070c 06D0     		beq	.L110
+ 1501              		.loc 1 617 0
+ 1502 070e 4046     		mov	r0, r8
+ 1503 0710 00F0A1FA 		bl	.L16
+ 1504 0714 02E0     		b	.L110
+ 1505              	.L109:
+ 1506              		.loc 1 620 0
+ 1507 0716 0823     		mov	r3, #8
+ 1508 0718 4046     		mov	r0, r8
+ 1509 071a 8360     		str	r3, [r0, #8]
+ 1510              	.L110:
+ 1511              		.loc 1 622 0
+ 1512 071c 0023     		mov	r3, #0
+ 1513 071e 4246     		mov	r2, r8
+ 1514 0720 5362     		str	r3, [r2, #36]
+ 1515 0722 0FE2     		b	.L149
+ 1516              	.LVL139:
+ 1517              	.L106:
+ 1518              		.loc 1 625 0
+ 1519 0724 4046     		mov	r0, r8
+ 1520 0726 8368     		ldr	r3, [r0, #8]
+ 1521 0728 072B     		cmp	r3, #7
+ 1522 072a 01D0     		beq	.L111
+ 1523              		.loc 1 626 0
+ 1524 072c 0623     		mov	r3, #6
+ 1525 072e 8360     		str	r3, [r0, #8]
+ 1526              	.L111:
+ 1527              		.loc 1 628 0
+ 1528 0730 032C     		cmp	r4, #3
+ 1529 0732 00D0     		beq	.LCB1289
+ 1530 0734 06E2     		b	.L149	@long jump
+ 1531              	.LCB1289:
+ 1532              		.loc 1 629 0
+ 1533 0736 4246     		mov	r2, r8
+ 1534 0738 536A     		ldr	r3, [r2, #36]
+ 1535 073a 0133     		add	r3, r3, #1
+ 1536 073c 5362     		str	r3, [r2, #36]
+ 1537 073e 01E2     		b	.L149
+ 1538              	.LVL140:
+ 1539              	.L92:
+ 1540              	.LBE15:
+ 1541              	.LBE14:
+ 1542              	.LBB18:
+ 1543              	.LBB19:
+ 1544              		.loc 1 641 0
+ 1545 0740 4346     		mov	r3, r8
+ 1546 0742 9868     		ldr	r0, [r3, #8]
+ 1547 0744 7849     		ldr	r1, .L155+40
+ 1548 0746 DB6A     		ldr	r3, [r3, #44]
+ 1549 0748 9A6B     		ldr	r2, [r3, #56]
+ 1550 074a 0090     		str	r0, [sp]
+ 1551 074c 704B     		ldr	r3, .L155+16
+ 1552 074e 8000     		lsl	r0, r0, #2
+ 1553 0750 C358     		ldr	r3, [r0, r3]
+ 1554 0752 0193     		str	r3, [sp, #4]
+ 1555 0754 0520     		mov	r0, #5
+ 1556 0756 4B46     		mov	r3, r9
+ 1557 0758 FFF7FEFF 		bl	ppp_trace
+ 1558              		.loc 1 644 0
+ 1559 075c 4446     		mov	r4, r8
+ 1560 075e 637C     		ldrb	r3, [r4, #17]
+ 1561 0760 9945     		cmp	r9, r3
+ 1562 0762 00D0     		beq	.LCB1322
+ 1563 0764 EEE1     		b	.L149	@long jump
+ 1564              	.LCB1322:
+ 1565 0766 A37C     		ldrb	r3, [r4, #18]
+ 1566 0768 002B     		cmp	r3, #0
+ 1567 076a 00D0     		beq	.LCB1325
+ 1568 076c EAE1     		b	.L149	@long jump
+ 1569              	.LCB1325:
+ 1570              		.loc 1 647 0
+ 1571 076e E36A     		ldr	r3, [r4, #44]
+ 1572 0770 DB68     		ldr	r3, [r3, #12]
+ 1573 0772 002B     		cmp	r3, #0
+ 1574 0774 07D0     		beq	.L112
+ 1575              	.LBE19:
+ 1576 0776 4046     		mov	r0, r8
+ 1577 0778 0299     		ldr	r1, [sp, #8]
+ 1578 077a 039A     		ldr	r2, [sp, #12]
+ 1579 077c 00F06BFA 		bl	.L16
+ 1580              	.LBB20:
+ 1581 0780 4342     		neg	r3, r0
+ 1582 0782 4341     		adc	r3, r3, r0
+ 1583 0784 02E0     		b	.L113
+ 1584              	.LVL141:
+ 1585              	.L112:
+ 1586 0786 039B     		ldr	r3, [sp, #12]
+ 1587 0788 5A1E     		sub	r2, r3, #1
+ 1588 078a 9341     		sbc	r3, r3, r2
+ 1589              	.LVL142:
+ 1590              	.L113:
+ 1591 078c 002B     		cmp	r3, #0
+ 1592 078e 08D0     		beq	.L114
+ 1593              		.loc 1 649 0
+ 1594 0790 6649     		ldr	r1, .L155+44
+ 1595 0792 4046     		mov	r0, r8
+ 1596 0794 C36A     		ldr	r3, [r0, #44]
+ 1597 0796 9A6B     		ldr	r2, [r3, #56]
+ 1598 0798 0520     		mov	r0, #5
+ 1599 079a 039B     		ldr	r3, [sp, #12]
+ 1600 079c FFF7FEFF 		bl	ppp_trace
+ 1601 07a0 D0E1     		b	.L149
+ 1602              	.L114:
+ 1603              		.loc 1 653 0
+ 1604 07a2 0123     		mov	r3, #1
+ 1605 07a4 4246     		mov	r2, r8
+ 1606 07a6 9374     		strb	r3, [r2, #18]
+ 1607              		.loc 1 655 0
+ 1608 07a8 9368     		ldr	r3, [r2, #8]
+ 1609 07aa 092B     		cmp	r3, #9
+ 1610 07ac 00D9     		bls	.LCB1373
+ 1611 07ae C9E1     		b	.L149	@long jump
+ 1612              	.LCB1373:
+ 1613 07b0 9B00     		lsl	r3, r3, #2
+ 1614 07b2 5F4A     		ldr	r2, .L155+48
+ 1615 07b4 D358     		ldr	r3, [r2, r3]
+ 1616 07b6 9F46     		mov	pc, r3
+ 1617              		.section	.rodata
+ 1618              		.align	2
+ 1619              	.L120:
+ 1620 00c0 440B0000 		.word	.L149
+ 1621 00c4 440B0000 		.word	.L149
+ 1622 00c8 B8070000 		.word	.L115
+ 1623 00cc B8070000 		.word	.L115
+ 1624 00d0 440B0000 		.word	.L149
+ 1625 00d4 440B0000 		.word	.L149
+ 1626 00d8 C8070000 		.word	.L116
+ 1627 00dc D4070000 		.word	.L117
+ 1628 00e0 EC070000 		.word	.L118
+ 1629 00e4 10080000 		.word	.L119
+ 1630              		.text
+ 1631              	.L115:
+ 1632              		.loc 1 658 0
+ 1633 07b8 0023     		mov	r3, #0
+ 1634 07ba 0093     		str	r3, [sp]
+ 1635 07bc 4046     		mov	r0, r8
+ 1636 07be 0621     		mov	r1, #6
+ 1637 07c0 4A46     		mov	r2, r9
+ 1638 07c2 FFF7FEFF 		bl	fsm_sdata
+ 1639 07c6 BDE1     		b	.L149
+ 1640              	.L116:
+ 1641              		.loc 1 662 0
+ 1642 07c8 0723     		mov	r3, #7
+ 1643 07ca 4446     		mov	r4, r8
+ 1644 07cc A360     		str	r3, [r4, #8]
+ 1645              		.loc 1 663 0
+ 1646 07ce A369     		ldr	r3, [r4, #24]
+ 1647 07d0 E361     		str	r3, [r4, #28]
+ 1648 07d2 B7E1     		b	.L149
+ 1649              	.L117:
+ 1650              		.loc 1 668 0
+ 1651 07d4 5348     		ldr	r0, .L155+36
+ 1652 07d6 4146     		mov	r1, r8
+ 1653 07d8 FFF7FEFF 		bl	sys_untimeout
+ 1654              		.loc 1 669 0
+ 1655 07dc 4046     		mov	r0, r8
+ 1656 07de 0021     		mov	r1, #0
+ 1657 07e0 FFF73EFD 		bl	fsm_sconfreq
+ 1658              		.loc 1 670 0
+ 1659 07e4 0623     		mov	r3, #6
+ 1660 07e6 4046     		mov	r0, r8
+ 1661 07e8 8360     		str	r3, [r0, #8]
+ 1662 07ea ABE1     		b	.L149
+ 1663              	.L118:
+ 1664              		.loc 1 674 0
+ 1665 07ec 4D48     		ldr	r0, .L155+36
+ 1666 07ee 4146     		mov	r1, r8
+ 1667 07f0 FFF7FEFF 		bl	sys_untimeout
+ 1668              		.loc 1 675 0
+ 1669 07f4 0923     		mov	r3, #9
+ 1670 07f6 4246     		mov	r2, r8
+ 1671 07f8 9360     		str	r3, [r2, #8]
+ 1672              		.loc 1 676 0
+ 1673 07fa 9369     		ldr	r3, [r2, #24]
+ 1674 07fc D361     		str	r3, [r2, #28]
+ 1675              		.loc 1 677 0
+ 1676 07fe D36A     		ldr	r3, [r2, #44]
+ 1677 0800 DB69     		ldr	r3, [r3, #28]
+ 1678 0802 002B     		cmp	r3, #0
+ 1679 0804 00D1     		bne	.LCB1428
+ 1680 0806 9DE1     		b	.L149	@long jump
+ 1681              	.LCB1428:
+ 1682              		.loc 1 678 0
+ 1683 0808 4046     		mov	r0, r8
+ 1684 080a 00F024FA 		bl	.L16
+ 1685 080e 99E1     		b	.L149
+ 1686              	.L119:
+ 1687              		.loc 1 684 0
+ 1688 0810 4446     		mov	r4, r8
+ 1689 0812 E36A     		ldr	r3, [r4, #44]
+ 1690 0814 1B6A     		ldr	r3, [r3, #32]
+ 1691 0816 002B     		cmp	r3, #0
+ 1692 0818 02D0     		beq	.L121
+ 1693              		.loc 1 685 0
+ 1694 081a 4046     		mov	r0, r8
+ 1695 081c 00F01BFA 		bl	.L16
+ 1696              	.L121:
+ 1697              		.loc 1 687 0
+ 1698 0820 4046     		mov	r0, r8
+ 1699 0822 0021     		mov	r1, #0
+ 1700 0824 FFF71CFD 		bl	fsm_sconfreq
+ 1701              		.loc 1 688 0
+ 1702 0828 0623     		mov	r3, #6
+ 1703 082a 4046     		mov	r0, r8
+ 1704 082c 8360     		str	r3, [r0, #8]
+ 1705 082e 89E1     		b	.L149
+ 1706              	.LVL143:
+ 1707              	.L93:
+ 1708              	.LBE20:
+ 1709              	.LBE18:
+ 1710              	.LBB21:
+ 1711              	.LBB22:
+ 1712              		.loc 1 703 0
+ 1713 0830 4246     		mov	r2, r8
+ 1714 0832 9068     		ldr	r0, [r2, #8]
+ 1715 0834 3F49     		ldr	r1, .L155+52
+ 1716 0836 D36A     		ldr	r3, [r2, #44]
+ 1717 0838 9A6B     		ldr	r2, [r3, #56]
+ 1718 083a 0090     		str	r0, [sp]
+ 1719 083c 344B     		ldr	r3, .L155+16
+ 1720 083e 8000     		lsl	r0, r0, #2
+ 1721 0840 C358     		ldr	r3, [r0, r3]
+ 1722 0842 0193     		str	r3, [sp, #4]
+ 1723 0844 0520     		mov	r0, #5
+ 1724 0846 4B46     		mov	r3, r9
+ 1725 0848 FFF7FEFF 		bl	ppp_trace
+ 1726              		.loc 1 706 0
+ 1727 084c 4446     		mov	r4, r8
+ 1728 084e 637C     		ldrb	r3, [r4, #17]
+ 1729 0850 9945     		cmp	r9, r3
+ 1730 0852 00D0     		beq	.LCB1476
+ 1731 0854 76E1     		b	.L149	@long jump
+ 1732              	.LCB1476:
+ 1733 0856 A37C     		ldrb	r3, [r4, #18]
+ 1734 0858 002B     		cmp	r3, #0
+ 1735 085a 00D0     		beq	.LCB1479
+ 1736 085c 72E1     		b	.L149	@long jump
+ 1737              	.LCB1479:
+ 1738              		.loc 1 709 0
+ 1739 085e 032E     		cmp	r6, #3
+ 1740 0860 02D1     		bne	.L122
+ 1741              	.LVL144:
+ 1742 0862 E36A     		ldr	r3, [r4, #44]
+ 1743 0864 1B69     		ldr	r3, [r3, #16]
+ 1744              	.LVL145:
+ 1745 0866 02E0     		b	.L123
+ 1746              	.LVL146:
+ 1747              	.L122:
+ 1748 0868 4246     		mov	r2, r8
+ 1749 086a D36A     		ldr	r3, [r2, #44]
+ 1750 086c 5B69     		ldr	r3, [r3, #20]
+ 1751              	.LVL147:
+ 1752              	.L123:
+ 1753              		.loc 1 710 0
+ 1754 086e 002B     		cmp	r3, #0
+ 1755 0870 07D0     		beq	.L124
+ 1756              	.LBE22:
+ 1757 0872 4046     		mov	r0, r8
+ 1758 0874 0299     		ldr	r1, [sp, #8]
+ 1759 0876 039A     		ldr	r2, [sp, #12]
+ 1760 0878 00F0EDF9 		bl	.L16
+ 1761              	.LVL148:
+ 1762 087c 041C     		mov	r4, r0
+ 1763              	.LVL149:
+ 1764              	.LBB23:
+ 1765 087e 0028     		cmp	r0, #0
+ 1766 0880 0FD1     		bne	.L125
+ 1767              	.LVL150:
+ 1768              	.L124:
+ 1769              		.loc 1 712 0
+ 1770 0882 4446     		mov	r4, r8
+ 1771 0884 E36A     		ldr	r3, [r4, #44]
+ 1772              	.LVL151:
+ 1773 0886 9A6B     		ldr	r2, [r3, #56]
+ 1774 0888 5846     		mov	r0, fp
+ 1775              	.LVL152:
+ 1776 088a 0328     		cmp	r0, #3
+ 1777 088c 01D0     		beq	.L126
+ 1778 088e 2A4B     		ldr	r3, .L155+56
+ 1779 0890 00E0     		b	.L127
+ 1780              	.L126:
+ 1781 0892 2A4B     		ldr	r3, .L155+60
+ 1782              	.L127:
+ 1783 0894 2A49     		ldr	r1, .L155+64
+ 1784 0896 039C     		ldr	r4, [sp, #12]
+ 1785 0898 0094     		str	r4, [sp]
+ 1786 089a 0520     		mov	r0, #5
+ 1787 089c FFF7FEFF 		bl	ppp_trace
+ 1788 08a0 50E1     		b	.L149
+ 1789              	.LVL153:
+ 1790              	.L125:
+ 1791              		.loc 1 716 0
+ 1792 08a2 0123     		mov	r3, #1
+ 1793 08a4 4046     		mov	r0, r8
+ 1794              	.LVL154:
+ 1795 08a6 8374     		strb	r3, [r0, #18]
+ 1796              		.loc 1 718 0
+ 1797 08a8 8368     		ldr	r3, [r0, #8]
+ 1798 08aa 092B     		cmp	r3, #9
+ 1799 08ac 00D9     		bls	.LCB1547
+ 1800 08ae 49E1     		b	.L149	@long jump
+ 1801              	.LCB1547:
+ 1802 08b0 9B00     		lsl	r3, r3, #2
+ 1803 08b2 244A     		ldr	r2, .L155+68
+ 1804 08b4 D358     		ldr	r3, [r2, r3]
+ 1805 08b6 9F46     		mov	pc, r3
+ 1806              		.section	.rodata
+ 1807              		.align	2
+ 1808              	.L132:
+ 1809 00e8 440B0000 		.word	.L149
+ 1810 00ec 440B0000 		.word	.L149
+ 1811 00f0 B8080000 		.word	.L128
+ 1812 00f4 B8080000 		.word	.L128
+ 1813 00f8 440B0000 		.word	.L149
+ 1814 00fc 440B0000 		.word	.L149
+ 1815 0100 C8080000 		.word	.L129
+ 1816 0104 E6080000 		.word	.L130
+ 1817 0108 C8080000 		.word	.L129
+ 1818 010c 48090000 		.word	.L131
+ 1819              		.text
+ 1820              	.L128:
+ 1821              		.loc 1 721 0
+ 1822 08b8 0023     		mov	r3, #0
+ 1823 08ba 0093     		str	r3, [sp]
+ 1824 08bc 4046     		mov	r0, r8
+ 1825 08be 0621     		mov	r1, #6
+ 1826 08c0 4A46     		mov	r2, r9
+ 1827 08c2 FFF7FEFF 		bl	fsm_sdata
+ 1828 08c6 3DE1     		b	.L149
+ 1829              	.L129:
+ 1830              		.loc 1 727 0
+ 1831 08c8 1648     		ldr	r0, .L155+36
+ 1832 08ca 4146     		mov	r1, r8
+ 1833 08cc FFF7FEFF 		bl	sys_untimeout
+ 1834              		.loc 1 728 0
+ 1835 08d0 002C     		cmp	r4, #0
+ 1836 08d2 03DA     		bge	.L133
+ 1837              		.loc 1 729 0
+ 1838 08d4 0323     		mov	r3, #3
+ 1839 08d6 4246     		mov	r2, r8
+ 1840 08d8 9360     		str	r3, [r2, #8]
+ 1841 08da 33E1     		b	.L149
+ 1842              	.L133:
+ 1843              		.loc 1 731 0
+ 1844 08dc 4046     		mov	r0, r8
+ 1845 08de 0021     		mov	r1, #0
+ 1846 08e0 FFF7BEFC 		bl	fsm_sconfreq
+ 1847 08e4 2EE1     		b	.L149
+ 1848              	.L130:
+ 1849              		.loc 1 737 0
+ 1850 08e6 0F48     		ldr	r0, .L155+36
+ 1851 08e8 4146     		mov	r1, r8
+ 1852 08ea FFF7FEFF 		bl	sys_untimeout
+ 1853              		.loc 1 738 0
+ 1854 08ee 4046     		mov	r0, r8
+ 1855 08f0 0021     		mov	r1, #0
+ 1856 08f2 FFF7B5FC 		bl	fsm_sconfreq
+ 1857              		.loc 1 739 0
+ 1858 08f6 0623     		mov	r3, #6
+ 1859 08f8 4446     		mov	r4, r8
+ 1860              	.LVL155:
+ 1861 08fa A360     		str	r3, [r4, #8]
+ 1862 08fc 22E1     		b	.L149
+ 1863              	.L156:
+ 1864 08fe C046     		.align	2
+ 1865              	.L155:
+ 1866 0900 3C020000 		.word	.LC42
+ 1867 0904 60020000 		.word	.LC44
+ 1868 0908 88020000 		.word	.LC46
+ 1869 090c AC020000 		.word	.LC48
+ 1870 0910 38010000 		.word	ppperr_strerr
+ 1871 0914 DC020000 		.word	.LC51
+ 1872 0918 78000000 		.word	.L97
+ 1873 091c F4020000 		.word	.LC54
+ 1874 0920 98000000 		.word	.L102
+ 1875 0924 00000000 		.word	fsm_timeout
+ 1876 0928 20030000 		.word	.LC58
+ 1877 092c 4C030000 		.word	.LC60
+ 1878 0930 C0000000 		.word	.L120
+ 1879 0934 70030000 		.word	.LC63
+ 1880 0938 A0030000 		.word	.LC65
+ 1881 093c A8030000 		.word	.LC67
+ 1882 0940 AC030000 		.word	.LC69
+ 1883 0944 E8000000 		.word	.L132
+ 1884              	.LVL156:
+ 1885              	.L131:
+ 1886              		.loc 1 744 0
+ 1887 0948 4046     		mov	r0, r8
+ 1888 094a C36A     		ldr	r3, [r0, #44]
+ 1889 094c 1B6A     		ldr	r3, [r3, #32]
+ 1890 094e 002B     		cmp	r3, #0
+ 1891 0950 01D0     		beq	.L134
+ 1892              		.loc 1 745 0
+ 1893 0952 00F080F9 		bl	.L16
+ 1894              	.L134:
+ 1895              		.loc 1 747 0
+ 1896 0956 4046     		mov	r0, r8
+ 1897 0958 0021     		mov	r1, #0
+ 1898 095a FFF781FC 		bl	fsm_sconfreq
+ 1899              		.loc 1 748 0
+ 1900 095e 0623     		mov	r3, #6
+ 1901 0960 4246     		mov	r2, r8
+ 1902 0962 9360     		str	r3, [r2, #8]
+ 1903 0964 EEE0     		b	.L149
+ 1904              	.LVL157:
+ 1905              	.L94:
+ 1906              	.LBE23:
+ 1907              	.LBE21:
+ 1908              	.LBB24:
+ 1909              	.LBB25:
+ 1910              		.loc 1 762 0
+ 1911 0966 4346     		mov	r3, r8
+ 1912 0968 9868     		ldr	r0, [r3, #8]
+ 1913 096a 7B49     		ldr	r1, .L157
+ 1914 096c DB6A     		ldr	r3, [r3, #44]
+ 1915 096e 9A6B     		ldr	r2, [r3, #56]
+ 1916 0970 0090     		str	r0, [sp]
+ 1917 0972 7A4B     		ldr	r3, .L157+4
+ 1918 0974 8000     		lsl	r0, r0, #2
+ 1919 0976 C358     		ldr	r3, [r0, r3]
+ 1920 0978 0193     		str	r3, [sp, #4]
+ 1921 097a 0520     		mov	r0, #5
+ 1922 097c 4B46     		mov	r3, r9
+ 1923 097e FFF7FEFF 		bl	ppp_trace
+ 1924              		.loc 1 765 0
+ 1925 0982 4446     		mov	r4, r8
+ 1926 0984 A368     		ldr	r3, [r4, #8]
+ 1927 0986 072B     		cmp	r3, #7
+ 1928 0988 38DB     		blt	.L135
+ 1929 098a 082B     		cmp	r3, #8
+ 1930 098c 02DD     		ble	.L136
+ 1931 098e 092B     		cmp	r3, #9
+ 1932 0990 34D1     		bne	.L135
+ 1933 0992 03E0     		b	.L152
+ 1934              	.L136:
+ 1935              		.loc 1 768 0
+ 1936 0994 0623     		mov	r3, #6
+ 1937 0996 4046     		mov	r0, r8
+ 1938 0998 8360     		str	r3, [r0, #8]
+ 1939 099a 2FE0     		b	.L135
+ 1940              	.L152:
+ 1941              		.loc 1 772 0
+ 1942 099c 039A     		ldr	r2, [sp, #12]
+ 1943 099e 002A     		cmp	r2, #0
+ 1944 09a0 08DD     		ble	.L138
+ 1945              	.LVL158:
+ 1946              		.loc 1 773 0
+ 1947 09a2 6F49     		ldr	r1, .L157+8
+ 1948 09a4 4446     		mov	r4, r8
+ 1949 09a6 E36A     		ldr	r3, [r4, #44]
+ 1950 09a8 9A6B     		ldr	r2, [r3, #56]
+ 1951 09aa 0520     		mov	r0, #5
+ 1952 09ac 029B     		ldr	r3, [sp, #8]
+ 1953 09ae FFF7FEFF 		bl	ppp_trace
+ 1954 09b2 06E0     		b	.L139
+ 1955              	.LVL159:
+ 1956              	.L138:
+ 1957              		.loc 1 775 0
+ 1958 09b4 6B49     		ldr	r1, .L157+12
+ 1959 09b6 4046     		mov	r0, r8
+ 1960 09b8 C36A     		ldr	r3, [r0, #44]
+ 1961 09ba 9A6B     		ldr	r2, [r3, #56]
+ 1962 09bc 0520     		mov	r0, #5
+ 1963 09be FFF7FEFF 		bl	ppp_trace
+ 1964              	.LVL160:
+ 1965              	.L139:
+ 1966              		.loc 1 777 0
+ 1967 09c2 4246     		mov	r2, r8
+ 1968 09c4 D36A     		ldr	r3, [r2, #44]
+ 1969 09c6 1B6A     		ldr	r3, [r3, #32]
+ 1970 09c8 002B     		cmp	r3, #0
+ 1971 09ca 02D0     		beq	.L140
+ 1972              		.loc 1 778 0
+ 1973 09cc 4046     		mov	r0, r8
+ 1974 09ce 00F042F9 		bl	.L16
+ 1975              	.L140:
+ 1976              		.loc 1 780 0
+ 1977 09d2 0023     		mov	r3, #0
+ 1978 09d4 4446     		mov	r4, r8
+ 1979 09d6 E361     		str	r3, [r4, #28]
+ 1980              		.loc 1 781 0
+ 1981 09d8 0523     		mov	r3, #5
+ 1982 09da A360     		str	r3, [r4, #8]
+ 1983              		.loc 1 782 0
+ 1984 09dc 624C     		ldr	r4, .L157+16
+ 1985 09de 201C     		mov	r0, r4
+ 1986 09e0 4146     		mov	r1, r8
+ 1987 09e2 FFF7FEFF 		bl	sys_untimeout
+ 1988 09e6 4046     		mov	r0, r8
+ 1989 09e8 4369     		ldr	r3, [r0, #20]
+ 1990 09ea 5801     		lsl	r0, r3, #5
+ 1991 09ec C01A     		sub	r0, r0, r3
+ 1992 09ee 8000     		lsl	r0, r0, #2
+ 1993 09f0 C018     		add	r0, r0, r3
+ 1994 09f2 C000     		lsl	r0, r0, #3
+ 1995 09f4 211C     		mov	r1, r4
+ 1996 09f6 4246     		mov	r2, r8
+ 1997 09f8 FFF7FEFF 		bl	sys_timeout
+ 1998              	.LVL161:
+ 1999              	.L135:
+ 2000              		.loc 1 786 0
+ 2001 09fc 0023     		mov	r3, #0
+ 2002 09fe 0093     		str	r3, [sp]
+ 2003 0a00 4046     		mov	r0, r8
+ 2004 0a02 0621     		mov	r1, #6
+ 2005 0a04 4A46     		mov	r2, r9
+ 2006 0a06 FFF7FEFF 		bl	fsm_sdata
+ 2007 0a0a 9BE0     		b	.L149
+ 2008              	.LVL162:
+ 2009              	.L95:
+ 2010              	.LBE25:
+ 2011              	.LBE24:
+ 2012              	.LBB26:
+ 2013              	.LBB27:
+ 2014              		.loc 1 796 0
+ 2015 0a0c 4246     		mov	r2, r8
+ 2016 0a0e 9368     		ldr	r3, [r2, #8]
+ 2017 0a10 5649     		ldr	r1, .L157+20
+ 2018 0a12 D26A     		ldr	r2, [r2, #44]
+ 2019 0a14 926B     		ldr	r2, [r2, #56]
+ 2020 0a16 514C     		ldr	r4, .L157+4
+ 2021 0a18 9800     		lsl	r0, r3, #2
+ 2022 0a1a 0059     		ldr	r0, [r0, r4]
+ 2023 0a1c 0090     		str	r0, [sp]
+ 2024 0a1e 0520     		mov	r0, #5
+ 2025 0a20 FFF7FEFF 		bl	ppp_trace
+ 2026              		.loc 1 799 0
+ 2027 0a24 4446     		mov	r4, r8
+ 2028 0a26 A368     		ldr	r3, [r4, #8]
+ 2029 0a28 052B     		cmp	r3, #5
+ 2030 0a2a 19D0     		beq	.L142
+ 2031 0a2c 052B     		cmp	r3, #5
+ 2032 0a2e 03DC     		bgt	.L145
+ 2033 0a30 042B     		cmp	r3, #4
+ 2034 0a32 00D0     		beq	.LCB1774
+ 2035 0a34 86E0     		b	.L149	@long jump
+ 2036              	.LCB1774:
+ 2037 0a36 05E0     		b	.L153
+ 2038              	.L145:
+ 2039 0a38 072B     		cmp	r3, #7
+ 2040 0a3a 20D0     		beq	.L143
+ 2041 0a3c 092B     		cmp	r3, #9
+ 2042 0a3e 00D0     		beq	.LCB1782
+ 2043 0a40 80E0     		b	.L149	@long jump
+ 2044              	.LCB1782:
+ 2045 0a42 20E0     		b	.L154
+ 2046              	.L153:
+ 2047              		.loc 1 801 0
+ 2048 0a44 4848     		ldr	r0, .L157+16
+ 2049 0a46 4146     		mov	r1, r8
+ 2050 0a48 FFF7FEFF 		bl	sys_untimeout
+ 2051              		.loc 1 802 0
+ 2052 0a4c 0223     		mov	r3, #2
+ 2053 0a4e 4046     		mov	r0, r8
+ 2054 0a50 8360     		str	r3, [r0, #8]
+ 2055              		.loc 1 803 0
+ 2056 0a52 C36A     		ldr	r3, [r0, #44]
+ 2057 0a54 9B6A     		ldr	r3, [r3, #40]
+ 2058 0a56 002B     		cmp	r3, #0
+ 2059 0a58 74D0     		beq	.L149
+ 2060              		.loc 1 804 0
+ 2061 0a5a 00F0FCF8 		bl	.L16
+ 2062 0a5e 71E0     		b	.L149
+ 2063              	.L142:
+ 2064              		.loc 1 809 0
+ 2065 0a60 4148     		ldr	r0, .L157+16
+ 2066 0a62 4146     		mov	r1, r8
+ 2067 0a64 FFF7FEFF 		bl	sys_untimeout
+ 2068              		.loc 1 810 0
+ 2069 0a68 0323     		mov	r3, #3
+ 2070 0a6a 4246     		mov	r2, r8
+ 2071 0a6c 9360     		str	r3, [r2, #8]
+ 2072              		.loc 1 811 0
+ 2073 0a6e D36A     		ldr	r3, [r2, #44]
+ 2074 0a70 9B6A     		ldr	r3, [r3, #40]
+ 2075 0a72 002B     		cmp	r3, #0
+ 2076 0a74 66D0     		beq	.L149
+ 2077              		.loc 1 812 0
+ 2078 0a76 4046     		mov	r0, r8
+ 2079 0a78 00F0EDF8 		bl	.L16
+ 2080 0a7c 62E0     		b	.L149
+ 2081              	.L143:
+ 2082              		.loc 1 817 0
+ 2083 0a7e 0623     		mov	r3, #6
+ 2084 0a80 4446     		mov	r4, r8
+ 2085 0a82 A360     		str	r3, [r4, #8]
+ 2086 0a84 5EE0     		b	.L149
+ 2087              	.L154:
+ 2088              		.loc 1 821 0
+ 2089 0a86 4046     		mov	r0, r8
+ 2090 0a88 C36A     		ldr	r3, [r0, #44]
+ 2091 0a8a 1B6A     		ldr	r3, [r3, #32]
+ 2092 0a8c 002B     		cmp	r3, #0
+ 2093 0a8e 01D0     		beq	.L146
+ 2094              		.loc 1 822 0
+ 2095 0a90 00F0E1F8 		bl	.L16
+ 2096              	.L146:
+ 2097              		.loc 1 824 0
+ 2098 0a94 4046     		mov	r0, r8
+ 2099 0a96 0021     		mov	r1, #0
+ 2100 0a98 FFF7E2FB 		bl	fsm_sconfreq
+ 2101 0a9c 52E0     		b	.L149
+ 2102              	.L96:
+ 2103              	.LBE27:
+ 2104              	.LBE26:
+ 2105              	.LBB28:
+ 2106              	.LBB29:
+ 2107              		.loc 1 838 0
+ 2108 0a9e 4246     		mov	r2, r8
+ 2109 0aa0 9368     		ldr	r3, [r2, #8]
+ 2110 0aa2 3349     		ldr	r1, .L157+24
+ 2111 0aa4 D26A     		ldr	r2, [r2, #44]
+ 2112 0aa6 926B     		ldr	r2, [r2, #56]
+ 2113 0aa8 2C4C     		ldr	r4, .L157+4
+ 2114 0aaa 9800     		lsl	r0, r3, #2
+ 2115 0aac 0059     		ldr	r0, [r0, r4]
+ 2116 0aae 0090     		str	r0, [sp]
+ 2117 0ab0 0520     		mov	r0, #5
+ 2118 0ab2 FFF7FEFF 		bl	ppp_trace
+ 2119              		.loc 1 841 0
+ 2120 0ab6 5346     		mov	r3, sl
+ 2121 0ab8 032B     		cmp	r3, #3
+ 2122 0aba 04D8     		bhi	.L147
+ 2123              		.loc 1 842 0
+ 2124 0abc 2D49     		ldr	r1, .L157+28
+ 2125 0abe 0520     		mov	r0, #5
+ 2126 0ac0 FFF7FEFF 		bl	ppp_trace
+ 2127 0ac4 3EE0     		b	.L149
+ 2128              	.L147:
+ 2129              		.loc 1 847 0
+ 2130 0ac6 2C49     		ldr	r1, .L157+32
+ 2131 0ac8 4446     		mov	r4, r8
+ 2132 0aca E36A     		ldr	r3, [r4, #44]
+ 2133 0acc 9A6B     		ldr	r2, [r3, #56]
+ 2134 0ace 0298     		ldr	r0, [sp, #8]
+ 2135 0ad0 0378     		ldrb	r3, [r0]
+ 2136 0ad2 4078     		ldrb	r0, [r0, #1]
+ 2137 0ad4 0090     		str	r0, [sp]
+ 2138 0ad6 0320     		mov	r0, #3
+ 2139 0ad8 FFF7FEFF 		bl	ppp_trace
+ 2140              		.loc 1 850 0
+ 2141 0adc A368     		ldr	r3, [r4, #8]
+ 2142 0ade 072B     		cmp	r3, #7
+ 2143 0ae0 30D1     		bne	.L149
+ 2144              	.LVL163:
+ 2145              		.loc 1 851 0
+ 2146 0ae2 0623     		mov	r3, #6
+ 2147 0ae4 A360     		str	r3, [r4, #8]
+ 2148 0ae6 2DE0     		b	.L149
+ 2149              	.LVL164:
+ 2150              	.L90:
+ 2151              	.LBE29:
+ 2152              	.LBE28:
+ 2153              		.loc 1 430 0
+ 2154 0ae8 4246     		mov	r2, r8
+ 2155 0aea D36A     		ldr	r3, [r2, #44]
+ 2156 0aec 5C6B     		ldr	r4, [r3, #52]
+ 2157 0aee 002C     		cmp	r4, #0
+ 2158 0af0 09D0     		beq	.L148
+ 2159 0af2 039B     		ldr	r3, [sp, #12]
+ 2160 0af4 0093     		str	r3, [sp]
+ 2161 0af6 4046     		mov	r0, r8
+ 2162 0af8 5946     		mov	r1, fp
+ 2163 0afa 4A46     		mov	r2, r9
+ 2164 0afc 029B     		ldr	r3, [sp, #8]
+ 2165 0afe 00F0ABF8 		bl	.L159
+ 2166 0b02 0028     		cmp	r0, #0
+ 2167 0b04 1ED1     		bne	.L149
+ 2168              	.L148:
+ 2169              		.loc 1 432 0
+ 2170 0b06 4446     		mov	r4, r8
+ 2171 0b08 227C     		ldrb	r2, [r4, #16]
+ 2172 0b0a 0132     		add	r2, r2, #1
+ 2173 0b0c 1206     		lsl	r2, r2, #24
+ 2174 0b0e 120E     		lsr	r2, r2, #24
+ 2175 0b10 2274     		strb	r2, [r4, #16]
+ 2176 0b12 0095     		str	r5, [sp]
+ 2177 0b14 4046     		mov	r0, r8
+ 2178 0b16 0721     		mov	r1, #7
+ 2179 0b18 3B1C     		mov	r3, r7
+ 2180 0b1a FFF7FEFF 		bl	fsm_sdata
+ 2181 0b1e 11E0     		b	.L149
+ 2182              	.LVL165:
+ 2183              	.L151:
+ 2184              	.LBB30:
+ 2185              	.LBB17:
+ 2186              		.loc 1 610 0
+ 2187 0b20 0023     		mov	r3, #0
+ 2188 0b22 0093     		str	r3, [sp]
+ 2189 0b24 4046     		mov	r0, r8
+ 2190 0b26 0221     		mov	r1, #2
+ 2191 0b28 4A46     		mov	r2, r9
+ 2192 0b2a 029B     		ldr	r3, [sp, #8]
+ 2193 0b2c FFF7FEFF 		bl	fsm_sdata
+ 2194 0b30 DFE5     		b	.L105
+ 2195              	.LVL166:
+ 2196              	.L107:
+ 2197 0b32 0093     		str	r3, [sp]
+ 2198 0b34 4046     		mov	r0, r8
+ 2199 0b36 0421     		mov	r1, #4
+ 2200 0b38 4A46     		mov	r2, r9
+ 2201 0b3a 029B     		ldr	r3, [sp, #8]
+ 2202 0b3c FFF7FEFF 		bl	fsm_sdata
+ 2203 0b40 0424     		mov	r4, #4
+ 2204              	.LVL167:
+ 2205 0b42 EFE5     		b	.L106
+ 2206              	.LVL168:
+ 2207              	.L149:
+ 2208              	.LBE17:
+ 2209              	.LBE30:
+ 2210              		.loc 1 436 0
+ 2211 0b44 05B0     		add	sp, sp, #20
+ 2212              		@ sp needed for prologue
+ 2213              	.LVL169:
+ 2214              	.LVL170:
+ 2215              	.LVL171:
+ 2216              	.LVL172:
+ 2217 0b46 3CBC     		pop	{r2, r3, r4, r5}
+ 2218 0b48 9046     		mov	r8, r2
+ 2219 0b4a 9946     		mov	r9, r3
+ 2220 0b4c A246     		mov	sl, r4
+ 2221 0b4e AB46     		mov	fp, r5
+ 2222 0b50 F0BC     		pop	{r4, r5, r6, r7}
+ 2223 0b52 01BC     		pop	{r0}
+ 2224 0b54 0047     		bx	r0
+ 2225              	.L158:
+ 2226 0b56 C046     		.align	2
+ 2227              	.L157:
+ 2228 0b58 D0030000 		.word	.LC72
+ 2229 0b5c 38010000 		.word	ppperr_strerr
+ 2230 0b60 FC030000 		.word	.LC74
+ 2231 0b64 18040000 		.word	.LC76
+ 2232 0b68 00000000 		.word	fsm_timeout
+ 2233 0b6c 30040000 		.word	.LC78
+ 2234 0b70 54040000 		.word	.LC80
+ 2235 0b74 78040000 		.word	.LC82
+ 2236 0b78 A8040000 		.word	.LC84
+ 2237              	.LFE296:
+ 2239              		.section	.rodata.str1.4
+ 2240 04d1 000000   		.align	2
+ 2241              	.LC88:
+ 2242 04d4 25733A20 		.ascii	"%s: close reason=%s state %d (%s) -> %d (%s)\012\000"
+ 2242      636C6F73 
+ 2242      65207265 
+ 2242      61736F6E 
+ 2242      3D257320 
+ 2243              		.text
+ 2244              		.align	2
+ 2245              		.global	fsm_close
+ 2246              		.code	16
+ 2247              		.thumb_func
+ 2249              	fsm_close:
+ 2250              	.LFB294:
+ 2251              		.loc 1 287 0
+ 2252 0b7c F0B5     		push	{r4, r5, r6, r7, lr}
+ 2253              	.LCFI18:
+ 2254              	.LVL173:
+ 2255 0b7e 84B0     		sub	sp, sp, #16
+ 2256              	.LCFI19:
+ 2257 0b80 051C     		mov	r5, r0
+ 2258 0b82 0E1C     		mov	r6, r1
+ 2259              		.loc 1 288 0
+ 2260 0b84 8768     		ldr	r7, [r0, #8]
+ 2261              	.LVL174:
+ 2262              		.loc 1 292 0
+ 2263 0b86 2963     		str	r1, [r5, #48]
+ 2264              		.loc 1 293 0
+ 2265 0b88 0029     		cmp	r1, #0
+ 2266 0b8a 01D1     		bne	.L161
+ 2267              	.LVL175:
+ 2268 0b8c 0020     		mov	r0, #0
+ 2269 0b8e 02E0     		b	.L162
+ 2270              	.LVL176:
+ 2271              	.L161:
+ 2272 0b90 081C     		mov	r0, r1
+ 2273 0b92 FFF7FEFF 		bl	strlen
+ 2274              	.LVL177:
+ 2275              	.L162:
+ 2276 0b96 6863     		str	r0, [r5, #52]
+ 2277              		.loc 1 294 0
+ 2278 0b98 A968     		ldr	r1, [r5, #8]
+ 2279 0b9a 0929     		cmp	r1, #9
+ 2280 0b9c 3DD8     		bhi	.L163
+ 2281 0b9e 8B00     		lsl	r3, r1, #2
+ 2282 0ba0 284A     		ldr	r2, .L172
+ 2283 0ba2 D358     		ldr	r3, [r2, r3]
+ 2284 0ba4 9F46     		mov	pc, r3
+ 2285              		.section	.rodata
+ 2286              		.align	2
+ 2287              	.L168:
+ 2288 0110 1A0C0000 		.word	.L163
+ 2289 0114 A60B0000 		.word	.L164
+ 2290 0118 1A0C0000 		.word	.L163
+ 2291 011c AC0B0000 		.word	.L165
+ 2292 0120 1A0C0000 		.word	.L163
+ 2293 0124 B20B0000 		.word	.L166
+ 2294 0128 B80B0000 		.word	.L167
+ 2295 012c B80B0000 		.word	.L167
+ 2296 0130 B80B0000 		.word	.L167
+ 2297 0134 B80B0000 		.word	.L167
+ 2298              		.text
+ 2299              	.L164:
+ 2300              		.loc 1 296 0
+ 2301 0ba6 0023     		mov	r3, #0
+ 2302 0ba8 AB60     		str	r3, [r5, #8]
+ 2303 0baa 36E0     		b	.L163
+ 2304              	.L165:
+ 2305              		.loc 1 299 0
+ 2306 0bac 0223     		mov	r3, #2
+ 2307 0bae AB60     		str	r3, [r5, #8]
+ 2308 0bb0 33E0     		b	.L163
+ 2309              	.L166:
+ 2310              		.loc 1 302 0
+ 2311 0bb2 0423     		mov	r3, #4
+ 2312 0bb4 AB60     		str	r3, [r5, #8]
+ 2313 0bb6 30E0     		b	.L163
+ 2314              	.L167:
+ 2315              		.loc 1 309 0
+ 2316 0bb8 0929     		cmp	r1, #9
+ 2317 0bba 04D0     		beq	.L169
+ 2318              		.loc 1 310 0
+ 2319 0bbc 2248     		ldr	r0, .L172+4
+ 2320 0bbe 291C     		mov	r1, r5
+ 2321 0bc0 FFF7FEFF 		bl	sys_untimeout
+ 2322 0bc4 06E0     		b	.L170
+ 2323              	.L169:
+ 2324              		.loc 1 311 0
+ 2325 0bc6 EB6A     		ldr	r3, [r5, #44]
+ 2326 0bc8 1B6A     		ldr	r3, [r3, #32]
+ 2327 0bca 002B     		cmp	r3, #0
+ 2328 0bcc 02D0     		beq	.L170
+ 2329              		.loc 1 312 0
+ 2330 0bce 281C     		mov	r0, r5
+ 2331 0bd0 00F041F8 		bl	.L16
+ 2332              	.L170:
+ 2333              		.loc 1 315 0
+ 2334 0bd4 2B6A     		ldr	r3, [r5, #32]
+ 2335 0bd6 EB61     		str	r3, [r5, #28]
+ 2336              		.loc 1 316 0
+ 2337 0bd8 2A7C     		ldrb	r2, [r5, #16]
+ 2338 0bda 0132     		add	r2, r2, #1
+ 2339 0bdc 1206     		lsl	r2, r2, #24
+ 2340 0bde 120E     		lsr	r2, r2, #24
+ 2341 0be0 2A74     		strb	r2, [r5, #16]
+ 2342 0be2 6A74     		strb	r2, [r5, #17]
+ 2343 0be4 2B6B     		ldr	r3, [r5, #48]
+ 2344 0be6 696B     		ldr	r1, [r5, #52]
+ 2345 0be8 0091     		str	r1, [sp]
+ 2346 0bea 281C     		mov	r0, r5
+ 2347 0bec 0521     		mov	r1, #5
+ 2348 0bee FFF7FEFF 		bl	fsm_sdata
+ 2349              		.loc 1 318 0
+ 2350 0bf2 154C     		ldr	r4, .L172+4
+ 2351 0bf4 201C     		mov	r0, r4
+ 2352 0bf6 291C     		mov	r1, r5
+ 2353 0bf8 FFF7FEFF 		bl	sys_untimeout
+ 2354 0bfc 6B69     		ldr	r3, [r5, #20]
+ 2355 0bfe 5801     		lsl	r0, r3, #5
+ 2356 0c00 C01A     		sub	r0, r0, r3
+ 2357 0c02 8000     		lsl	r0, r0, #2
+ 2358 0c04 C018     		add	r0, r0, r3
+ 2359 0c06 C000     		lsl	r0, r0, #3
+ 2360 0c08 211C     		mov	r1, r4
+ 2361 0c0a 2A1C     		mov	r2, r5
+ 2362 0c0c FFF7FEFF 		bl	sys_timeout
+ 2363              		.loc 1 319 0
+ 2364 0c10 EB69     		ldr	r3, [r5, #28]
+ 2365 0c12 013B     		sub	r3, r3, #1
+ 2366 0c14 EB61     		str	r3, [r5, #28]
+ 2367              		.loc 1 321 0
+ 2368 0c16 0423     		mov	r3, #4
+ 2369 0c18 AB60     		str	r3, [r5, #8]
+ 2370              	.L163:
+ 2371              		.loc 1 325 0
+ 2372 0c1a A868     		ldr	r0, [r5, #8]
+ 2373 0c1c 0B49     		ldr	r1, .L172+8
+ 2374 0c1e EB6A     		ldr	r3, [r5, #44]
+ 2375 0c20 9A6B     		ldr	r2, [r3, #56]
+ 2376 0c22 0097     		str	r7, [sp]
+ 2377 0c24 0A4C     		ldr	r4, .L172+12
+ 2378 0c26 BB00     		lsl	r3, r7, #2
+ 2379 0c28 1B59     		ldr	r3, [r3, r4]
+ 2380 0c2a 0193     		str	r3, [sp, #4]
+ 2381 0c2c 0290     		str	r0, [sp, #8]
+ 2382 0c2e 8000     		lsl	r0, r0, #2
+ 2383 0c30 0359     		ldr	r3, [r0, r4]
+ 2384 0c32 0393     		str	r3, [sp, #12]
+ 2385 0c34 0520     		mov	r0, #5
+ 2386 0c36 331C     		mov	r3, r6
+ 2387 0c38 FFF7FEFF 		bl	ppp_trace
+ 2388              		.loc 1 327 0
+ 2389 0c3c 04B0     		add	sp, sp, #16
+ 2390              		@ sp needed for prologue
+ 2391              	.LVL178:
+ 2392              	.LVL179:
+ 2393              	.LVL180:
+ 2394 0c3e F0BC     		pop	{r4, r5, r6, r7}
+ 2395 0c40 01BC     		pop	{r0}
+ 2396 0c42 0047     		bx	r0
+ 2397              	.L173:
+ 2398              		.align	2
+ 2399              	.L172:
+ 2400 0c44 10010000 		.word	.L168
+ 2401 0c48 00000000 		.word	fsm_timeout
+ 2402 0c4c D4040000 		.word	.LC88
+ 2403 0c50 38010000 		.word	ppperr_strerr
+ 2404              	.LFE294:
+ 2406              		.section	.rodata.str1.4
+ 2407 0502 0000     		.align	2
+ 2408              	.LC91:
+ 2409 0504 4C535F49 		.ascii	"LS_INITIAL\000"
+ 2409      4E495449 
+ 2409      414C00
+ 2410 050f 00       		.align	2
+ 2411              	.LC92:
+ 2412 0510 4C535F53 		.ascii	"LS_STARTING\000"
+ 2412      54415254 
+ 2412      494E4700 
+ 2413              		.align	2
+ 2414              	.LC93:
+ 2415 051c 4C535F43 		.ascii	"LS_CLOSED\000"
+ 2415      4C4F5345 
+ 2415      4400
+ 2416 0526 0000     		.align	2
+ 2417              	.LC94:
+ 2418 0528 4C535F53 		.ascii	"LS_STOPPED\000"
+ 2418      544F5050 
+ 2418      454400
+ 2419 0533 00       		.align	2
+ 2420              	.LC95:
+ 2421 0534 4C535F43 		.ascii	"LS_CLOSING\000"
+ 2421      4C4F5349 
+ 2421      4E4700
+ 2422 053f 00       		.align	2
+ 2423              	.LC96:
+ 2424 0540 4C535F53 		.ascii	"LS_STOPPING\000"
+ 2424      544F5050 
+ 2424      494E4700 
+ 2425              		.align	2
+ 2426              	.LC97:
+ 2427 054c 4C535F52 		.ascii	"LS_REQSENT\000"
+ 2427      45515345 
+ 2427      4E5400
+ 2428 0557 00       		.align	2
+ 2429              	.LC98:
+ 2430 0558 4C535F41 		.ascii	"LS_ACKRCVD\000"
+ 2430      434B5243 
+ 2430      564400
+ 2431 0563 00       		.align	2
+ 2432              	.LC99:
+ 2433 0564 4C535F41 		.ascii	"LS_ACKSENT\000"
+ 2433      434B5345 
+ 2433      4E5400
+ 2434 056f 00       		.align	2
+ 2435              	.LC100:
+ 2436 0570 4C535F4F 		.ascii	"LS_OPENED\000"
+ 2436      50454E45 
+ 2436      4400
+ 2437 057a 0000     		.section	.rodata
+ 2438              		.align	2
+ 2441              	ppperr_strerr:
+ 2442 0138 04050000 		.word	.LC91
+ 2443 013c 10050000 		.word	.LC92
+ 2444 0140 1C050000 		.word	.LC93
+ 2445 0144 28050000 		.word	.LC94
+ 2446 0148 34050000 		.word	.LC95
+ 2447 014c 40050000 		.word	.LC96
+ 2448 0150 4C050000 		.word	.LC97
+ 2449 0154 58050000 		.word	.LC98
+ 2450 0158 64050000 		.word	.LC99
+ 2451 015c 70050000 		.word	.LC100
+ 2452              		.comm	peer_mru,4,4
+ 2709              	.Letext0:
+ 5542              		.code 16
+ 5543              		.align	1
+ 5544              	.L46:
+ 5545 0c54 1047     		bx	r2
+ 5546              	.L16:
+ 5547 0c56 1847     		bx	r3
+ 5548              	.L159:
+ 5549 0c58 2047C046 		bx	r4
+DEFINED SYMBOLS
+                            *ABS*:00000000 fsm.c
+     /tmp/ccOk2hOD.s:1      .text:00000000 $t
+     /tmp/ccOk2hOD.s:16     .text:00000000 fsm_init
+     /tmp/ccOk2hOD.s:59     .text:0000001c fsm_lowerdown
+     /tmp/ccOk2hOD.s:81     .rodata:00000000 $d
+     /tmp/ccOk2hOD.s:190    .text:000000b4 $d
+     /tmp/ccOk2hOD.s:933    .text:00000444 fsm_timeout
+     /tmp/ccOk2hOD.s:2441   .rodata:00000138 ppperr_strerr
+     /tmp/ccOk2hOD.s:207    .text:000000c8 fsm_sdata
+     /tmp/ccOk2hOD.s:204    .text:000000c8 $t
+     /tmp/ccOk2hOD.s:351    .text:00000184 $d
+                            *COM*:00000004 peer_mru
+     /tmp/ccOk2hOD.s:366    .text:00000190 fsm_protreject
+     /tmp/ccOk2hOD.s:363    .text:00000190 $t
+     /tmp/ccOk2hOD.s:513    .text:00000250 $d
+     /tmp/ccOk2hOD.s:525    .text:00000260 $t
+     /tmp/ccOk2hOD.s:528    .text:00000260 fsm_sconfreq
+     /tmp/ccOk2hOD.s:674    .text:00000330 $d
+     /tmp/ccOk2hOD.s:693    .text:00000340 fsm_lowerup
+     /tmp/ccOk2hOD.s:690    .text:00000340 $t
+     /tmp/ccOk2hOD.s:777    .text:000003b0 $d
+     /tmp/ccOk2hOD.s:792    .text:000003bc fsm_open
+     /tmp/ccOk2hOD.s:789    .text:000003bc $t
+     /tmp/ccOk2hOD.s:903    .text:00000438 $d
+     /tmp/ccOk2hOD.s:930    .text:00000444 $t
+     /tmp/ccOk2hOD.s:1130   .text:00000578 $d
+     /tmp/ccOk2hOD.s:1203   .text:00000594 fsm_input
+     /tmp/ccOk2hOD.s:1200   .text:00000594 $t
+     /tmp/ccOk2hOD.s:1866   .text:00000900 $d
+     /tmp/ccOk2hOD.s:1887   .text:00000948 $t
+     /tmp/ccOk2hOD.s:2228   .text:00000b58 $d
+     /tmp/ccOk2hOD.s:2249   .text:00000b7c fsm_close
+     /tmp/ccOk2hOD.s:2246   .text:00000b7c $t
+     /tmp/ccOk2hOD.s:2400   .text:00000c44 $d
+     /tmp/ccOk2hOD.s:5542   .text:00000c54 $t
+
+UNDEFINED SYMBOLS
+sys_untimeout
+ppp_trace
+memcpy
+pppWrite
+outpacket_buf
+sys_timeout
+strlen

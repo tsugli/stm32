@@ -1,0 +1,2253 @@
+   1              		.code	16
+   2              		.file	"dns.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	dns_setserver
+  13              		.code	16
+  14              		.thumb_func
+  16              	dns_setserver:
+  17              	.LFB3:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/dns.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * DNS - host name to IP address resolver.
+   4:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+   8:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+   9:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * This file implements a DNS host name to IP address resolver.
+  10:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  11:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Port to lwIP from uIP
+  12:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * by Jim Pettinato April 2007
+  13:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  14:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * uIP version Copyright (c) 2002-2003, Adam Dunkels.
+  15:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * All rights reserved.
+  16:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  17:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Redistribution and use in source and binary forms, with or without
+  18:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * modification, are permitted provided that the following conditions
+  19:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * are met:
+  20:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * 1. Redistributions of source code must retain the above copyright
+  21:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *    notice, this list of conditions and the following disclaimer.
+  22:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * 2. Redistributions in binary form must reproduce the above copyright
+  23:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *    notice, this list of conditions and the following disclaimer in the
+  24:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *    documentation and/or other materials provided with the distribution.
+  25:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * 3. The name of the author may not be used to endorse or promote
+  26:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *    products derived from this software without specific prior
+  27:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *    written permission.
+  28:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  29:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+  30:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  31:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  32:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+  33:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  34:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+  35:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  36:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+  37:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  38:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  39:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  40:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  41:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  42:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * DNS.C
+  43:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  44:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * The lwIP DNS resolver functions are used to lookup a host name and
+  45:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * map it to a numerical IP address. It maintains a list of resolved
+  46:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * hostnames that can be queried with the dns_lookup() function.
+  47:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * New hostnames can be resolved using the dns_query() function.
+  48:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  49:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * The lwIP version of the resolver also adds a non-blocking version of
+  50:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * gethostbyname() that will work with a raw API application. This function
+  51:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * checks for an IP address string first and converts it if it is valid.
+  52:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * gethostbyname() then does a dns_lookup() to see if the name is 
+  53:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * already in the table. If so, the IP is returned. If not, a query is 
+  54:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * issued and the function returns with a ERR_INPROGRESS status. The app
+  55:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * using the dns client must then go into a waiting state.
+  56:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+  57:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Once a hostname has been resolved (or found to be non-existent),
+  58:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * the resolver code calls a specified callback function (which 
+  59:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * must be implemented by the module that uses the resolver).
+  60:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+  61:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  62:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /*-----------------------------------------------------------------------------
+  63:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * RFC 1035 - Domain names - implementation and specification
+  64:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * RFC 2181 - Clarifications to the DNS Specification
+  65:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *----------------------------------------------------------------------------*/
+  66:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  67:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** @todo: define good default values (rfc compliance) */
+  68:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** @todo: improve answer parsing, more checkings... */
+  69:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** @todo: check RFC1035 - 7.3. Processing responses */
+  70:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  71:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /*-----------------------------------------------------------------------------
+  72:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Includes
+  73:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *----------------------------------------------------------------------------*/
+  74:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  75:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #include "lwip/opt.h"
+  76:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if LWIP_DNS /* don't build if not configured for use in lwipopts.h */
+  78:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  79:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #include "lwip/udp.h"
+  80:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #include "lwip/mem.h"
+  81:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #include "lwip/dns.h"
+  82:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  83:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #include <string.h>
+  84:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  85:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS server IP address */
+  86:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_SERVER_ADDRESS
+  87:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_SERVER_ADDRESS        inet_addr("208.67.222.222") /* resolver1.opendns.com */
+  88:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+  89:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  90:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS server port address */
+  91:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_SERVER_PORT
+  92:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_SERVER_PORT           53
+  93:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+  94:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+  95:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS maximum number of retries when asking for a name, before "timeout". */
+  96:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_MAX_RETRIES
+  97:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_MAX_RETRIES           4
+  98:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+  99:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 100:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS resource record max. TTL (one week as default) */
+ 101:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_MAX_TTL
+ 102:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_MAX_TTL               604800
+ 103:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 104:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 105:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /* DNS protocol flags */
+ 106:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_RESPONSE        0x80
+ 107:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_OPCODE_STATUS   0x10
+ 108:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_OPCODE_INVERSE  0x08
+ 109:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_OPCODE_STANDARD 0x00
+ 110:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_AUTHORATIVE     0x04
+ 111:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_TRUNC           0x02
+ 112:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG1_RD              0x01
+ 113:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG2_RA              0x80
+ 114:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG2_ERR_MASK        0x0f
+ 115:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG2_ERR_NONE        0x00
+ 116:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_FLAG2_ERR_NAME        0x03
+ 117:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 118:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /* DNS protocol states */
+ 119:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_STATE_UNUSED          0
+ 120:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_STATE_NEW             1
+ 121:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_STATE_ASKING          2
+ 122:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_STATE_DONE            3
+ 123:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 124:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 125:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/bpstruct.h"
+ 126:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 127:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_BEGIN
+ 128:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS message header */
+ 129:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct dns_hdr {
+ 130:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t id);
+ 131:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u8_t flags1);
+ 132:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u8_t flags2);
+ 133:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t numquestions);
+ 134:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t numanswers);
+ 135:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t numauthrr);
+ 136:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t numextrarr);
+ 137:rtos/common/ethernet/lwIP_132/src/core/dns.c **** } PACK_STRUCT_STRUCT;
+ 138:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_END
+ 139:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 140:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/epstruct.h"
+ 141:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 142:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define SIZEOF_DNS_HDR 12
+ 143:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 144:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 145:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/bpstruct.h"
+ 146:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 147:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_BEGIN
+ 148:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS query message structure */
+ 149:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct dns_query {
+ 150:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* DNS query record starts with either a domain name or a pointer
+ 151:rtos/common/ethernet/lwIP_132/src/core/dns.c ****      to a name already present somewhere in the packet. */
+ 152:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t type);
+ 153:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t class);
+ 154:rtos/common/ethernet/lwIP_132/src/core/dns.c **** } PACK_STRUCT_STRUCT;
+ 155:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_END
+ 156:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 157:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/epstruct.h"
+ 158:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 159:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define SIZEOF_DNS_QUERY 4
+ 160:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 161:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 162:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/bpstruct.h"
+ 163:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 164:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_BEGIN
+ 165:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS answer message structure */
+ 166:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct dns_answer {
+ 167:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* DNS answer record starts with either a domain name or a pointer
+ 168:rtos/common/ethernet/lwIP_132/src/core/dns.c ****      to a name already present somewhere in the packet. */
+ 169:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t type);
+ 170:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t class);
+ 171:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u32_t ttl);
+ 172:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   PACK_STRUCT_FIELD(u16_t len);
+ 173:rtos/common/ethernet/lwIP_132/src/core/dns.c **** } PACK_STRUCT_STRUCT;
+ 174:rtos/common/ethernet/lwIP_132/src/core/dns.c **** PACK_STRUCT_END
+ 175:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+ 176:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #  include "arch/epstruct.h"
+ 177:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 178:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define SIZEOF_DNS_ANSWER 10
+ 179:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 180:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** DNS table entry */
+ 181:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct dns_table_entry {
+ 182:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  state;
+ 183:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  numdns;
+ 184:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  tmr;
+ 185:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  retries;
+ 186:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  seqno;
+ 187:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t  err;
+ 188:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u32_t ttl;
+ 189:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   char name[DNS_MAX_NAME_LENGTH];
+ 190:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct ip_addr ipaddr;
+ 191:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* pointer to callback on DNS query done */
+ 192:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   dns_found_callback found;
+ 193:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   void *arg;
+ 194:rtos/common/ethernet/lwIP_132/src/core/dns.c **** };
+ 195:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 196:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST
+ 197:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** struct used for local host-list */
+ 198:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct local_hostlist_entry {
+ 199:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /** static hostname */
+ 200:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   const char *name;
+ 201:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /** static host address in network byteorder */
+ 202:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u32_t addr;
+ 203:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *next;
+ 204:rtos/common/ethernet/lwIP_132/src/core/dns.c **** };
+ 205:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 206:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST_IS_DYNAMIC
+ 207:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** Local host-list. For hostnames in this list, no
+ 208:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *  external name resolution is performed */
+ 209:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static struct local_hostlist_entry *local_hostlist_dynamic;
+ 210:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #else /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC */
+ 211:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** Defining this allows the local_hostlist_static to be placed in a different
+ 213:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * linker section (e.g. FLASH) */
+ 214:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_LOCAL_HOSTLIST_STORAGE_PRE
+ 215:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_LOCAL_HOSTLIST_STORAGE_PRE static
+ 216:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_STORAGE_PRE */
+ 217:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** Defining this allows the local_hostlist_static to be placed in a different
+ 218:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * linker section (e.g. FLASH) */
+ 219:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifndef DNS_LOCAL_HOSTLIST_STORAGE_POST
+ 220:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #define DNS_LOCAL_HOSTLIST_STORAGE_POST
+ 221:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_STORAGE_POST */
+ 222:rtos/common/ethernet/lwIP_132/src/core/dns.c **** DNS_LOCAL_HOSTLIST_STORAGE_PRE struct local_hostlist_entry local_hostlist_static[]
+ 223:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   DNS_LOCAL_HOSTLIST_STORAGE_POST = DNS_LOCAL_HOSTLIST_INIT;
+ 224:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 225:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC */
+ 226:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 227:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void dns_init_local();
+ 228:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST */
+ 229:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 230:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 231:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /* forward declarations */
+ 232:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void dns_recv(void *s, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr, u16_t port
+ 233:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void dns_check_entries(void);
+ 234:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 235:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /*-----------------------------------------------------------------------------
+ 236:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Globales
+ 237:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *----------------------------------------------------------------------------*/
+ 238:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 239:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /* DNS variables */
+ 240:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static struct udp_pcb        *dns_pcb;
+ 241:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static u8_t                   dns_seqno;
+ 242:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static struct dns_table_entry dns_table[DNS_TABLE_SIZE];
+ 243:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static struct ip_addr         dns_servers[DNS_MAX_SERVERS];
+ 244:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 245:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if (DNS_USES_STATIC_BUF == 1)
+ 246:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static u8_t                   dns_payload[DNS_MSG_SIZE];
+ 247:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* (DNS_USES_STATIC_BUF == 1) */
+ 248:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 249:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 250:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Initialize the resolver: set up the UDP pcb and configure the default server
+ 251:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * (DNS_SERVER_ADDRESS).
+ 252:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 253:rtos/common/ethernet/lwIP_132/src/core/dns.c **** void
+ 254:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_init()
+ 255:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 256:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct ip_addr dnsserver;
+ 257:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   
+ 258:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* initialize default DNS server address */
+ 259:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   dnsserver.addr = DNS_SERVER_ADDRESS;
+ 260:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 261:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_DEBUGF(DNS_DEBUG, ("dns_init: initializing\n"));
+ 262:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 263:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* if dns client not yet initialized... */
+ 264:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (dns_pcb == NULL) {
+ 265:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     dns_pcb = udp_new();
+ 266:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 267:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (dns_pcb != NULL) {
+ 268:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* initialize DNS table not needed (initialized to zero since it is a
+ 269:rtos/common/ethernet/lwIP_132/src/core/dns.c ****        * global variable) */
+ 270:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       LWIP_ASSERT("For implicit initialization to work, DNS_STATE_UNUSED needs to be 0",
+ 271:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         DNS_STATE_UNUSED == 0);
+ 272:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 273:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* initialize DNS client */
+ 274:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       udp_bind(dns_pcb, IP_ADDR_ANY, 0);
+ 275:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       udp_recv(dns_pcb, dns_recv, NULL);
+ 276:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 277:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* initialize default DNS primary server */
+ 278:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       dns_setserver(0, &dnsserver);
+ 279:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 280:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 281:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST
+ 282:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   dns_init_local();
+ 283:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif
+ 284:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 285:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 286:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 287:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Initialize one of the DNS servers.
+ 288:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 289:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param numdns the index of the DNS server to set must be < DNS_MAX_SERVERS
+ 290:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param dnsserver IP address of the DNS server to set
+ 291:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 292:rtos/common/ethernet/lwIP_132/src/core/dns.c **** void
+ 293:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_setserver(u8_t numdns, struct ip_addr *dnsserver)
+ 294:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+  19              		.loc 1 294 0
+  20              	.LVL0:
+  21 0000 0006     		lsl	r0, r0, #24
+  22              	.LVL1:
+  23 0002 000E     		lsr	r0, r0, #24
+  24              	.LVL2:
+ 295:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if ((numdns < DNS_MAX_SERVERS) && (dns_pcb != NULL) &&
+  25              		.loc 1 295 0
+  26 0004 0128     		cmp	r0, #1
+  27 0006 0BD8     		bhi	.L3
+  28 0008 064B     		ldr	r3, .L4
+  29 000a 1B68     		ldr	r3, [r3]
+  30 000c 002B     		cmp	r3, #0
+  31 000e 07D0     		beq	.L3
+  32 0010 0029     		cmp	r1, #0
+  33 0012 05D0     		beq	.L3
+  34 0014 0968     		ldr	r1, [r1]
+  35              	.LVL3:
+  36 0016 0029     		cmp	r1, #0
+  37 0018 02D0     		beq	.L3
+ 296:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       (dnsserver != NULL) && (dnsserver->addr !=0 )) {
+ 297:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     dns_servers[numdns] = (*dnsserver);
+  38              		.loc 1 297 0
+  39 001a 034A     		ldr	r2, .L4+4
+  40 001c 8300     		lsl	r3, r0, #2
+  41 001e D150     		str	r1, [r2, r3]
+  42              	.LVL4:
+  43              	.L3:
+ 298:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 299:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+  44              		.loc 1 299 0
+  45              		@ sp needed for prologue
+  46 0020 7047     		bx	lr
+  47              	.L5:
+  48 0022 C046     		.align	2
+  49              	.L4:
+  50 0024 00000000 		.word	dns_pcb
+  51 0028 68040000 		.word	dns_servers
+  52              	.LFE3:
+  54              		.align	2
+  55              		.global	dns_getserver
+  56              		.code	16
+  57              		.thumb_func
+  59              	dns_getserver:
+  60              	.LFB4:
+ 300:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 301:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 302:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Obtain one of the currently configured DNS server.
+ 303:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 304:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param numdns the index of the DNS server
+ 305:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return IP address of the indexed DNS server or "ip_addr_any" if the DNS
+ 306:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *         server has not been configured.
+ 307:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 308:rtos/common/ethernet/lwIP_132/src/core/dns.c **** struct ip_addr
+ 309:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_getserver(u8_t numdns)
+ 310:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+  61              		.loc 1 310 0
+  62              	.LVL5:
+  63 002c 0006     		lsl	r0, r0, #24
+  64              	.LVL6:
+  65 002e 000E     		lsr	r0, r0, #24
+  66              	.LVL7:
+ 311:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (numdns < DNS_MAX_SERVERS) {
+  67              		.loc 1 311 0
+  68 0030 0128     		cmp	r0, #1
+  69 0032 03D8     		bhi	.L7
+ 312:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return dns_servers[numdns];
+  70              		.loc 1 312 0
+  71 0034 034A     		ldr	r2, .L10
+  72 0036 8300     		lsl	r3, r0, #2
+  73 0038 D058     		ldr	r0, [r2, r3]
+  74              	.LVL8:
+  75 003a 01E0     		b	.L8
+  76              	.LVL9:
+  77              	.L7:
+ 313:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   } else {
+ 314:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return *IP_ADDR_ANY;
+  78              		.loc 1 314 0
+  79 003c 024B     		ldr	r3, .L10+4
+  80 003e 1868     		ldr	r0, [r3]
+  81              	.LVL10:
+  82              	.L8:
+ 315:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 316:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+  83              		.loc 1 316 0
+  84              		@ sp needed for prologue
+  85 0040 7047     		bx	lr
+  86              	.L11:
+  87 0042 C046     		.align	2
+  88              	.L10:
+  89 0044 68040000 		.word	dns_servers
+  90 0048 00000000 		.word	ip_addr_any
+  91              	.LFE4:
+  93              		.align	2
+  94              		.code	16
+  95              		.thumb_func
+  97              	dns_parse_name:
+  98              	.LFB8:
+ 317:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 318:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 319:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * The DNS resolver client timer - handle retries and timeouts and should
+ 320:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * be called every DNS_TMR_INTERVAL milliseconds (every second by default).
+ 321:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 322:rtos/common/ethernet/lwIP_132/src/core/dns.c **** void
+ 323:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_tmr(void)
+ 324:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 325:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (dns_pcb != NULL) {
+ 326:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_DEBUGF(DNS_DEBUG, ("dns_tmr: dns_check_entries\n"));
+ 327:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     dns_check_entries();
+ 328:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 329:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 330:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 331:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST
+ 332:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void
+ 333:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_init_local()
+ 334:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 335:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST_IS_DYNAMIC && defined(DNS_LOCAL_HOSTLIST_INIT)
+ 336:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   int i;
+ 337:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *entry;
+ 338:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* Dynamic: copy entries from DNS_LOCAL_HOSTLIST_INIT to list */
+ 339:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry local_hostlist_init[] = DNS_LOCAL_HOSTLIST_INIT;
+ 340:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   for (i = 0; i < sizeof(local_hostlist_init) / sizeof(struct local_hostlist_entry); i++) {
+ 341:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     entry = mem_malloc(sizeof(struct local_hostlist_entry));
+ 342:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_ASSERT("mem-error in dns_init_local", entry != NULL);
+ 343:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (entry != NULL) {
+ 344:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       struct local_hostlist_entry *init_entry = &local_hostlist_init[i];
+ 345:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       entry->name = init_entry->name;
+ 346:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       entry->addr = init_entry->addr;
+ 347:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       entry->next = local_hostlist_dynamic;
+ 348:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       local_hostlist_dynamic = entry;
+ 349:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 350:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 351:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC && defined(DNS_LOCAL_HOSTLIST_INIT) */
+ 352:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 353:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 354:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 355:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Scans the local host-list for a hostname.
+ 356:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 357:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param hostname Hostname to look for in the local host-list
+ 358:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return The first IP address for the hostname in the local host-list or
+ 359:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *         INADDR_NONE if not found.
+ 360:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 361:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static u32_t
+ 362:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_lookup_local(const char *hostname)
+ 363:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 364:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST_IS_DYNAMIC
+ 365:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *entry = local_hostlist_dynamic;
+ 366:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   while(entry != NULL) {
+ 367:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if(strcmp(entry->name, hostname) == 0) {
+ 368:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       return entry->addr;
+ 369:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 370:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     entry = entry->next;
+ 371:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 372:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #else /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC */
+ 373:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   int i;
+ 374:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   for (i = 0; i < sizeof(local_hostlist_static) / sizeof(struct local_hostlist_entry); i++) {
+ 375:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if(strcmp(local_hostlist_static[i].name, hostname) == 0) {
+ 376:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       return local_hostlist_static[i].addr;
+ 377:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 378:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 379:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC */
+ 380:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return INADDR_NONE;
+ 381:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 382:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 383:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST_IS_DYNAMIC
+ 384:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /** Remove all entries from the local host-list for a specific hostname
+ 385:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * and/or IP addess
+ 386:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 387:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param hostname hostname for which entries shall be removed from the local
+ 388:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *                 host-list
+ 389:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param addr address for which entries shall be removed from the local host-list
+ 390:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return the number of removed entries
+ 391:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 392:rtos/common/ethernet/lwIP_132/src/core/dns.c **** int
+ 393:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_local_removehost(const char *hostname, const struct ip_addr *addr)
+ 394:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 395:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   int removed = 0;
+ 396:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *entry = local_hostlist_dynamic;
+ 397:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *last_entry = NULL;
+ 398:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   while (entry != NULL) {
+ 399:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (((hostname == NULL) || !strcmp(entry->name, hostname)) &&
+ 400:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ((addr == NULL) || (entry->addr == addr->addr))) {
+ 401:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       struct local_hostlist_entry *free_entry;
+ 402:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       if (last_entry != NULL) {
+ 403:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         last_entry->next = entry->next;
+ 404:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       } else {
+ 405:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         local_hostlist_dynamic = entry->next;
+ 406:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 407:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       free_entry = entry;
+ 408:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       entry = entry->next;
+ 409:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       mem_free(free_entry);
+ 410:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       removed++;
+ 411:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     } else {
+ 412:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       last_entry = entry;
+ 413:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       entry = entry->next;
+ 414:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 415:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 416:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return removed;
+ 417:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 418:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 419:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 420:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Add a hostname/IP address pair to the local host-list.
+ 421:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Duplicates are not checked.
+ 422:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 423:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param hostname hostname of the new entry
+ 424:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param addr IP address of the new entry
+ 425:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return ERR_OK if succeeded or ERR_MEM on memory error
+ 426:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 427:rtos/common/ethernet/lwIP_132/src/core/dns.c **** err_t
+ 428:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_local_addhost(const char *hostname, const struct ip_addr *addr)
+ 429:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 430:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct local_hostlist_entry *entry;
+ 431:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   entry = mem_malloc(sizeof(struct local_hostlist_entry));
+ 432:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (entry == NULL) {
+ 433:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return ERR_MEM;
+ 434:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 435:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   entry->name = hostname;
+ 436:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   entry->addr = addr->addr;
+ 437:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   entry->next = local_hostlist_dynamic;
+ 438:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   local_hostlist_dynamic = entry;
+ 439:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return ERR_OK;
+ 440:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 441:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST_IS_DYNAMIC*/
+ 442:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST */
+ 443:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 444:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 445:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Look up a hostname in the array of known hostnames.
+ 446:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 447:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @note This function only looks in the internal array of known
+ 448:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * hostnames, it does not send out a query for the hostname if none
+ 449:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * was found. The function dns_enqueue() can be used to send a query
+ 450:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * for a hostname.
+ 451:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 452:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param name the hostname to look up
+ 453:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return the hostname's IP address, as u32_t (instead of struct ip_addr to
+ 454:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *         better check for failure: != INADDR_NONE) or INADDR_NONE if the hostname
+ 455:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *         was not found in the cached dns_table.
+ 456:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 457:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static u32_t
+ 458:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_lookup(const char *name)
+ 459:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 460:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t i;
+ 461:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST || defined(DNS_LOOKUP_LOCAL_EXTERN)
+ 462:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u32_t addr;
+ 463:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST || defined(DNS_LOOKUP_LOCAL_EXTERN) */
+ 464:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_LOCAL_HOSTLIST
+ 465:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if ((addr = dns_lookup_local(name)) != INADDR_NONE) {
+ 466:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return addr;
+ 467:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 468:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOCAL_HOSTLIST */
+ 469:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #ifdef DNS_LOOKUP_LOCAL_EXTERN
+ 470:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if((addr = DNS_LOOKUP_LOCAL_EXTERN(name)) != INADDR_NONE) {
+ 471:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return addr;
+ 472:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 473:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_LOOKUP_LOCAL_EXTERN */
+ 474:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 475:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* Walk through name list, return entry if found. If not, return NULL. */
+ 476:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   for (i = 0; i < DNS_TABLE_SIZE; ++i) {
+ 477:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if ((dns_table[i].state == DNS_STATE_DONE) &&
+ 478:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         (strcmp(name, dns_table[i].name) == 0)) {
+ 479:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       LWIP_DEBUGF(DNS_DEBUG, ("dns_lookup: \"%s\": found = ", name));
+ 480:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       ip_addr_debug_print(DNS_DEBUG, &(dns_table[i].ipaddr));
+ 481:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       LWIP_DEBUGF(DNS_DEBUG, ("\n"));
+ 482:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       return dns_table[i].ipaddr.addr;
+ 483:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 484:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 485:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 486:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return INADDR_NONE;
+ 487:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 488:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 489:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_DOES_NAME_CHECK
+ 490:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 491:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Compare the "dotted" name "query" with the encoded name "response"
+ 492:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * to make sure an answer from the DNS server matches the current dns_table
+ 493:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * entry (otherwise, answers might arrive late for hostname not on the list
+ 494:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * any more).
+ 495:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 496:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param query hostname (not encoded) from the dns_table
+ 497:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param response encoded hostname in the DNS response
+ 498:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return 0: names equal; 1: names differ
+ 499:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 500:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static u8_t
+ 501:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_compare_name(unsigned char *query, unsigned char *response)
+ 502:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 503:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   unsigned char n;
+ 504:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 505:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   do {
+ 506:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     n = *response++;
+ 507:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /** @see RFC 1035 - 4.1.4. Message compression */
+ 508:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if ((n & 0xc0) == 0xc0) {
+ 509:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* Compressed name */
+ 510:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 511:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     } else {
+ 512:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* Not compressed name */
+ 513:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       while (n > 0) {
+ 514:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         if ((*query) != (*response)) {
+ 515:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           return 1;
+ 516:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         }
+ 517:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ++response;
+ 518:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ++query;
+ 519:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         --n;
+ 520:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       };
+ 521:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       ++query;
+ 522:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 523:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   } while (*response != 0);
+ 524:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 525:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return 0;
+ 526:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 527:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_DOES_NAME_CHECK */
+ 528:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 529:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 530:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Walk through a compact encoded DNS name and return the end of the name.
+ 531:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 532:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param query encoded DNS name in the DNS server response
+ 533:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return end of the name
+ 534:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 535:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static unsigned char *
+ 536:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_parse_name(unsigned char *query)
+ 537:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+  99              		.loc 1 537 0
+ 100              	.LVL11:
+ 538:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   unsigned char n;
+ 539:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 540:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   do {
+ 541:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     n = *query++;
+ 542:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /** @see RFC 1035 - 4.1.4. Message compression */
+ 543:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if ((n & 0xc0) == 0xc0) {
+ 101              		.loc 1 543 0
+ 102 004c C021     		mov	r1, #192
+ 103              	.LVL12:
+ 104              	.L15:
+ 105              		.loc 1 541 0
+ 106 004e 0278     		ldrb	r2, [r0]
+ 107 0050 0130     		add	r0, r0, #1
+ 108              	.LVL13:
+ 109              		.loc 1 543 0
+ 110 0052 131C     		mov	r3, r2
+ 111 0054 0B40     		and	r3, r3, r1
+ 112 0056 C02B     		cmp	r3, #192
+ 113 0058 09D0     		beq	.L13
+ 544:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* Compressed name */
+ 545:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 546:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     } else {
+ 547:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* Not compressed name */
+ 548:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       while (n > 0) {
+ 114              		.loc 1 548 0
+ 115 005a 002A     		cmp	r2, #0
+ 116 005c 04D0     		beq	.L14
+ 117 005e 531E     		sub	r3, r2, #1
+ 118 0060 1B06     		lsl	r3, r3, #24
+ 119 0062 1B0E     		lsr	r3, r3, #24
+ 120 0064 0133     		add	r3, r3, #1
+ 121 0066 C018     		add	r0, r0, r3
+ 122              	.L14:
+ 549:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ++query;
+ 550:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         --n;
+ 551:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       };
+ 552:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 553:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   } while (*query != 0);
+ 123              		.loc 1 553 0
+ 124 0068 0378     		ldrb	r3, [r0]
+ 125 006a 002B     		cmp	r3, #0
+ 126 006c EFD1     		bne	.L15
+ 127              	.L13:
+ 128 006e 0130     		add	r0, r0, #1
+ 129              	.LVL14:
+ 554:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 555:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return query + 1;
+ 556:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 130              		.loc 1 556 0
+ 131              		@ sp needed for prologue
+ 132 0070 7047     		bx	lr
+ 133              	.LFE8:
+ 135 0072 C046     		.align	2
+ 136              		.code	16
+ 137              		.thumb_func
+ 139              	dns_send:
+ 140              	.LFB9:
+ 557:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 558:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 559:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Send a DNS query packet.
+ 560:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 561:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param numdns index of the DNS server in the dns_servers table
+ 562:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param name hostname to query
+ 563:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param id index of the hostname in dns_table, used as transaction ID in the
+ 564:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *        DNS query packet
+ 565:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return ERR_OK if packet is sent; an err_t indicating the problem otherwise
+ 566:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 567:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static err_t
+ 568:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_send(u8_t numdns, const char* name, u8_t id)
+ 569:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 141              		.loc 1 569 0
+ 142 0074 F0B5     		push	{r4, r5, r6, r7, lr}
+ 143              	.LCFI0:
+ 144 0076 4746     		mov	r7, r8
+ 145 0078 80B4     		push	{r7}
+ 146              	.LCFI1:
+ 147              	.LVL15:
+ 148 007a 81B0     		sub	sp, sp, #4
+ 149              	.LCFI2:
+ 150 007c 0E1C     		mov	r6, r1
+ 151 007e 0006     		lsl	r0, r0, #24
+ 152              	.LVL16:
+ 153 0080 000E     		lsr	r0, r0, #24
+ 154 0082 8046     		mov	r8, r0
+ 155              	.LVL17:
+ 156 0084 1206     		lsl	r2, r2, #24
+ 157              	.LVL18:
+ 158 0086 150E     		lsr	r5, r2, #24
+ 159              	.LVL19:
+ 570:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   err_t err;
+ 571:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_hdr *hdr;
+ 572:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_query qry;
+ 573:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct pbuf *p;
+ 574:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   char *query, *nptr;
+ 575:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   const char *pHostname;
+ 576:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t n;
+ 577:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 578:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_DEBUGF(DNS_DEBUG, ("dns_send: dns_servers[%"U16_F"] \"%s\": request\n",
+ 579:rtos/common/ethernet/lwIP_132/src/core/dns.c ****               (u16_t)(numdns), name));
+ 580:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_ASSERT("dns server out of array", numdns < DNS_MAX_SERVERS);
+ 581:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_ASSERT("dns server has no IP address set", dns_servers[numdns].addr != 0);
+ 582:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 583:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* if here, we have either a new query or a retry on a previous query to process */
+ 584:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   p = pbuf_alloc(PBUF_TRANSPORT, SIZEOF_DNS_HDR + DNS_MAX_NAME_LENGTH +
+ 160              		.loc 1 584 0
+ 161 0088 8821     		mov	r1, #136
+ 162              	.LVL20:
+ 163 008a 4900     		lsl	r1, r1, #1
+ 164 008c 0020     		mov	r0, #0
+ 165 008e 0022     		mov	r2, #0
+ 166 0090 FFF7FEFF 		bl	pbuf_alloc
+ 167 0094 071C     		mov	r7, r0
+ 168              	.LVL21:
+ 585:rtos/common/ethernet/lwIP_132/src/core/dns.c ****                  SIZEOF_DNS_QUERY, PBUF_RAM);
+ 586:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (p != NULL) {
+ 169              		.loc 1 586 0
+ 170 0096 0028     		cmp	r0, #0
+ 171 0098 01D1     		bne	.L19
+ 172              	.LVL22:
+ 173 009a FF24     		mov	r4, #255
+ 174              	.LVL23:
+ 175 009c 5DE0     		b	.L20
+ 176              	.LVL24:
+ 177              	.L19:
+ 587:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_ASSERT("pbuf must be in one piece", p->next == NULL);
+ 588:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* fill dns header */
+ 589:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     hdr = (struct dns_hdr*)p->payload;
+ 178              		.loc 1 589 0
+ 179 009e 4468     		ldr	r4, [r0, #4]
+ 180              	.LVL25:
+ 590:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     memset(hdr, 0, SIZEOF_DNS_HDR);
+ 181              		.loc 1 590 0
+ 182 00a0 0022     		mov	r2, #0
+ 183 00a2 231C     		mov	r3, r4
+ 184 00a4 04C3     		stmia	r3!, {r2}
+ 185 00a6 04C3     		stmia	r3!, {r2}
+ 186 00a8 1A60     		str	r2, [r3]
+ 591:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     hdr->id = htons(id);
+ 187              		.loc 1 591 0
+ 188 00aa 281C     		mov	r0, r5
+ 189              	.LVL26:
+ 190 00ac FFF7FEFF 		bl	htons
+ 191 00b0 2080     		strh	r0, [r4]
+ 592:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     hdr->flags1 = DNS_FLAG1_RD;
+ 192              		.loc 1 592 0
+ 193 00b2 0123     		mov	r3, #1
+ 194 00b4 A370     		strb	r3, [r4, #2]
+ 593:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     hdr->numquestions = htons(1);
+ 195              		.loc 1 593 0
+ 196 00b6 0120     		mov	r0, #1
+ 197 00b8 FFF7FEFF 		bl	htons
+ 198 00bc A080     		strh	r0, [r4, #4]
+ 594:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     query = (char*)hdr + SIZEOF_DNS_HDR;
+ 199              		.loc 1 594 0
+ 200 00be 0C34     		add	r4, r4, #12
+ 201              	.LVL27:
+ 595:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     pHostname = name;
+ 596:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     --pHostname;
+ 202              		.loc 1 596 0
+ 203 00c0 711E     		sub	r1, r6, #1
+ 204              	.LVL28:
+ 597:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 598:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* convert hostname into suitable query format. */
+ 599:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     do {
+ 600:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       ++pHostname;
+ 601:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       nptr = query;
+ 602:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       ++query;
+ 603:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       for(n = 0; *pHostname != '.' && *pHostname != 0; ++pHostname) {
+ 205              		.loc 1 603 0
+ 206 00c2 0020     		mov	r0, #0
+ 207              	.LVL29:
+ 208              	.L27:
+ 209              		.loc 1 600 0
+ 210 00c4 0131     		add	r1, r1, #1
+ 211              		.loc 1 602 0
+ 212 00c6 661C     		add	r6, r4, #1
+ 213              	.LVL30:
+ 214              		.loc 1 603 0
+ 215 00c8 0A78     		ldrb	r2, [r1]
+ 216 00ca 2E2A     		cmp	r2, #46
+ 217 00cc 01D0     		beq	.L29
+ 218 00ce 002A     		cmp	r2, #0
+ 219 00d0 01D1     		bne	.L21
+ 220              	.L29:
+ 221 00d2 031C     		mov	r3, r0
+ 222 00d4 0BE0     		b	.L23
+ 223              	.LVL31:
+ 224              	.L21:
+ 225 00d6 031C     		mov	r3, r0
+ 226              	.LVL32:
+ 227              	.L24:
+ 604:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         *query = *pHostname;
+ 228              		.loc 1 604 0
+ 229 00d8 3270     		strb	r2, [r6]
+ 605:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ++query;
+ 230              		.loc 1 605 0
+ 231 00da 0136     		add	r6, r6, #1
+ 606:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         ++n;
+ 232              		.loc 1 606 0
+ 233 00dc 0133     		add	r3, r3, #1
+ 234              	.LVL33:
+ 235 00de 1B06     		lsl	r3, r3, #24
+ 236 00e0 1B0E     		lsr	r3, r3, #24
+ 237              	.LVL34:
+ 238              		.loc 1 603 0
+ 239 00e2 0131     		add	r1, r1, #1
+ 240 00e4 0A78     		ldrb	r2, [r1]
+ 241 00e6 2E2A     		cmp	r2, #46
+ 242 00e8 01D0     		beq	.L23
+ 243 00ea 002A     		cmp	r2, #0
+ 244 00ec F4D1     		bne	.L24
+ 245              	.LVL35:
+ 246              	.L23:
+ 607:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 608:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       *nptr = n;
+ 247              		.loc 1 608 0
+ 248 00ee 2370     		strb	r3, [r4]
+ 609:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     } while(*pHostname != 0);
+ 249              		.loc 1 609 0
+ 250 00f0 0B78     		ldrb	r3, [r1]
+ 251              	.LVL36:
+ 252 00f2 002B     		cmp	r3, #0
+ 253 00f4 01D0     		beq	.L26
+ 254              	.LVL37:
+ 255 00f6 341C     		mov	r4, r6
+ 256 00f8 E4E7     		b	.L27
+ 257              	.L26:
+ 610:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     *query++='\0';
+ 258              		.loc 1 610 0
+ 259 00fa 0023     		mov	r3, #0
+ 260 00fc 3370     		strb	r3, [r6]
+ 261 00fe 751C     		add	r5, r6, #1
+ 262              	.LVL38:
+ 611:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 612:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* fill dns query */
+ 613:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     qry.type  = htons(DNS_RRTYPE_A);
+ 263              		.loc 1 613 0
+ 264 0100 0120     		mov	r0, #1
+ 265              	.LVL39:
+ 266 0102 FFF7FEFF 		bl	htons
+ 267              	.LVL40:
+ 268 0106 6C46     		mov	r4, sp
+ 269 0108 2080     		strh	r0, [r4]
+ 614:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     qry.class = htons(DNS_RRCLASS_IN);
+ 270              		.loc 1 614 0
+ 271 010a 0120     		mov	r0, #1
+ 272 010c FFF7FEFF 		bl	htons
+ 273 0110 6B46     		mov	r3, sp
+ 274 0112 0233     		add	r3, r3, #2
+ 275 0114 1880     		strh	r0, [r3]
+ 615:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     MEMCPY( query, &qry, SIZEOF_DNS_QUERY);
+ 276              		.loc 1 615 0
+ 277 0116 281C     		mov	r0, r5
+ 278 0118 6946     		mov	r1, sp
+ 279 011a 0422     		mov	r2, #4
+ 280 011c FFF7FEFF 		bl	memcpy
+ 616:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 617:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* resize pbuf to the exact dns query */
+ 618:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     pbuf_realloc(p, (query + SIZEOF_DNS_QUERY) - ((char*)(p->payload)));
+ 281              		.loc 1 618 0
+ 282 0120 BB88     		ldrh	r3, [r7, #4]
+ 283 0122 711D     		add	r1, r6, #5
+ 284 0124 C91A     		sub	r1, r1, r3
+ 285 0126 0904     		lsl	r1, r1, #16
+ 286 0128 090C     		lsr	r1, r1, #16
+ 287 012a 381C     		mov	r0, r7
+ 288 012c FFF7FEFF 		bl	pbuf_realloc
+ 619:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 620:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* connect to the server for faster receiving */
+ 621:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     udp_connect(dns_pcb, &dns_servers[numdns], DNS_SERVER_PORT);
+ 289              		.loc 1 621 0
+ 290 0130 4246     		mov	r2, r8
+ 291 0132 9300     		lsl	r3, r2, #2
+ 292 0134 0D4C     		ldr	r4, .L31
+ 293 0136 E418     		add	r4, r4, r3
+ 294 0138 0D4D     		ldr	r5, .L31+4
+ 295              	.LVL41:
+ 296 013a 2868     		ldr	r0, [r5]
+ 297 013c 211C     		mov	r1, r4
+ 298 013e 3522     		mov	r2, #53
+ 299 0140 FFF7FEFF 		bl	udp_connect
+ 622:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* send dns packet */
+ 623:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     err = udp_sendto(dns_pcb, p, &dns_servers[numdns], DNS_SERVER_PORT);
+ 300              		.loc 1 623 0
+ 301 0144 2868     		ldr	r0, [r5]
+ 302 0146 391C     		mov	r1, r7
+ 303 0148 221C     		mov	r2, r4
+ 304 014a 3523     		mov	r3, #53
+ 305 014c FFF7FEFF 		bl	udp_sendto
+ 306 0150 0006     		lsl	r0, r0, #24
+ 307 0152 040E     		lsr	r4, r0, #24
+ 308              	.LVL42:
+ 624:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 625:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* free pbuf */
+ 626:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     pbuf_free(p);
+ 309              		.loc 1 626 0
+ 310 0154 381C     		mov	r0, r7
+ 311 0156 FFF7FEFF 		bl	pbuf_free
+ 312              	.LVL43:
+ 313              	.L20:
+ 314 015a 2006     		lsl	r0, r4, #24
+ 315 015c 0016     		asr	r0, r0, #24
+ 627:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   } else {
+ 628:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     err = ERR_MEM;
+ 629:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 630:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 631:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return err;
+ 632:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 316              		.loc 1 632 0
+ 317 015e 01B0     		add	sp, sp, #4
+ 318              		@ sp needed for prologue
+ 319              	.LVL44:
+ 320              	.LVL45:
+ 321              	.LVL46:
+ 322              	.LVL47:
+ 323              	.LVL48:
+ 324 0160 04BC     		pop	{r2}
+ 325 0162 9046     		mov	r8, r2
+ 326 0164 F0BC     		pop	{r4, r5, r6, r7}
+ 327 0166 02BC     		pop	{r1}
+ 328 0168 0847     		bx	r1
+ 329              	.L32:
+ 330 016a C046     		.align	2
+ 331              	.L31:
+ 332 016c 68040000 		.word	dns_servers
+ 333 0170 00000000 		.word	dns_pcb
+ 334              	.LFE9:
+ 336              		.align	2
+ 337              		.code	16
+ 338              		.thumb_func
+ 340              	dns_check_entry:
+ 341              	.LFB10:
+ 633:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 634:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 635:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * dns_check_entry() - see if pEntry has not yet been queried and, if so, sends out a query.
+ 636:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Check an entry in the dns_table:
+ 637:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * - send out query for new entries
+ 638:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * - retry old pending entries on timeout (also with different servers)
+ 639:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * - remove completed entries from the table if their TTL has expired
+ 640:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 641:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param i index of the dns_table entry to check
+ 642:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 643:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void
+ 644:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_check_entry(u8_t i)
+ 645:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 342              		.loc 1 645 0
+ 343 0174 30B5     		push	{r4, r5, lr}
+ 344              	.LCFI3:
+ 345              	.LVL49:
+ 346 0176 0006     		lsl	r0, r0, #24
+ 347              	.LVL50:
+ 348 0178 050E     		lsr	r5, r0, #24
+ 349              	.LVL51:
+ 646:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_table_entry *pEntry = &dns_table[i];
+ 350              		.loc 1 646 0
+ 351 017a AB00     		lsl	r3, r5, #2
+ 352 017c 5B19     		add	r3, r3, r5
+ 353 017e DA00     		lsl	r2, r3, #3
+ 354 0180 D21A     		sub	r2, r2, r3
+ 355 0182 D200     		lsl	r2, r2, #3
+ 356 0184 314B     		ldr	r3, .L42
+ 357 0186 9C18     		add	r4, r3, r2
+ 358              	.LVL52:
+ 647:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 648:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_ASSERT("array index out of bounds", i < DNS_TABLE_SIZE);
+ 649:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 650:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   switch(pEntry->state) {
+ 359              		.loc 1 650 0
+ 360 0188 2278     		ldrb	r2, [r4]
+ 361 018a 1306     		lsl	r3, r2, #24
+ 362 018c 1B0E     		lsr	r3, r3, #24
+ 363 018e 022B     		cmp	r3, #2
+ 364 0190 15D0     		beq	.L36
+ 365 0192 1306     		lsl	r3, r2, #24
+ 366 0194 1B0E     		lsr	r3, r3, #24
+ 367 0196 032B     		cmp	r3, #3
+ 368 0198 4AD0     		beq	.L37
+ 369 019a 1306     		lsl	r3, r2, #24
+ 370 019c 1B0E     		lsr	r3, r3, #24
+ 371 019e 012B     		cmp	r3, #1
+ 372 01a0 50D1     		bne	.L41
+ 651:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 652:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     case DNS_STATE_NEW: {
+ 653:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* initialize new entry */
+ 654:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry->state   = DNS_STATE_ASKING;
+ 373              		.loc 1 654 0
+ 374 01a2 0223     		mov	r3, #2
+ 375 01a4 2370     		strb	r3, [r4]
+ 655:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry->numdns  = 0;
+ 376              		.loc 1 655 0
+ 377 01a6 0022     		mov	r2, #0
+ 378 01a8 6270     		strb	r2, [r4, #1]
+ 656:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry->tmr     = 1;
+ 379              		.loc 1 656 0
+ 380 01aa 0123     		mov	r3, #1
+ 381 01ac A370     		strb	r3, [r4, #2]
+ 657:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry->retries = 0;
+ 382              		.loc 1 657 0
+ 383 01ae E270     		strb	r2, [r4, #3]
+ 658:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       
+ 659:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* send DNS packet for this entry */
+ 660:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       dns_send(pEntry->numdns, pEntry->name, i);
+ 384              		.loc 1 660 0
+ 385 01b0 6078     		ldrb	r0, [r4, #1]
+ 386 01b2 211C     		mov	r1, r4
+ 387 01b4 0C31     		add	r1, r1, #12
+ 388 01b6 2A1C     		mov	r2, r5
+ 389 01b8 FFF75CFF 		bl	dns_send
+ 390 01bc 42E0     		b	.L41
+ 391              	.L36:
+ 661:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 662:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 663:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 664:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     case DNS_STATE_ASKING: {
+ 665:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       if (--pEntry->tmr == 0) {
+ 392              		.loc 1 665 0
+ 393 01be A378     		ldrb	r3, [r4, #2]
+ 394 01c0 013B     		sub	r3, r3, #1
+ 395 01c2 1B06     		lsl	r3, r3, #24
+ 396 01c4 1B0E     		lsr	r3, r3, #24
+ 397 01c6 A370     		strb	r3, [r4, #2]
+ 398 01c8 002B     		cmp	r3, #0
+ 399 01ca 3BD1     		bne	.L41
+ 666:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         if (++pEntry->retries == DNS_MAX_RETRIES) {
+ 400              		.loc 1 666 0
+ 401 01cc E378     		ldrb	r3, [r4, #3]
+ 402 01ce 0133     		add	r3, r3, #1
+ 403 01d0 1B06     		lsl	r3, r3, #24
+ 404 01d2 1B0E     		lsr	r3, r3, #24
+ 405 01d4 E370     		strb	r3, [r4, #3]
+ 406 01d6 042B     		cmp	r3, #4
+ 407 01d8 22D1     		bne	.L38
+ 667:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           if ((pEntry->numdns+1<DNS_MAX_SERVERS) && (dns_servers[pEntry->numdns+1].addr!=0)) {
+ 408              		.loc 1 667 0
+ 409 01da 6178     		ldrb	r1, [r4, #1]
+ 410 01dc 4A1C     		add	r2, r1, #1
+ 411 01de 012A     		cmp	r2, #1
+ 412 01e0 0BDC     		bgt	.L39
+ 413 01e2 1B4B     		ldr	r3, .L42+4
+ 414 01e4 9200     		lsl	r2, r2, #2
+ 415 01e6 9B58     		ldr	r3, [r3, r2]
+ 416 01e8 002B     		cmp	r3, #0
+ 417 01ea 06D0     		beq	.L39
+ 668:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* change of server */
+ 669:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->numdns++;
+ 418              		.loc 1 669 0
+ 419 01ec 4B1C     		add	r3, r1, #1
+ 420 01ee 6370     		strb	r3, [r4, #1]
+ 670:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->tmr     = 1;
+ 421              		.loc 1 670 0
+ 422 01f0 0123     		mov	r3, #1
+ 423 01f2 A370     		strb	r3, [r4, #2]
+ 671:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->retries = 0;
+ 424              		.loc 1 671 0
+ 425 01f4 0023     		mov	r3, #0
+ 426 01f6 E370     		strb	r3, [r4, #3]
+ 427 01f8 24E0     		b	.L41
+ 428              	.L39:
+ 672:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             break;
+ 673:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           } else {
+ 674:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             LWIP_DEBUGF(DNS_DEBUG, ("dns_check_entry: \"%s\": timeout\n", pEntry->name));
+ 675:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* call specified callback function if provided */
+ 676:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             if (pEntry->found)
+ 429              		.loc 1 676 0
+ 430 01fa 8823     		mov	r3, #136
+ 431 01fc 5B00     		lsl	r3, r3, #1
+ 432 01fe E558     		ldr	r5, [r4, r3]
+ 433              	.LVL53:
+ 434 0200 002D     		cmp	r5, #0
+ 435 0202 07D0     		beq	.L40
+ 677:rtos/common/ethernet/lwIP_132/src/core/dns.c ****               (*pEntry->found)(pEntry->name, NULL, pEntry->arg);
+ 436              		.loc 1 677 0
+ 437 0204 201C     		mov	r0, r4
+ 438 0206 0C30     		add	r0, r0, #12
+ 439 0208 8A23     		mov	r3, #138
+ 440 020a 5B00     		lsl	r3, r3, #1
+ 441 020c E258     		ldr	r2, [r4, r3]
+ 442 020e 0021     		mov	r1, #0
+ 443 0210 00F0F6F9 		bl	.L44
+ 444              	.L40:
+ 678:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* flush this entry */
+ 679:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->state   = DNS_STATE_UNUSED;
+ 445              		.loc 1 679 0
+ 446 0214 0022     		mov	r2, #0
+ 447 0216 2270     		strb	r2, [r4]
+ 680:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->found   = NULL;
+ 448              		.loc 1 680 0
+ 449 0218 8823     		mov	r3, #136
+ 450 021a 5B00     		lsl	r3, r3, #1
+ 451 021c E250     		str	r2, [r4, r3]
+ 452 021e 11E0     		b	.L41
+ 453              	.LVL54:
+ 454              	.L38:
+ 681:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             break;
+ 682:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           }
+ 683:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         }
+ 684:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 685:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* wait longer for the next retry */
+ 686:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pEntry->tmr = pEntry->retries;
+ 455              		.loc 1 686 0
+ 456 0220 A370     		strb	r3, [r4, #2]
+ 687:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 688:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* send DNS packet for this entry */
+ 689:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         dns_send(pEntry->numdns, pEntry->name, i);
+ 457              		.loc 1 689 0
+ 458 0222 6078     		ldrb	r0, [r4, #1]
+ 459 0224 211C     		mov	r1, r4
+ 460 0226 0C31     		add	r1, r1, #12
+ 461 0228 2A1C     		mov	r2, r5
+ 462 022a FFF723FF 		bl	dns_send
+ 463 022e 09E0     		b	.L41
+ 464              	.L37:
+ 690:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 691:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 692:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 693:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 694:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     case DNS_STATE_DONE: {
+ 695:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* if the time to live is nul */
+ 696:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       if (--pEntry->ttl == 0) {
+ 465              		.loc 1 696 0
+ 466 0230 A368     		ldr	r3, [r4, #8]
+ 467 0232 013B     		sub	r3, r3, #1
+ 468 0234 A360     		str	r3, [r4, #8]
+ 469 0236 002B     		cmp	r3, #0
+ 470 0238 04D1     		bne	.L41
+ 697:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         LWIP_DEBUGF(DNS_DEBUG, ("dns_check_entry: \"%s\": flush\n", pEntry->name));
+ 698:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* flush this entry */
+ 699:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pEntry->state = DNS_STATE_UNUSED;
+ 471              		.loc 1 699 0
+ 472 023a 0022     		mov	r2, #0
+ 473 023c 2270     		strb	r2, [r4]
+ 700:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pEntry->found = NULL;
+ 474              		.loc 1 700 0
+ 475 023e 8823     		mov	r3, #136
+ 476 0240 5B00     		lsl	r3, r3, #1
+ 477 0242 E250     		str	r2, [r4, r3]
+ 478              	.L41:
+ 701:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 702:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 703:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 704:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     case DNS_STATE_UNUSED:
+ 705:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* nothing to do */
+ 706:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 707:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     default:
+ 708:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       LWIP_ASSERT("unknown dns_table entry state:", 0);
+ 709:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 710:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 711:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 479              		.loc 1 711 0
+ 480              		@ sp needed for prologue
+ 481              	.LVL55:
+ 482              	.LVL56:
+ 483 0244 30BC     		pop	{r4, r5}
+ 484 0246 01BC     		pop	{r0}
+ 485 0248 0047     		bx	r0
+ 486              	.L43:
+ 487 024a C046     		.align	2
+ 488              	.L42:
+ 489 024c 08000000 		.word	dns_table
+ 490 0250 68040000 		.word	dns_servers
+ 491              	.LFE10:
+ 493              		.align	2
+ 494              		.global	dns_gethostbyname
+ 495              		.code	16
+ 496              		.thumb_func
+ 498              	dns_gethostbyname:
+ 499              	.LFB14:
+ 712:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 713:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 714:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Call dns_check_entry for each entry in dns_table - check all entries.
+ 715:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 716:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void
+ 717:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_check_entries(void)
+ 718:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 719:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t i;
+ 720:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 721:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   for (i = 0; i < DNS_TABLE_SIZE; ++i) {
+ 722:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     dns_check_entry(i);
+ 723:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 724:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 725:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 726:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 727:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Receive input function for DNS response packets arriving for the dns UDP pcb.
+ 728:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 729:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @params see udp.h
+ 730:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 731:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static void
+ 732:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr, u16_t port)
+ 733:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 734:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t i;
+ 735:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   char *pHostname;
+ 736:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_hdr *hdr;
+ 737:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_answer ans;
+ 738:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_table_entry *pEntry;
+ 739:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t nquestions, nanswers;
+ 740:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if (DNS_USES_STATIC_BUF == 0)
+ 741:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t dns_payload[DNS_MSG_SIZE];
+ 742:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* (DNS_USES_STATIC_BUF == 0) */
+ 743:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if (DNS_USES_STATIC_BUF == 2)
+ 744:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t* dns_payload;
+ 745:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* (DNS_USES_STATIC_BUF == 2) */
+ 746:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 747:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_UNUSED_ARG(arg);
+ 748:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_UNUSED_ARG(pcb);
+ 749:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_UNUSED_ARG(addr);
+ 750:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_UNUSED_ARG(port);
+ 751:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 752:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* is the dns message too big ? */
+ 753:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (p->tot_len > DNS_MSG_SIZE) {
+ 754:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: pbuf too big\n"));
+ 755:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* free pbuf and return */
+ 756:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     goto memerr1;
+ 757:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 758:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 759:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* is the dns message big enough ? */
+ 760:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (p->tot_len < (SIZEOF_DNS_HDR + SIZEOF_DNS_QUERY + SIZEOF_DNS_ANSWER)) {
+ 761:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: pbuf too small\n"));
+ 762:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* free pbuf and return */
+ 763:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     goto memerr1;
+ 764:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 765:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 766:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if (DNS_USES_STATIC_BUF == 2)
+ 767:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   dns_payload = mem_malloc(p->tot_len);
+ 768:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (dns_payload == NULL) {
+ 769:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: mem_malloc error\n"));
+ 770:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* free pbuf and return */
+ 771:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     goto memerr1;
+ 772:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 773:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* (DNS_USES_STATIC_BUF == 2) */
+ 774:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 775:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* copy dns payload inside static buffer for processing */ 
+ 776:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (pbuf_copy_partial(p, dns_payload, p->tot_len, 0) == p->tot_len) {
+ 777:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* The ID in the DNS header should be our entry into the name table. */
+ 778:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     hdr = (struct dns_hdr*)dns_payload;
+ 779:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     i = htons(hdr->id);
+ 780:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (i < DNS_TABLE_SIZE) {
+ 781:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry = &dns_table[i];
+ 782:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       if(pEntry->state == DNS_STATE_ASKING) {
+ 783:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* This entry is now completed. */
+ 784:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pEntry->state = DNS_STATE_DONE;
+ 785:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pEntry->err   = hdr->flags2 & DNS_FLAG2_ERR_MASK;
+ 786:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 787:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* We only care about the question(s) and the answers. The authrr
+ 788:rtos/common/ethernet/lwIP_132/src/core/dns.c ****            and the extrarr are simply discarded. */
+ 789:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         nquestions = htons(hdr->numquestions);
+ 790:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         nanswers   = htons(hdr->numanswers);
+ 791:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 792:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* Check for error. If so, call callback to inform. */
+ 793:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         if (((hdr->flags1 & DNS_FLAG1_RESPONSE) == 0) || (pEntry->err != 0) || (nquestions != 1)) {
+ 794:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: \"%s\": error in flags\n", pEntry->name));
+ 795:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           /* call callback to indicate error, clean up memory and return */
+ 796:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           goto responseerr;
+ 797:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         }
+ 798:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 799:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if DNS_DOES_NAME_CHECK
+ 800:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* Check if the name in the "question" part match with the name in the entry. */
+ 801:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         if (dns_compare_name((unsigned char *)(pEntry->name), (unsigned char *)dns_payload + SIZEOF
+ 802:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: \"%s\": response not match to query\n", pEntry->name))
+ 803:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           /* call callback to indicate error, clean up memory and return */
+ 804:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           goto responseerr;
+ 805:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         }
+ 806:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* DNS_DOES_NAME_CHECK */
+ 807:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 808:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* Skip the name in the "question" part */
+ 809:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         pHostname = (char *) dns_parse_name((unsigned char *)dns_payload + SIZEOF_DNS_HDR) + SIZEOF
+ 810:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 811:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         while(nanswers > 0) {
+ 812:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           /* skip answer resource record's host name */
+ 813:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           pHostname = (char *) dns_parse_name((unsigned char *)pHostname);
+ 814:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 815:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           /* Check for IP address type and Internet class. Others are discarded. */
+ 816:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           MEMCPY(&ans, pHostname, SIZEOF_DNS_ANSWER);
+ 817:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           if((ntohs(ans.type) == DNS_RRTYPE_A) && (ntohs(ans.class) == DNS_RRCLASS_IN) && (ntohs(an
+ 818:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* read the answer resource record's TTL, and maximize it if needed */
+ 819:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pEntry->ttl = ntohl(ans.ttl);
+ 820:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             if (pEntry->ttl > DNS_MAX_TTL) {
+ 821:rtos/common/ethernet/lwIP_132/src/core/dns.c ****               pEntry->ttl = DNS_MAX_TTL;
+ 822:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             }
+ 823:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* read the IP address after answer resource record's header */
+ 824:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             MEMCPY( &(pEntry->ipaddr), (pHostname+SIZEOF_DNS_ANSWER), sizeof(struct ip_addr));
+ 825:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: \"%s\": response = ", pEntry->name));
+ 826:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             ip_addr_debug_print(DNS_DEBUG, (&(pEntry->ipaddr)));
+ 827:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             LWIP_DEBUGF(DNS_DEBUG, ("\n"));
+ 828:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* call specified callback function if provided */
+ 829:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             if (pEntry->found) {
+ 830:rtos/common/ethernet/lwIP_132/src/core/dns.c ****               (*pEntry->found)(pEntry->name, &pEntry->ipaddr, pEntry->arg);
+ 831:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             }
+ 832:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             /* deallocate memory and return */
+ 833:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             goto memerr2;
+ 834:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           } else {
+ 835:rtos/common/ethernet/lwIP_132/src/core/dns.c ****             pHostname = pHostname + SIZEOF_DNS_ANSWER + htons(ans.len);
+ 836:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           }
+ 837:rtos/common/ethernet/lwIP_132/src/core/dns.c ****           --nanswers;
+ 838:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         }
+ 839:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         LWIP_DEBUGF(DNS_DEBUG, ("dns_recv: \"%s\": error in response\n", pEntry->name));
+ 840:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         /* call callback to indicate error, clean up memory and return */
+ 841:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         goto responseerr;
+ 842:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 843:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 844:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 845:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 846:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* deallocate memory and return */
+ 847:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   goto memerr2;
+ 848:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 849:rtos/common/ethernet/lwIP_132/src/core/dns.c **** responseerr:
+ 850:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* ERROR: call specified callback function with NULL as name to indicate an error */
+ 851:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (pEntry->found) {
+ 852:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     (*pEntry->found)(pEntry->name, NULL, pEntry->arg);
+ 853:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 854:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* flush this entry */
+ 855:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->state = DNS_STATE_UNUSED;
+ 856:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->found = NULL;
+ 857:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 858:rtos/common/ethernet/lwIP_132/src/core/dns.c **** memerr2:
+ 859:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if (DNS_USES_STATIC_BUF == 2)
+ 860:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* free dns buffer */
+ 861:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   mem_free(dns_payload);
+ 862:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* (DNS_USES_STATIC_BUF == 2) */
+ 863:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 864:rtos/common/ethernet/lwIP_132/src/core/dns.c **** memerr1:
+ 865:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* free pbuf */
+ 866:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pbuf_free(p);
+ 867:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return;
+ 868:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 869:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 870:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 871:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Queues a new hostname to resolve and sends out a DNS query for that hostname
+ 872:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 873:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param name the hostname that is to be queried
+ 874:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param found a callback founction to be called on success, failure or timeout
+ 875:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param callback_arg argument to pass to the callback function
+ 876:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return @return a err_t return code.
+ 877:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 878:rtos/common/ethernet/lwIP_132/src/core/dns.c **** static err_t
+ 879:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_enqueue(const char *name, dns_found_callback found, void *callback_arg)
+ 880:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 881:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t i;
+ 882:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   u8_t lseq, lseqi;
+ 883:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   struct dns_table_entry *pEntry = NULL;
+ 884:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 885:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* search an unused entry, or the oldest one */
+ 886:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   lseq = lseqi = 0;
+ 887:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   for (i = 0; i < DNS_TABLE_SIZE; ++i) {
+ 888:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     pEntry = &dns_table[i];
+ 889:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* is it an unused entry ? */
+ 890:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (pEntry->state == DNS_STATE_UNUSED)
+ 891:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       break;
+ 892:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 893:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     /* check if this is the oldest completed entry */
+ 894:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if (pEntry->state == DNS_STATE_DONE) {
+ 895:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       if ((dns_seqno - pEntry->seqno) > lseq) {
+ 896:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         lseq = dns_seqno - pEntry->seqno;
+ 897:rtos/common/ethernet/lwIP_132/src/core/dns.c ****         lseqi = i;
+ 898:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       }
+ 899:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 900:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 901:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 902:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* if we don't have found an unused entry, use the oldest completed one */
+ 903:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (i == DNS_TABLE_SIZE) {
+ 904:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     if ((lseqi >= DNS_TABLE_SIZE) || (dns_table[lseqi].state != DNS_STATE_DONE)) {
+ 905:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* no entry can't be used now, table is full */
+ 906:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       LWIP_DEBUGF(DNS_DEBUG, ("dns_enqueue: \"%s\": DNS entries table is full\n", name));
+ 907:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       return ERR_MEM;
+ 908:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     } else {
+ 909:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       /* use the oldest completed one */
+ 910:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       i = lseqi;
+ 911:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       pEntry = &dns_table[i];
+ 912:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     }
+ 913:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 914:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 915:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* use this entry */
+ 916:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   LWIP_DEBUGF(DNS_DEBUG, ("dns_enqueue: \"%s\": use DNS entry %"U16_F"\n", name, (u16_t)(i)));
+ 917:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 918:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* fill the entry */
+ 919:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->state = DNS_STATE_NEW;
+ 920:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->seqno = dns_seqno++;
+ 921:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->found = found;
+ 922:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   pEntry->arg   = callback_arg;
+ 923:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   strcpy(pEntry->name, name);
+ 924:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 925:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* force to send query without waiting timer */
+ 926:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   dns_check_entry(i);
+ 927:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 928:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* dns query is enqueued */
+ 929:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return ERR_INPROGRESS;
+ 930:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 931:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 932:rtos/common/ethernet/lwIP_132/src/core/dns.c **** /**
+ 933:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Resolve a hostname (string) into an IP address.
+ 934:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * NON-BLOCKING callback version for use with raw API!!!
+ 935:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 936:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * Returns immediately with one of err_t return codes:
+ 937:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * - ERR_OK if hostname is a valid IP address string or the host
+ 938:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *   name is already in the local names table.
+ 939:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * - ERR_INPROGRESS enqueue a request to be sent to the DNS server
+ 940:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *   for resolution if no errors are present.
+ 941:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *
+ 942:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param hostname the hostname that is to be queried
+ 943:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param addr pointer to a struct ip_addr where to store the address if it is already
+ 944:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *             cached in the dns_table (only valid if ERR_OK is returned!)
+ 945:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param found a callback function to be called on success, failure or timeout (only if
+ 946:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  *              ERR_INPROGRESS is returned!)
+ 947:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @param callback_arg argument to pass to the callback function
+ 948:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  * @return a err_t return code.
+ 949:rtos/common/ethernet/lwIP_132/src/core/dns.c ****  */
+ 950:rtos/common/ethernet/lwIP_132/src/core/dns.c **** err_t
+ 951:rtos/common/ethernet/lwIP_132/src/core/dns.c **** dns_gethostbyname(const char *hostname, struct ip_addr *addr, dns_found_callback found,
+ 952:rtos/common/ethernet/lwIP_132/src/core/dns.c ****                   void *callback_arg)
+ 953:rtos/common/ethernet/lwIP_132/src/core/dns.c **** {
+ 500              		.loc 1 953 0
+ 501 0254 F0B5     		push	{r4, r5, r6, r7, lr}
+ 502              	.LCFI4:
+ 503 0256 5F46     		mov	r7, fp
+ 504 0258 5646     		mov	r6, sl
+ 505 025a 4D46     		mov	r5, r9
+ 506 025c 4446     		mov	r4, r8
+ 507 025e F0B4     		push	{r4, r5, r6, r7}
+ 508              	.LCFI5:
+ 509              	.LVL57:
+ 510 0260 81B0     		sub	sp, sp, #4
+ 511              	.LCFI6:
+ 512 0262 051C     		mov	r5, r0
+ 513 0264 0C1C     		mov	r4, r1
+ 514 0266 161C     		mov	r6, r2
+ 515 0268 1F1C     		mov	r7, r3
+ 954:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* not initialized or no valid server yet, or invalid addr pointer
+ 955:rtos/common/ethernet/lwIP_132/src/core/dns.c ****    * or invalid hostname or invalid hostname length */
+ 956:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if ((dns_pcb == NULL) || (addr == NULL) ||
+ 516              		.loc 1 956 0
+ 517 026a 564B     		ldr	r3, .L64
+ 518              	.LVL58:
+ 519 026c 1B68     		ldr	r3, [r3]
+ 520 026e 002B     		cmp	r3, #0
+ 521 0270 00D1     		bne	.LCB482
+ 522 0272 8AE0     		b	.L46	@long jump
+ 523              	.LCB482:
+ 524              	.LVL59:
+ 525 0274 0029     		cmp	r1, #0
+ 526 0276 00D1     		bne	.LCB487
+ 527 0278 87E0     		b	.L46	@long jump
+ 528              	.LCB487:
+ 529              	.LVL60:
+ 530 027a 0028     		cmp	r0, #0
+ 531 027c 00D1     		bne	.LCB490
+ 532 027e 84E0     		b	.L46	@long jump
+ 533              	.LCB490:
+ 534              	.LVL61:
+ 535 0280 0378     		ldrb	r3, [r0]
+ 536 0282 002B     		cmp	r3, #0
+ 537 0284 00D1     		bne	.LCB494
+ 538 0286 80E0     		b	.L46	@long jump
+ 539              	.LCB494:
+ 540 0288 FFF7FEFF 		bl	strlen
+ 541              	.LVL62:
+ 542 028c FF28     		cmp	r0, #255
+ 543 028e 7CD8     		bhi	.L46
+ 957:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       (!hostname) || (!hostname[0]) ||
+ 958:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       (strlen(hostname) >= DNS_MAX_NAME_LENGTH)) {
+ 959:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return ERR_VAL;
+ 960:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 961:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 962:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #if LWIP_HAVE_LOOPIF
+ 963:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (strcmp(hostname,"localhost")==0) {
+ 964:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     addr->addr = htonl(INADDR_LOOPBACK);
+ 965:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return ERR_OK;
+ 966:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 967:rtos/common/ethernet/lwIP_132/src/core/dns.c **** #endif /* LWIP_HAVE_LOOPIF */
+ 968:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 969:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* host name already in octet notation? set ip addr and return ERR_OK
+ 970:rtos/common/ethernet/lwIP_132/src/core/dns.c ****    * already have this address cached? */
+ 971:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   if (((addr->addr = inet_addr(hostname)) != INADDR_NONE) ||
+ 544              		.loc 1 971 0
+ 545 0290 281C     		mov	r0, r5
+ 546 0292 FFF7FEFF 		bl	inet_addr
+ 547 0296 2060     		str	r0, [r4]
+ 548 0298 0130     		add	r0, r0, #1
+ 549 029a 78D1     		bne	.L47
+ 550 029c 4A48     		ldr	r0, .L64+4
+ 551 029e 8146     		mov	r9, r0
+ 552 02a0 0022     		mov	r2, #0
+ 553 02a2 9246     		mov	sl, r2
+ 554              	.LBB6:
+ 555              		.loc 1 477 0
+ 556 02a4 0090     		str	r0, [sp]
+ 557              	.LBE6:
+ 558              		.loc 1 971 0
+ 559 02a6 8C20     		mov	r0, #140
+ 560 02a8 4200     		lsl	r2, r0, #1
+ 561 02aa 9346     		mov	fp, r2
+ 562              	.L50:
+ 563              	.LBB10:
+ 564              	.LBB8:
+ 565              		.loc 1 477 0
+ 566 02ac 4846     		mov	r0, r9
+ 567 02ae 0378     		ldrb	r3, [r0]
+ 568 02b0 032B     		cmp	r3, #3
+ 569 02b2 1DD1     		bne	.L48
+ 570              	.LBE8:
+ 571 02b4 5246     		mov	r2, sl
+ 572 02b6 9300     		lsl	r3, r2, #2
+ 573 02b8 5344     		add	r3, r3, sl
+ 574 02ba D900     		lsl	r1, r3, #3
+ 575 02bc C91A     		sub	r1, r1, r3
+ 576 02be C900     		lsl	r1, r1, #3
+ 577 02c0 0C31     		add	r1, r1, #12
+ 578 02c2 009B     		ldr	r3, [sp]
+ 579 02c4 5918     		add	r1, r3, r1
+ 580 02c6 281C     		mov	r0, r5
+ 581 02c8 FFF7FEFF 		bl	strcmp
+ 582              	.LBB7:
+ 583 02cc 0028     		cmp	r0, #0
+ 584 02ce 0FD1     		bne	.L48
+ 585              		.loc 1 482 0
+ 586 02d0 3D49     		ldr	r1, .L64+4
+ 587 02d2 5046     		mov	r0, sl
+ 588 02d4 8200     		lsl	r2, r0, #2
+ 589 02d6 5244     		add	r2, r2, sl
+ 590 02d8 D300     		lsl	r3, r2, #3
+ 591 02da 9B1A     		sub	r3, r3, r2
+ 592 02dc DB00     		lsl	r3, r3, #3
+ 593 02de C918     		add	r1, r1, r3
+ 594 02e0 8622     		mov	r2, #134
+ 595 02e2 5200     		lsl	r2, r2, #1
+ 596 02e4 8918     		add	r1, r1, r2
+ 597 02e6 0B68     		ldr	r3, [r1]
+ 598              	.LBE7:
+ 599              	.LBE10:
+ 600              		.loc 1 971 0
+ 601 02e8 2360     		str	r3, [r4]
+ 602 02ea 0133     		add	r3, r3, #1
+ 603 02ec 4FD1     		bne	.L47
+ 604 02ee 5DE0     		b	.L49
+ 605              	.L48:
+ 606 02f0 0123     		mov	r3, #1
+ 607 02f2 9A44     		add	sl, sl, r3
+ 608 02f4 D944     		add	r9, r9, fp
+ 609              	.LBB11:
+ 610              	.LBB9:
+ 611              		.loc 1 476 0
+ 612 02f6 5046     		mov	r0, sl
+ 613 02f8 0428     		cmp	r0, #4
+ 614 02fa D7D1     		bne	.L50
+ 615 02fc 53E0     		b	.L63
+ 616              	.LVL63:
+ 617              	.L54:
+ 618 02fe 201C     		mov	r0, r4
+ 619              	.LBE9:
+ 620              	.LBE11:
+ 621              	.LBB12:
+ 622              	.LBB13:
+ 623              		.loc 1 890 0
+ 624 0300 2378     		ldrb	r3, [r4]
+ 625 0302 002B     		cmp	r3, #0
+ 626 0304 13D0     		beq	.L52
+ 627              	.LVL64:
+ 628              		.loc 1 894 0
+ 629 0306 032B     		cmp	r3, #3
+ 630 0308 0AD1     		bne	.L53
+ 631              		.loc 1 895 0
+ 632 030a 2279     		ldrb	r2, [r4, #4]
+ 633 030c 5846     		mov	r0, fp
+ 634              	.LVL65:
+ 635 030e 831A     		sub	r3, r0, r2
+ 636 0310 4B45     		cmp	r3, r9
+ 637 0312 05DD     		ble	.L53
+ 638              		.loc 1 896 0
+ 639 0314 5046     		mov	r0, sl
+ 640 0316 831A     		sub	r3, r0, r2
+ 641 0318 1B06     		lsl	r3, r3, #24
+ 642 031a 1B0E     		lsr	r3, r3, #24
+ 643 031c 9946     		mov	r9, r3
+ 644              	.LVL66:
+ 645 031e 8846     		mov	r8, r1
+ 646              	.LVL67:
+ 647              	.L53:
+ 648              		.loc 1 887 0
+ 649 0320 4B1C     		add	r3, r1, #1
+ 650 0322 1B06     		lsl	r3, r3, #24
+ 651 0324 190E     		lsr	r1, r3, #24
+ 652              	.LVL68:
+ 653 0326 6444     		add	r4, r4, ip
+ 654 0328 0429     		cmp	r1, #4
+ 655 032a E8D1     		bne	.L54
+ 656 032c 03E0     		b	.L55
+ 657              	.LVL69:
+ 658              	.L52:
+ 659              		.loc 1 903 0
+ 660 032e 0429     		cmp	r1, #4
+ 661 0330 01D0     		beq	.L55
+ 662              	.LVL70:
+ 663 0332 8846     		mov	r8, r1
+ 664 0334 10E0     		b	.L56
+ 665              	.L55:
+ 666              		.loc 1 904 0
+ 667 0336 4246     		mov	r2, r8
+ 668 0338 032A     		cmp	r2, #3
+ 669 033a 24D8     		bhi	.L57
+ 670              	.LVL71:
+ 671 033c 2249     		ldr	r1, .L64+4
+ 672 033e 9200     		lsl	r2, r2, #2
+ 673 0340 4244     		add	r2, r2, r8
+ 674 0342 D300     		lsl	r3, r2, #3
+ 675 0344 9B1A     		sub	r3, r3, r2
+ 676 0346 DB00     		lsl	r3, r3, #3
+ 677 0348 5B5C     		ldrb	r3, [r3, r1]
+ 678 034a 032B     		cmp	r3, #3
+ 679 034c 1BD1     		bne	.L57
+ 680              		.loc 1 911 0
+ 681 034e 131C     		mov	r3, r2
+ 682 0350 D200     		lsl	r2, r2, #3
+ 683 0352 D21A     		sub	r2, r2, r3
+ 684 0354 D200     		lsl	r2, r2, #3
+ 685 0356 8818     		add	r0, r1, r2
+ 686              	.LVL72:
+ 687              	.L56:
+ 688              		.loc 1 919 0
+ 689 0358 0123     		mov	r3, #1
+ 690 035a 0370     		strb	r3, [r0]
+ 691              		.loc 1 920 0
+ 692 035c 5246     		mov	r2, sl
+ 693 035e 0271     		strb	r2, [r0, #4]
+ 694 0360 1A4A     		ldr	r2, .L64+8
+ 695 0362 5346     		mov	r3, sl
+ 696 0364 0133     		add	r3, r3, #1
+ 697 0366 1370     		strb	r3, [r2]
+ 698              		.loc 1 921 0
+ 699 0368 8823     		mov	r3, #136
+ 700 036a 5B00     		lsl	r3, r3, #1
+ 701 036c C650     		str	r6, [r0, r3]
+ 702              		.loc 1 922 0
+ 703 036e 8A23     		mov	r3, #138
+ 704 0370 5B00     		lsl	r3, r3, #1
+ 705 0372 C750     		str	r7, [r0, r3]
+ 706              		.loc 1 923 0
+ 707 0374 0C30     		add	r0, r0, #12
+ 708              	.LVL73:
+ 709 0376 291C     		mov	r1, r5
+ 710 0378 FFF7FEFF 		bl	strcpy
+ 711              		.loc 1 926 0
+ 712 037c 4046     		mov	r0, r8
+ 713 037e FFF7F9FE 		bl	dns_check_entry
+ 714 0382 F220     		mov	r0, #242
+ 715 0384 04E0     		b	.L58
+ 716              	.LVL74:
+ 717              	.L57:
+ 718 0386 FF20     		mov	r0, #255
+ 719              	.LVL75:
+ 720 0388 02E0     		b	.L58
+ 721              	.LVL76:
+ 722              	.L46:
+ 723 038a F720     		mov	r0, #247
+ 724 038c 00E0     		b	.L58
+ 725              	.LVL77:
+ 726              	.L47:
+ 727 038e 0020     		mov	r0, #0
+ 728              	.LVL78:
+ 729              	.L58:
+ 730 0390 0006     		lsl	r0, r0, #24
+ 731 0392 0016     		asr	r0, r0, #24
+ 732              	.LBE13:
+ 733              	.LBE12:
+ 972:rtos/common/ethernet/lwIP_132/src/core/dns.c ****       ((addr->addr = dns_lookup(hostname)) != INADDR_NONE)) {
+ 973:rtos/common/ethernet/lwIP_132/src/core/dns.c ****     return ERR_OK;
+ 974:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   }
+ 975:rtos/common/ethernet/lwIP_132/src/core/dns.c **** 
+ 976:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   /* queue query with specified callback */
+ 977:rtos/common/ethernet/lwIP_132/src/core/dns.c ****   return dns_enqueue(hostname, found, callback_arg);
+ 978:rtos/common/ethernet/lwIP_132/src/core/dns.c **** }
+ 734              		.loc 1 978 0
+ 735 0394 01B0     		add	sp, sp, #4
+ 736              		@ sp needed for prologue
+ 737              	.LVL79:
+ 738              	.LVL80:
+ 739              	.LVL81:
+ 740              	.LVL82:
+ 741              	.LVL83:
+ 742              	.LVL84:
+ 743 0396 3CBC     		pop	{r2, r3, r4, r5}
+ 744 0398 9046     		mov	r8, r2
+ 745 039a 9946     		mov	r9, r3
+ 746 039c A246     		mov	sl, r4
+ 747 039e AB46     		mov	fp, r5
+ 748 03a0 F0BC     		pop	{r4, r5, r6, r7}
+ 749 03a2 02BC     		pop	{r1}
+ 750 03a4 0847     		bx	r1
+ 751              	.LVL85:
+ 752              	.L63:
+ 753              		.loc 1 971 0
+ 754 03a6 0123     		mov	r3, #1
+ 755 03a8 5B42     		neg	r3, r3
+ 756 03aa 2360     		str	r3, [r4]
+ 757              	.L49:
+ 758              	.LBB15:
+ 759              	.LBB14:
+ 760              		.loc 1 895 0
+ 761 03ac 074B     		ldr	r3, .L64+8
+ 762 03ae 1B78     		ldrb	r3, [r3]
+ 763 03b0 9A46     		mov	sl, r3
+ 764 03b2 9B46     		mov	fp, r3
+ 765 03b4 044C     		ldr	r4, .L64+4
+ 766              	.LVL86:
+ 767 03b6 0021     		mov	r1, #0
+ 768              	.LVL87:
+ 769 03b8 8946     		mov	r9, r1
+ 770              	.LVL88:
+ 771 03ba 8846     		mov	r8, r1
+ 772              		.loc 1 887 0
+ 773 03bc 8C23     		mov	r3, #140
+ 774 03be 5800     		lsl	r0, r3, #1
+ 775 03c0 8446     		mov	ip, r0
+ 776 03c2 9CE7     		b	.L54
+ 777              	.L65:
+ 778              		.align	2
+ 779              	.L64:
+ 780 03c4 00000000 		.word	dns_pcb
+ 781 03c8 08000000 		.word	dns_table
+ 782 03cc 04000000 		.word	dns_seqno
+ 783              	.LBE14:
+ 784              	.LBE15:
+ 785              	.LFE14:
+ 787              		.align	2
+ 788              		.global	dns_tmr
+ 789              		.code	16
+ 790              		.thumb_func
+ 792              	dns_tmr:
+ 793              	.LFB5:
+ 794              		.loc 1 324 0
+ 795 03d0 10B5     		push	{r4, lr}
+ 796              	.LCFI7:
+ 797              		.loc 1 325 0
+ 798 03d2 074B     		ldr	r3, .L71
+ 799 03d4 1B68     		ldr	r3, [r3]
+ 800 03d6 002B     		cmp	r3, #0
+ 801 03d8 06D0     		beq	.L69
+ 802 03da 0024     		mov	r4, #0
+ 803              	.L68:
+ 804              	.LBB18:
+ 805              	.LBB19:
+ 806              		.loc 1 722 0
+ 807 03dc 201C     		mov	r0, r4
+ 808 03de FFF7C9FE 		bl	dns_check_entry
+ 809 03e2 0134     		add	r4, r4, #1
+ 810              		.loc 1 721 0
+ 811 03e4 042C     		cmp	r4, #4
+ 812 03e6 F9D1     		bne	.L68
+ 813              	.L69:
+ 814              	.LBE19:
+ 815              	.LBE18:
+ 816              		.loc 1 329 0
+ 817              		@ sp needed for prologue
+ 818 03e8 10BC     		pop	{r4}
+ 819 03ea 01BC     		pop	{r0}
+ 820 03ec 0047     		bx	r0
+ 821              	.L72:
+ 822 03ee C046     		.align	2
+ 823              	.L71:
+ 824 03f0 00000000 		.word	dns_pcb
+ 825              	.LFE5:
+ 827              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 828              		.align	2
+ 829              	.LC14:
+ 830 0000 3230382E 		.ascii	"208.67.222.222\000"
+ 830      36372E32 
+ 830      32322E32 
+ 830      323200
+ 831 000f 00       		.text
+ 832              		.align	2
+ 833              		.global	dns_init
+ 834              		.code	16
+ 835              		.thumb_func
+ 837              	dns_init:
+ 838              	.LFB2:
+ 839              		.loc 1 255 0
+ 840 03f4 00B5     		push	{lr}
+ 841              	.LCFI8:
+ 842 03f6 81B0     		sub	sp, sp, #4
+ 843              	.LCFI9:
+ 844              		.loc 1 259 0
+ 845 03f8 0F48     		ldr	r0, .L76
+ 846 03fa FFF7FEFF 		bl	inet_addr
+ 847              		.loc 1 264 0
+ 848 03fe 0F4B     		ldr	r3, .L76+4
+ 849 0400 1B68     		ldr	r3, [r3]
+ 850 0402 002B     		cmp	r3, #0
+ 851 0404 14D1     		bne	.L75
+ 852              		.loc 1 259 0
+ 853 0406 0090     		str	r0, [sp]
+ 854              		.loc 1 265 0
+ 855 0408 FFF7FEFF 		bl	udp_new
+ 856 040c 0B4B     		ldr	r3, .L76+4
+ 857 040e 1860     		str	r0, [r3]
+ 858              		.loc 1 267 0
+ 859 0410 0028     		cmp	r0, #0
+ 860 0412 0DD0     		beq	.L75
+ 861              		.loc 1 274 0
+ 862 0414 0A49     		ldr	r1, .L76+8
+ 863 0416 0022     		mov	r2, #0
+ 864 0418 FFF7FEFF 		bl	udp_bind
+ 865              		.loc 1 275 0
+ 866 041c 074B     		ldr	r3, .L76+4
+ 867 041e 1868     		ldr	r0, [r3]
+ 868 0420 0849     		ldr	r1, .L76+12
+ 869 0422 0022     		mov	r2, #0
+ 870 0424 FFF7FEFF 		bl	udp_recv
+ 871              		.loc 1 278 0
+ 872 0428 0020     		mov	r0, #0
+ 873 042a 6946     		mov	r1, sp
+ 874 042c FFF7FEFF 		bl	dns_setserver
+ 875              	.L75:
+ 876              		.loc 1 284 0
+ 877 0430 01B0     		add	sp, sp, #4
+ 878              		@ sp needed for prologue
+ 879 0432 01BC     		pop	{r0}
+ 880 0434 0047     		bx	r0
+ 881              	.L77:
+ 882 0436 C046     		.align	2
+ 883              	.L76:
+ 884 0438 00000000 		.word	.LC14
+ 885 043c 00000000 		.word	dns_pcb
+ 886 0440 00000000 		.word	ip_addr_any
+ 887 0444 00000000 		.word	dns_recv
+ 888              	.LFE2:
+ 890              		.align	2
+ 891              		.code	16
+ 892              		.thumb_func
+ 894              	dns_recv:
+ 895              	.LFB12:
+ 896              		.loc 1 733 0
+ 897 0448 F0B5     		push	{r4, r5, r6, r7, lr}
+ 898              	.LCFI10:
+ 899 044a 5746     		mov	r7, sl
+ 900 044c 4646     		mov	r6, r8
+ 901 044e C0B4     		push	{r6, r7}
+ 902              	.LCFI11:
+ 903              	.LVL89:
+ 904 0450 83B0     		sub	sp, sp, #12
+ 905              	.LCFI12:
+ 906 0452 141C     		mov	r4, r2
+ 907              		.loc 1 753 0
+ 908 0454 1289     		ldrh	r2, [r2, #8]
+ 909              	.LVL90:
+ 910 0456 8023     		mov	r3, #128
+ 911              	.LVL91:
+ 912 0458 9B00     		lsl	r3, r3, #2
+ 913 045a 9A42     		cmp	r2, r3
+ 914 045c 00D9     		bls	.LCB858
+ 915 045e BCE0     		b	.L90	@long jump
+ 916              	.LCB858:
+ 917              		.loc 1 760 0
+ 918 0460 192A     		cmp	r2, #25
+ 919 0462 00D8     		bhi	.LCB860
+ 920 0464 B9E0     		b	.L90	@long jump
+ 921              	.LCB860:
+ 922              		.loc 1 776 0
+ 923 0466 6249     		ldr	r1, .L93
+ 924              	.LVL92:
+ 925 0468 201C     		mov	r0, r4
+ 926              	.LVL93:
+ 927 046a 0023     		mov	r3, #0
+ 928 046c FFF7FEFF 		bl	pbuf_copy_partial
+ 929 0470 2389     		ldrh	r3, [r4, #8]
+ 930 0472 8342     		cmp	r3, r0
+ 931 0474 00D0     		beq	.LCB869
+ 932 0476 B0E0     		b	.L90	@long jump
+ 933              	.LCB869:
+ 934              		.loc 1 778 0
+ 935 0478 5D4D     		ldr	r5, .L93
+ 936              	.LVL94:
+ 937              		.loc 1 779 0
+ 938 047a 2888     		ldrh	r0, [r5]
+ 939 047c FFF7FEFF 		bl	htons
+ 940 0480 0006     		lsl	r0, r0, #24
+ 941 0482 000E     		lsr	r0, r0, #24
+ 942              	.LVL95:
+ 943              		.loc 1 780 0
+ 944 0484 0328     		cmp	r0, #3
+ 945 0486 00D9     		bls	.LCB879
+ 946 0488 A7E0     		b	.L90	@long jump
+ 947              	.LCB879:
+ 948              		.loc 1 781 0
+ 949 048a 8300     		lsl	r3, r0, #2
+ 950 048c 1B18     		add	r3, r3, r0
+ 951 048e DA00     		lsl	r2, r3, #3
+ 952 0490 D21A     		sub	r2, r2, r3
+ 953 0492 D200     		lsl	r2, r2, #3
+ 954 0494 574B     		ldr	r3, .L93+4
+ 955 0496 9E18     		add	r6, r3, r2
+ 956              	.LVL96:
+ 957              		.loc 1 782 0
+ 958 0498 3378     		ldrb	r3, [r6]
+ 959 049a 022B     		cmp	r3, #2
+ 960 049c 00D0     		beq	.LCB890
+ 961 049e 9CE0     		b	.L90	@long jump
+ 962              	.LCB890:
+ 963              		.loc 1 784 0
+ 964 04a0 0323     		mov	r3, #3
+ 965 04a2 3370     		strb	r3, [r6]
+ 966              		.loc 1 785 0
+ 967 04a4 EB78     		ldrb	r3, [r5, #3]
+ 968 04a6 0F22     		mov	r2, #15
+ 969 04a8 1340     		and	r3, r3, r2
+ 970 04aa 7371     		strb	r3, [r6, #5]
+ 971              		.loc 1 789 0
+ 972 04ac A888     		ldrh	r0, [r5, #4]
+ 973              	.LVL97:
+ 974 04ae FFF7FEFF 		bl	htons
+ 975 04b2 071C     		mov	r7, r0
+ 976              		.loc 1 790 0
+ 977 04b4 E888     		ldrh	r0, [r5, #6]
+ 978 04b6 FFF7FEFF 		bl	htons
+ 979 04ba 8446     		mov	ip, r0
+ 980              		.loc 1 793 0
+ 981 04bc 0223     		mov	r3, #2
+ 982 04be EB56     		ldrsb	r3, [r5, r3]
+ 983 04c0 002B     		cmp	r3, #0
+ 984 04c2 78DA     		bge	.L80
+ 985 04c4 7379     		ldrb	r3, [r6, #5]
+ 986 04c6 002B     		cmp	r3, #0
+ 987 04c8 75D1     		bne	.L80
+ 988 04ca 3B06     		lsl	r3, r7, #24
+ 989 04cc 1B0E     		lsr	r3, r3, #24
+ 990 04ce 012B     		cmp	r3, #1
+ 991 04d0 71D1     		bne	.L80
+ 992              		.loc 1 801 0
+ 993 04d2 0C22     		mov	r2, #12
+ 994 04d4 9219     		add	r2, r2, r6
+ 995 04d6 9246     		mov	sl, r2
+ 996              	.LVL98:
+ 997 04d8 101C     		mov	r0, r2
+ 998 04da 4749     		ldr	r1, .L93+8
+ 999              	.LVL99:
+ 1000              	.LBB22:
+ 1001              	.LBB23:
+ 1002              		.loc 1 508 0
+ 1003 04dc C027     		mov	r7, #192
+ 1004              	.LVL100:
+ 1005              	.L85:
+ 1006              		.loc 1 506 0
+ 1007 04de 0D78     		ldrb	r5, [r1]
+ 1008              	.LVL101:
+ 1009              		.loc 1 508 0
+ 1010 04e0 2B1C     		mov	r3, r5
+ 1011 04e2 3B40     		and	r3, r3, r7
+ 1012 04e4 C02B     		cmp	r3, #192
+ 1013 04e6 17D0     		beq	.L81
+ 1014              		.loc 1 506 0
+ 1015 04e8 0131     		add	r1, r1, #1
+ 1016              		.loc 1 513 0
+ 1017 04ea 002D     		cmp	r5, #0
+ 1018 04ec 0FD0     		beq	.L82
+ 1019              		.loc 1 514 0
+ 1020 04ee 0278     		ldrb	r2, [r0]
+ 1021 04f0 0B78     		ldrb	r3, [r1]
+ 1022 04f2 9A42     		cmp	r2, r3
+ 1023 04f4 04D0     		beq	.L92
+ 1024 04f6 5EE0     		b	.L80
+ 1025              	.LVL102:
+ 1026              	.L84:
+ 1027 04f8 0278     		ldrb	r2, [r0]
+ 1028 04fa 0B78     		ldrb	r3, [r1]
+ 1029 04fc 9A42     		cmp	r2, r3
+ 1030 04fe 5AD1     		bne	.L80
+ 1031              	.LVL103:
+ 1032              	.L92:
+ 1033              		.loc 1 517 0
+ 1034 0500 0131     		add	r1, r1, #1
+ 1035              		.loc 1 518 0
+ 1036 0502 0130     		add	r0, r0, #1
+ 1037              		.loc 1 519 0
+ 1038 0504 6B1E     		sub	r3, r5, #1
+ 1039 0506 1B06     		lsl	r3, r3, #24
+ 1040 0508 1D0E     		lsr	r5, r3, #24
+ 1041              	.LVL104:
+ 1042              		.loc 1 513 0
+ 1043 050a 002D     		cmp	r5, #0
+ 1044 050c F4D1     		bne	.L84
+ 1045              	.LVL105:
+ 1046              	.L82:
+ 1047              		.loc 1 523 0
+ 1048 050e 0B78     		ldrb	r3, [r1]
+ 1049 0510 002B     		cmp	r3, #0
+ 1050 0512 01D0     		beq	.L81
+ 1051              		.loc 1 521 0
+ 1052 0514 0130     		add	r0, r0, #1
+ 1053 0516 E2E7     		b	.L85
+ 1054              	.LVL106:
+ 1055              	.L81:
+ 1056              	.LBE23:
+ 1057              	.LBE22:
+ 1058              		.loc 1 790 0
+ 1059 0518 6246     		mov	r2, ip
+ 1060 051a 1306     		lsl	r3, r2, #24
+ 1061 051c 1F0E     		lsr	r7, r3, #24
+ 1062              	.LVL107:
+ 1063              		.loc 1 809 0
+ 1064 051e 3648     		ldr	r0, .L93+8
+ 1065              	.LVL108:
+ 1066 0520 FFF794FD 		bl	dns_parse_name
+ 1067              	.LVL109:
+ 1068              		.loc 1 811 0
+ 1069 0524 002F     		cmp	r7, #0
+ 1070 0526 46D0     		beq	.L80
+ 1071              		.loc 1 809 0
+ 1072 0528 0430     		add	r0, r0, #4
+ 1073              	.LVL110:
+ 1074              		.loc 1 816 0
+ 1075 052a E846     		mov	r8, sp
+ 1076              	.L88:
+ 1077              		.loc 1 813 0
+ 1078 052c FFF78EFD 		bl	dns_parse_name
+ 1079              	.LVL111:
+ 1080 0530 051C     		mov	r5, r0
+ 1081              	.LVL112:
+ 1082              		.loc 1 816 0
+ 1083 0532 6846     		mov	r0, sp
+ 1084 0534 291C     		mov	r1, r5
+ 1085 0536 0A22     		mov	r2, #10
+ 1086 0538 FFF7FEFF 		bl	memcpy
+ 1087              		.loc 1 817 0
+ 1088 053c 4346     		mov	r3, r8
+ 1089 053e 1888     		ldrh	r0, [r3]
+ 1090 0540 FFF7FEFF 		bl	ntohs
+ 1091 0544 0128     		cmp	r0, #1
+ 1092 0546 29D1     		bne	.L86
+ 1093 0548 4246     		mov	r2, r8
+ 1094 054a 5088     		ldrh	r0, [r2, #2]
+ 1095 054c FFF7FEFF 		bl	ntohs
+ 1096 0550 0128     		cmp	r0, #1
+ 1097 0552 23D1     		bne	.L86
+ 1098 0554 4346     		mov	r3, r8
+ 1099 0556 1889     		ldrh	r0, [r3, #8]
+ 1100 0558 FFF7FEFF 		bl	ntohs
+ 1101 055c 0428     		cmp	r0, #4
+ 1102 055e 1DD1     		bne	.L86
+ 1103              		.loc 1 819 0
+ 1104 0560 0198     		ldr	r0, [sp, #4]
+ 1105 0562 FFF7FEFF 		bl	ntohl
+ 1106 0566 B060     		str	r0, [r6, #8]
+ 1107              		.loc 1 820 0
+ 1108 0568 244B     		ldr	r3, .L93+12
+ 1109 056a 9842     		cmp	r0, r3
+ 1110 056c 00D9     		bls	.L87
+ 1111              		.loc 1 821 0
+ 1112 056e B360     		str	r3, [r6, #8]
+ 1113              	.L87:
+ 1114              		.loc 1 824 0
+ 1115 0570 8622     		mov	r2, #134
+ 1116 0572 5200     		lsl	r2, r2, #1
+ 1117 0574 B718     		add	r7, r6, r2
+ 1118              	.LVL113:
+ 1119 0576 291C     		mov	r1, r5
+ 1120 0578 0A31     		add	r1, r1, #10
+ 1121 057a 381C     		mov	r0, r7
+ 1122 057c 0422     		mov	r2, #4
+ 1123 057e FFF7FEFF 		bl	memcpy
+ 1124              		.loc 1 829 0
+ 1125 0582 8823     		mov	r3, #136
+ 1126 0584 5B00     		lsl	r3, r3, #1
+ 1127 0586 F558     		ldr	r5, [r6, r3]
+ 1128              	.LVL114:
+ 1129 0588 002D     		cmp	r5, #0
+ 1130 058a 26D0     		beq	.L90
+ 1131              		.loc 1 830 0
+ 1132 058c 8A23     		mov	r3, #138
+ 1133 058e 5B00     		lsl	r3, r3, #1
+ 1134 0590 F258     		ldr	r2, [r6, r3]
+ 1135 0592 5046     		mov	r0, sl
+ 1136 0594 391C     		mov	r1, r7
+ 1137 0596 00F033F8 		bl	.L44
+ 1138 059a 1EE0     		b	.L90
+ 1139              	.LVL115:
+ 1140              	.L86:
+ 1141              		.loc 1 835 0
+ 1142 059c 4346     		mov	r3, r8
+ 1143 059e 1889     		ldrh	r0, [r3, #8]
+ 1144 05a0 FFF7FEFF 		bl	htons
+ 1145              		.loc 1 837 0
+ 1146 05a4 7B1E     		sub	r3, r7, #1
+ 1147 05a6 1B06     		lsl	r3, r3, #24
+ 1148 05a8 1F0E     		lsr	r7, r3, #24
+ 1149              	.LVL116:
+ 1150              		.loc 1 811 0
+ 1151 05aa 002F     		cmp	r7, #0
+ 1152 05ac 03D0     		beq	.L80
+ 1153              		.loc 1 835 0
+ 1154 05ae 031C     		mov	r3, r0
+ 1155 05b0 0A33     		add	r3, r3, #10
+ 1156 05b2 E818     		add	r0, r5, r3
+ 1157              	.LVL117:
+ 1158 05b4 BAE7     		b	.L88
+ 1159              	.LVL118:
+ 1160              	.L80:
+ 1161              		.loc 1 851 0
+ 1162 05b6 8823     		mov	r3, #136
+ 1163 05b8 5B00     		lsl	r3, r3, #1
+ 1164 05ba F558     		ldr	r5, [r6, r3]
+ 1165              	.LVL119:
+ 1166 05bc 002D     		cmp	r5, #0
+ 1167 05be 07D0     		beq	.L89
+ 1168              		.loc 1 852 0
+ 1169 05c0 301C     		mov	r0, r6
+ 1170 05c2 0C30     		add	r0, r0, #12
+ 1171 05c4 8A23     		mov	r3, #138
+ 1172 05c6 5B00     		lsl	r3, r3, #1
+ 1173 05c8 F258     		ldr	r2, [r6, r3]
+ 1174 05ca 0021     		mov	r1, #0
+ 1175              	.LVL120:
+ 1176 05cc 00F018F8 		bl	.L44
+ 1177              	.LVL121:
+ 1178              	.L89:
+ 1179              		.loc 1 855 0
+ 1180 05d0 0022     		mov	r2, #0
+ 1181 05d2 3270     		strb	r2, [r6]
+ 1182              		.loc 1 856 0
+ 1183 05d4 8823     		mov	r3, #136
+ 1184 05d6 5B00     		lsl	r3, r3, #1
+ 1185 05d8 F250     		str	r2, [r6, r3]
+ 1186              	.L79:
+ 1187              	.LVL122:
+ 1188              	.L90:
+ 1189              		.loc 1 866 0
+ 1190 05da 201C     		mov	r0, r4
+ 1191              	.LVL123:
+ 1192 05dc FFF7FEFF 		bl	pbuf_free
+ 1193              	.LVL124:
+ 1194              		.loc 1 868 0
+ 1195 05e0 03B0     		add	sp, sp, #12
+ 1196              		@ sp needed for prologue
+ 1197              	.LVL125:
+ 1198              	.LVL126:
+ 1199              	.LVL127:
+ 1200              	.LVL128:
+ 1201              	.LVL129:
+ 1202 05e2 0CBC     		pop	{r2, r3}
+ 1203 05e4 9046     		mov	r8, r2
+ 1204 05e6 9A46     		mov	sl, r3
+ 1205 05e8 F0BC     		pop	{r4, r5, r6, r7}
+ 1206 05ea 01BC     		pop	{r0}
+ 1207 05ec 0047     		bx	r0
+ 1208              	.L94:
+ 1209 05ee C046     		.align	2
+ 1210              	.L93:
+ 1211 05f0 70040000 		.word	dns_payload
+ 1212 05f4 08000000 		.word	dns_table
+ 1213 05f8 7C040000 		.word	dns_payload+12
+ 1214 05fc 803A0900 		.word	604800
+ 1215              	.LFE12:
+ 1217              		.bss
+ 1218              		.align	2
+ 1219              	dns_pcb:
+ 1220 0000 00000000 		.space	4
+ 1221              	dns_seqno:
+ 1222 0004 00       		.space	1
+ 1223 0005 000000   		.align	2
+ 1224              	dns_table:
+ 1225 0008 00000000 		.space	1120
+ 1225      00000000 
+ 1225      00000000 
+ 1225      00000000 
+ 1225      00000000 
+ 1226              		.align	2
+ 1227              	dns_servers:
+ 1228 0468 00000000 		.space	8
+ 1228      00000000 
+ 1229              	dns_payload:
+ 1230 0470 00000000 		.space	512
+ 1230      00000000 
+ 1230      00000000 
+ 1230      00000000 
+ 1230      00000000 
+ 1427              	.Letext0:
+ 4181              		.code 16
+ 4182              		.align	1
+ 4183              	.L44:
+ 4184 0600 2847C046 		bx	r5
+DEFINED SYMBOLS
+                            *ABS*:00000000 dns.c
+     /tmp/cc5J9Mpj.s:1      .text:00000000 $t
+     /tmp/cc5J9Mpj.s:16     .text:00000000 dns_setserver
+     /tmp/cc5J9Mpj.s:50     .text:00000024 $d
+     /tmp/cc5J9Mpj.s:1219   .bss:00000000 dns_pcb
+     /tmp/cc5J9Mpj.s:1227   .bss:00000468 dns_servers
+     /tmp/cc5J9Mpj.s:59     .text:0000002c dns_getserver
+     /tmp/cc5J9Mpj.s:56     .text:0000002c $t
+     /tmp/cc5J9Mpj.s:89     .text:00000044 $d
+     /tmp/cc5J9Mpj.s:94     .text:0000004c $t
+     /tmp/cc5J9Mpj.s:97     .text:0000004c dns_parse_name
+     /tmp/cc5J9Mpj.s:139    .text:00000074 dns_send
+     /tmp/cc5J9Mpj.s:332    .text:0000016c $d
+     /tmp/cc5J9Mpj.s:337    .text:00000174 $t
+     /tmp/cc5J9Mpj.s:340    .text:00000174 dns_check_entry
+     /tmp/cc5J9Mpj.s:489    .text:0000024c $d
+     /tmp/cc5J9Mpj.s:1224   .bss:00000008 dns_table
+     /tmp/cc5J9Mpj.s:498    .text:00000254 dns_gethostbyname
+     /tmp/cc5J9Mpj.s:495    .text:00000254 $t
+     /tmp/cc5J9Mpj.s:780    .text:000003c4 $d
+     /tmp/cc5J9Mpj.s:1221   .bss:00000004 dns_seqno
+     /tmp/cc5J9Mpj.s:792    .text:000003d0 dns_tmr
+     /tmp/cc5J9Mpj.s:789    .text:000003d0 $t
+     /tmp/cc5J9Mpj.s:824    .text:000003f0 $d
+     /tmp/cc5J9Mpj.s:837    .text:000003f4 dns_init
+     /tmp/cc5J9Mpj.s:834    .text:000003f4 $t
+     /tmp/cc5J9Mpj.s:884    .text:00000438 $d
+     /tmp/cc5J9Mpj.s:894    .text:00000448 dns_recv
+     /tmp/cc5J9Mpj.s:891    .text:00000448 $t
+     /tmp/cc5J9Mpj.s:1211   .text:000005f0 $d
+     /tmp/cc5J9Mpj.s:1229   .bss:00000470 dns_payload
+     /tmp/cc5J9Mpj.s:4181   .text:00000600 $t
+
+UNDEFINED SYMBOLS
+ip_addr_any
+pbuf_alloc
+htons
+memcpy
+pbuf_realloc
+udp_connect
+udp_sendto
+pbuf_free
+strlen
+inet_addr
+strcmp
+strcpy
+udp_new
+udp_bind
+udp_recv
+pbuf_copy_partial
+ntohs
+ntohl

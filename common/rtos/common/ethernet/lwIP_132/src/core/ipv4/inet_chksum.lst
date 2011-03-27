@@ -1,0 +1,893 @@
+   1              		.code	16
+   2              		.file	"inet_chksum.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.code	16
+  13              		.thumb_func
+  15              	lwip_standard_chksum:
+  16              	.LFB2:
+  17              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Incluse internet checksum functions.
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #include "lwip/inet_chksum.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #include "lwip/inet.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #include <stddef.h>
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* These are some reference implementations of the checksum algorithm, with the
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * aim of being simple, correct and fully portable. Checksumming is the
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * first thing you would want to optimize for your platform. If you create
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * your own version, link it in and in your cc.h put:
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * 
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * #define LWIP_CHKSUM <your_checksum_routine> 
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Or you can select from the implementations below by defining
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * LWIP_CHKSUM_ALGORITHM to 1, 2 or 3.
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #ifndef LWIP_CHKSUM
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** # define LWIP_CHKSUM lwip_standard_chksum
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** # ifndef LWIP_CHKSUM_ALGORITHM
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #  define LWIP_CHKSUM_ALGORITHM 1
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** # endif
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* If none set: */
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #ifndef LWIP_CHKSUM_ALGORITHM
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** # define LWIP_CHKSUM_ALGORITHM 0
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /** Like the name says... */
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #if LWIP_PLATFORM_BYTESWAP && (BYTE_ORDER == LITTLE_ENDIAN)
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* little endian and PLATFORM_BYTESWAP defined */
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #define SWAP_BYTES_IN_WORD(w) LWIP_PLATFORM_HTONS(w)
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #else
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* can't use htons on big endian (or PLATFORM_BYTESWAP not defined)... */
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #define SWAP_BYTES_IN_WORD(w) ((w & 0xff) << 8) | ((w & 0xff00) >> 8)
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /** Split an u32_t in two u16_ts and add them up */
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #define FOLD_U32T(u)          ((u >> 16) + (u & 0x0000ffffUL))
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #if (LWIP_CHKSUM_ALGORITHM == 1) /* Version #1 */
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /**
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * lwip checksum
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param dataptr points to start of data to be summed at any boundary
+  85:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param len length of data to be summed
+  86:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return host order (!) lwip checksum (non-inverted Internet sum) 
+  87:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+  88:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @note accumulator size limits summable length to 64k
+  89:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @note host endianess is irrelevant (p3 RFC1071)
+  90:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+  91:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** static u16_t
+  92:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** lwip_standard_chksum(void *dataptr, u16_t len)
+  93:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+  18              		.loc 1 93 0
+  19 0000 70B5     		push	{r4, r5, r6, lr}
+  20              	.LCFI0:
+  21              	.LVL0:
+  22 0002 021C     		mov	r2, r0
+  23 0004 0904     		lsl	r1, r1, #16
+  24              	.LVL1:
+  25 0006 0C0C     		lsr	r4, r1, #16
+  26              	.LVL2:
+  94:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t acc;
+  95:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u16_t src;
+  96:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t *octetptr;
+  97:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+  98:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = 0;
+  99:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* dataptr may be at odd or even addresses */
+ 100:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   octetptr = (u8_t*)dataptr;
+  27              		.loc 1 100 0
+  28 0008 061C     		mov	r6, r0
+  29              	.LVL3:
+ 101:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   while (len > 1) {
+  30              		.loc 1 101 0
+  31 000a 012C     		cmp	r4, #1
+  32 000c 01D8     		bhi	.L2
+  33 000e 0020     		mov	r0, #0
+  34              	.LVL4:
+  35 0010 19E0     		b	.L3
+  36              	.LVL5:
+  37              	.L2:
+  38 0012 011C     		mov	r1, r0
+  39 0014 0020     		mov	r0, #0
+  40              	.LVL6:
+  41              		.loc 1 93 0
+  42 0016 A31E     		sub	r3, r4, #2
+  43 0018 1B04     		lsl	r3, r3, #16
+  44 001a 1D0C     		lsr	r5, r3, #16
+  45              		.loc 1 101 0
+  46 001c 5B0C     		lsr	r3, r3, #17
+  47 001e 1B04     		lsl	r3, r3, #16
+  48 0020 1B0C     		lsr	r3, r3, #16
+  49 0022 0133     		add	r3, r3, #1
+  50 0024 5B00     		lsl	r3, r3, #1
+  51 0026 D418     		add	r4, r2, r3
+  52              	.LVL7:
+  53              	.L4:
+ 102:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /* declare first octet as most significant
+ 103:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        thus assume network order, ignoring host order */
+ 104:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     src = (*octetptr) << 8;
+  54              		.loc 1 104 0
+  55 0028 0B78     		ldrb	r3, [r1]
+  56 002a 1B02     		lsl	r3, r3, #8
+  57              	.LVL8:
+ 105:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     octetptr++;
+ 106:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /* declare second octet as least significant */
+ 107:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     src |= (*octetptr);
+  58              		.loc 1 107 0
+  59 002c 4A78     		ldrb	r2, [r1, #1]
+  60              	.LVL9:
+  61 002e 1343     		orr	r3, r3, r2
+  62              	.LVL10:
+  63              		.loc 1 93 0
+  64 0030 0231     		add	r1, r1, #2
+ 108:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     octetptr++;
+ 109:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc += src;
+  65              		.loc 1 109 0
+  66 0032 C018     		add	r0, r0, r3
+  67              		.loc 1 101 0
+  68 0034 A142     		cmp	r1, r4
+  69 0036 F7D1     		bne	.L4
+  70 0038 0123     		mov	r3, #1
+  71              	.LVL11:
+  72 003a 2C1C     		mov	r4, r5
+  73              	.LVL12:
+  74 003c 1C40     		and	r4, r4, r3
+  75              	.LVL13:
+  76 003e 6B08     		lsr	r3, r5, #1
+  77 0040 0133     		add	r3, r3, #1
+  78 0042 5B00     		lsl	r3, r3, #1
+  79 0044 F618     		add	r6, r6, r3
+  80              	.LVL14:
+  81              	.L3:
+ 110:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len -= 2;
+ 111:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 112:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (len > 0) {
+  82              		.loc 1 112 0
+  83 0046 002C     		cmp	r4, #0
+  84 0048 02D0     		beq	.L5
+ 113:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /* accumulate remaining octet */
+ 114:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     src = (*octetptr) << 8;
+ 115:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc += src;
+  85              		.loc 1 115 0
+  86 004a 3378     		ldrb	r3, [r6]
+  87 004c 1B02     		lsl	r3, r3, #8
+  88 004e C018     		add	r0, r0, r3
+  89              	.L5:
+ 116:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 117:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* add deferred carry bits */
+ 118:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = (acc >> 16) + (acc & 0x0000ffffUL);
+  90              		.loc 1 118 0
+  91 0050 020C     		lsr	r2, r0, #16
+  92              	.LVL15:
+  93 0052 084B     		ldr	r3, .L9
+  94 0054 0340     		and	r3, r3, r0
+  95 0056 9818     		add	r0, r3, r2
+  96              	.LVL16:
+ 119:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if ((acc & 0xffff0000UL) != 0) {
+  97              		.loc 1 119 0
+  98 0058 074B     		ldr	r3, .L9+4
+  99 005a 1842     		tst	r0, r3
+ 100 005c 03D0     		beq	.L6
+ 120:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = (acc >> 16) + (acc & 0x0000ffffUL);
+ 101              		.loc 1 120 0
+ 102 005e 030C     		lsr	r3, r0, #16
+ 103 0060 044A     		ldr	r2, .L9
+ 104 0062 0240     		and	r2, r2, r0
+ 105 0064 D018     		add	r0, r2, r3
+ 106              	.L6:
+ 121:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 122:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* This maybe a little confusing: reorder sum using htons()
+ 123:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      instead of ntohs() since it has a little less call overhead.
+ 124:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      The caller must invert bits for Internet sum ! */
+ 125:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return htons((u16_t)acc);
+ 107              		.loc 1 125 0
+ 108 0066 0004     		lsl	r0, r0, #16
+ 109              	.LVL17:
+ 110 0068 000C     		lsr	r0, r0, #16
+ 111 006a FFF7FEFF 		bl	htons
+ 126:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 112              		.loc 1 126 0
+ 113              		@ sp needed for prologue
+ 114              	.LVL18:
+ 115              	.LVL19:
+ 116 006e 70BC     		pop	{r4, r5, r6}
+ 117 0070 02BC     		pop	{r1}
+ 118 0072 0847     		bx	r1
+ 119              	.L10:
+ 120              		.align	2
+ 121              	.L9:
+ 122 0074 FFFF0000 		.word	65535
+ 123 0078 0000FFFF 		.word	-65536
+ 124              	.LFE2:
+ 126              		.align	2
+ 127              		.global	inet_chksum_pbuf
+ 128              		.code	16
+ 129              		.thumb_func
+ 131              	inet_chksum_pbuf:
+ 132              	.LFB5:
+ 127:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+ 128:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 129:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #if (LWIP_CHKSUM_ALGORITHM == 2) /* Alternative version #2 */
+ 130:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /*
+ 131:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Curt McDowell
+ 132:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Broadcom Corp.
+ 133:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * csm@broadcom.com
+ 134:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 135:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * IP checksum two bytes at a time with support for
+ 136:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * unaligned buffer.
+ 137:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Works for len up to and including 0x20000.
+ 138:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * by Curt McDowell, Broadcom Corp. 12/08/2005
+ 139:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 140:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param dataptr points to start of data to be summed at any boundary
+ 141:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param len length of data to be summed
+ 142:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return host order (!) lwip checksum (non-inverted Internet sum) 
+ 143:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 144:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 145:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** static u16_t
+ 146:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** lwip_standard_chksum(void *dataptr, int len)
+ 147:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 148:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t *pb = dataptr;
+ 149:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u16_t *ps, t = 0;
+ 150:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t sum = 0;
+ 151:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   int odd = ((u32_t)pb & 1);
+ 152:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 153:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Get aligned to u16_t */
+ 154:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (odd && len > 0) {
+ 155:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     ((u8_t *)&t)[1] = *pb++;
+ 156:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len--;
+ 157:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 158:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 159:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Add the bulk of the data */
+ 160:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   ps = (u16_t *)pb;
+ 161:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   while (len > 1) {
+ 162:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum += *ps++;
+ 163:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len -= 2;
+ 164:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 165:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 166:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Consume left-over byte, if any */
+ 167:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (len > 0) {
+ 168:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     ((u8_t *)&t)[0] = *(u8_t *)ps;;
+ 169:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 170:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 171:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Add end bytes */
+ 172:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum += t;
+ 173:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 174:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Fold 32-bit sum to 16 bits
+ 175:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      calling this twice is propably faster than if statements... */
+ 176:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum = FOLD_U32T(sum);
+ 177:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum = FOLD_U32T(sum);
+ 178:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 179:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Swap if alignment was odd */
+ 180:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (odd) {
+ 181:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum = SWAP_BYTES_IN_WORD(sum);
+ 182:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 183:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 184:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return sum;
+ 185:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 186:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+ 187:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 188:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #if (LWIP_CHKSUM_ALGORITHM == 3) /* Alternative version #3 */
+ 189:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /**
+ 190:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * An optimized checksum routine. Basically, it uses loop-unrolling on
+ 191:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * the checksum loop, treating the head and tail bytes specially, whereas
+ 192:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * the inner loop acts on 8 bytes at a time. 
+ 193:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 194:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @arg start of buffer to be checksummed. May be an odd byte address.
+ 195:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @len number of bytes in the buffer to be checksummed.
+ 196:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return host order (!) lwip checksum (non-inverted Internet sum) 
+ 197:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * 
+ 198:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * by Curt McDowell, Broadcom Corp. December 8th, 2005
+ 199:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 200:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 201:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** static u16_t
+ 202:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** lwip_standard_chksum(void *dataptr, int len)
+ 203:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 204:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t *pb = dataptr;
+ 205:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u16_t *ps, t = 0;
+ 206:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t *pl;
+ 207:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t sum = 0, tmp;
+ 208:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* starts at odd byte address? */
+ 209:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   int odd = ((u32_t)pb & 1);
+ 210:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 211:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (odd && len > 0) {
+ 212:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     ((u8_t *)&t)[1] = *pb++;
+ 213:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len--;
+ 214:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 215:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 216:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   ps = (u16_t *)pb;
+ 217:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 218:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (((u32_t)ps & 3) && len > 1) {
+ 219:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum += *ps++;
+ 220:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len -= 2;
+ 221:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 222:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 223:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   pl = (u32_t *)ps;
+ 224:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 225:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   while (len > 7)  {
+ 226:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     tmp = sum + *pl++;          /* ping */
+ 227:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (tmp < sum) {
+ 228:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       tmp++;                    /* add back carry */
+ 229:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 230:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 231:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum = tmp + *pl++;          /* pong */
+ 232:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (sum < tmp) {
+ 233:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       sum++;                    /* add back carry */
+ 234:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 235:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 236:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len -= 8;
+ 237:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 238:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 239:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* make room in upper bits */
+ 240:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum = FOLD_U32T(sum);
+ 241:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 242:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   ps = (u16_t *)pl;
+ 243:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 244:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* 16-bit aligned word remaining? */
+ 245:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   while (len > 1) {
+ 246:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum += *ps++;
+ 247:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     len -= 2;
+ 248:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 249:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 250:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* dangling tail byte remaining? */
+ 251:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (len > 0) {                /* include odd byte */
+ 252:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     ((u8_t *)&t)[0] = *(u8_t *)ps;
+ 253:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 254:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 255:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum += t;                     /* add end bytes */
+ 256:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 257:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Fold 32-bit sum to 16 bits
+ 258:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      calling this twice is propably faster than if statements... */
+ 259:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum = FOLD_U32T(sum);
+ 260:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   sum = FOLD_U32T(sum);
+ 261:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 262:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (odd) {
+ 263:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     sum = SWAP_BYTES_IN_WORD(sum);
+ 264:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 265:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 266:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return sum;
+ 267:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 268:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif
+ 269:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 270:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* inet_chksum_pseudo:
+ 271:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 272:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Calculates the pseudo Internet checksum used by TCP and UDP for a pbuf chain.
+ 273:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * IP addresses are expected to be in network byte order.
+ 274:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 275:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param p chain of pbufs over that a checksum should be calculated (ip data part)
+ 276:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param src source ip address (used for checksum of pseudo header)
+ 277:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param dst destination ip address (used for checksum of pseudo header)
+ 278:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param proto ip protocol (used for checksum of pseudo header)
+ 279:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param proto_len length of the ip data part (used for checksum of pseudo header)
+ 280:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return checksum (as u16_t) to be saved directly in the protocol header
+ 281:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 282:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** u16_t
+ 283:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** inet_chksum_pseudo(struct pbuf *p,
+ 284:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        struct ip_addr *src, struct ip_addr *dest,
+ 285:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        u8_t proto, u16_t proto_len)
+ 286:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 287:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t acc;
+ 288:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   struct pbuf *q;
+ 289:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t swapped;
+ 290:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 291:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = 0;
+ 292:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   swapped = 0;
+ 293:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* iterate through all pbuf in chain */
+ 294:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   for(q = p; q != NULL; q = q->next) {
+ 295:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): checksumming pbuf %p (has next %p) \n",
+ 296:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       (void *)q, (void *)q->next));
+ 297:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc += LWIP_CHKSUM(q->payload, q->len);
+ 298:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /*LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): unwrapped lwip_chksum()=%"X32_F" \n", acc));*
+ 299:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /* just executing this next line is probably faster that the if statement needed
+ 300:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        to check whether we really need to execute it, and does no harm */
+ 301:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = FOLD_U32T(acc);
+ 302:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (q->len % 2 != 0) {
+ 303:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       swapped = 1 - swapped;
+ 304:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       acc = SWAP_BYTES_IN_WORD(acc);
+ 305:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 306:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /*LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): wrapped lwip_chksum()=%"X32_F" \n", acc));*/
+ 307:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 308:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 309:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (swapped) {
+ 310:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = SWAP_BYTES_IN_WORD(acc);
+ 311:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 312:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (src->addr & 0xffffUL);
+ 313:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += ((src->addr >> 16) & 0xffffUL);
+ 314:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (dest->addr & 0xffffUL);
+ 315:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += ((dest->addr >> 16) & 0xffffUL);
+ 316:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (u32_t)htons((u16_t)proto);
+ 317:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (u32_t)htons(proto_len);
+ 318:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 319:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Fold 32-bit sum to 16 bits
+ 320:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      calling this twice is propably faster than if statements... */
+ 321:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = FOLD_U32T(acc);
+ 322:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = FOLD_U32T(acc);
+ 323:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): pbuf chain lwip_chksum()=%"X32_F"\n", acc));
+ 324:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return (u16_t)~(acc & 0xffffUL);
+ 325:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 326:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 327:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* inet_chksum_pseudo:
+ 328:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 329:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Calculates the pseudo Internet checksum used by TCP and UDP for a pbuf chain.
+ 330:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * IP addresses are expected to be in network byte order.
+ 331:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 332:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param p chain of pbufs over that a checksum should be calculated (ip data part)
+ 333:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param src source ip address (used for checksum of pseudo header)
+ 334:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param dst destination ip address (used for checksum of pseudo header)
+ 335:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param proto ip protocol (used for checksum of pseudo header)
+ 336:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param proto_len length of the ip data part (used for checksum of pseudo header)
+ 337:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return checksum (as u16_t) to be saved directly in the protocol header
+ 338:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 339:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* Currently only used by UDPLITE, although this could change in the future. */
+ 340:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #if LWIP_UDPLITE
+ 341:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** u16_t
+ 342:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** inet_chksum_pseudo_partial(struct pbuf *p,
+ 343:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        struct ip_addr *src, struct ip_addr *dest,
+ 344:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****        u8_t proto, u16_t proto_len, u16_t chksum_len)
+ 345:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 346:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t acc;
+ 347:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   struct pbuf *q;
+ 348:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t swapped;
+ 349:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u16_t chklen;
+ 350:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 351:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = 0;
+ 352:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   swapped = 0;
+ 353:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* iterate through all pbuf in chain */
+ 354:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   for(q = p; (q != NULL) && (chksum_len > 0); q = q->next) {
+ 355:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): checksumming pbuf %p (has next %p) \n",
+ 356:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       (void *)q, (void *)q->next));
+ 357:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     chklen = q->len;
+ 358:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (chklen > chksum_len) {
+ 359:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       chklen = chksum_len;
+ 360:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 361:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc += LWIP_CHKSUM(q->payload, chklen);
+ 362:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     chksum_len -= chklen;
+ 363:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     LWIP_ASSERT("delete me", chksum_len < 0x7fff);
+ 364:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /*LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): unwrapped lwip_chksum()=%"X32_F" \n", acc));*
+ 365:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /* fold the upper bit down */
+ 366:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = FOLD_U32T(acc);
+ 367:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (q->len % 2 != 0) {
+ 368:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       swapped = 1 - swapped;
+ 369:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       acc = SWAP_BYTES_IN_WORD(acc);
+ 370:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 371:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     /*LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): wrapped lwip_chksum()=%"X32_F" \n", acc));*/
+ 372:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 373:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 374:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (swapped) {
+ 375:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = SWAP_BYTES_IN_WORD(acc);
+ 376:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 377:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (src->addr & 0xffffUL);
+ 378:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += ((src->addr >> 16) & 0xffffUL);
+ 379:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (dest->addr & 0xffffUL);
+ 380:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += ((dest->addr >> 16) & 0xffffUL);
+ 381:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (u32_t)htons((u16_t)proto);
+ 382:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc += (u32_t)htons(proto_len);
+ 383:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 384:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   /* Fold 32-bit sum to 16 bits
+ 385:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****      calling this twice is propably faster than if statements... */
+ 386:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = FOLD_U32T(acc);
+ 387:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = FOLD_U32T(acc);
+ 388:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): pbuf chain lwip_chksum()=%"X32_F"\n", acc));
+ 389:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return (u16_t)~(acc & 0xffffUL);
+ 390:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 391:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** #endif /* LWIP_UDPLITE */
+ 392:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 393:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /* inet_chksum:
+ 394:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 395:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Calculates the Internet checksum over a portion of memory. Used primarily for IP
+ 396:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * and ICMP.
+ 397:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 398:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param dataptr start of the buffer to calculate the checksum (no alignment needed)
+ 399:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param len length of the buffer to calculate the checksum
+ 400:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return checksum (as u16_t) to be saved directly in the protocol header
+ 401:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 402:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 403:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** u16_t
+ 404:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** inet_chksum(void *dataptr, u16_t len)
+ 405:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 406:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return ~LWIP_CHKSUM(dataptr, len);
+ 407:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 408:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 409:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** /**
+ 410:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * Calculate a checksum over a chain of pbufs (without pseudo-header, much like
+ 411:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * inet_chksum only pbufs are used).
+ 412:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  *
+ 413:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @param p pbuf chain over that the checksum should be calculated
+ 414:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  * @return checksum (as u16_t) to be saved directly in the protocol header
+ 415:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****  */
+ 416:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** u16_t
+ 417:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** inet_chksum_pbuf(struct pbuf *p)
+ 418:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** {
+ 133              		.loc 1 418 0
+ 134 007c F0B5     		push	{r4, r5, r6, r7, lr}
+ 135              	.LCFI1:
+ 136 007e 5746     		mov	r7, sl
+ 137 0080 4E46     		mov	r6, r9
+ 138 0082 4546     		mov	r5, r8
+ 139 0084 E0B4     		push	{r5, r6, r7}
+ 140              	.LCFI2:
+ 141              	.LVL20:
+ 419:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u32_t acc;
+ 420:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   struct pbuf *q;
+ 421:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   u8_t swapped;
+ 422:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 423:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   acc = 0;
+ 424:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   swapped = 0;
+ 425:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   for(q = p; q != NULL; q = q->next) {
+ 142              		.loc 1 425 0
+ 143 0086 0028     		cmp	r0, #0
+ 144 0088 01D1     		bne	.L12
+ 145 008a 0025     		mov	r5, #0
+ 146              	.LVL21:
+ 147 008c 2FE0     		b	.L13
+ 148              	.LVL22:
+ 149              	.L12:
+ 150 008e 041C     		mov	r4, r0
+ 151              	.LVL23:
+ 152 0090 0025     		mov	r5, #0
+ 153              	.LVL24:
+ 154 0092 0026     		mov	r6, #0
+ 155              	.LVL25:
+ 426:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc += LWIP_CHKSUM(q->payload, q->len);
+ 427:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = FOLD_U32T(acc);
+ 156              		.loc 1 427 0
+ 157 0094 1B4A     		ldr	r2, .L18
+ 158 0096 9046     		mov	r8, r2
+ 428:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     if (q->len % 2 != 0) {
+ 159              		.loc 1 428 0
+ 160 0098 0123     		mov	r3, #1
+ 161 009a 9A46     		mov	sl, r3
+ 429:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       swapped = 1 - swapped;
+ 162              		.loc 1 429 0
+ 163 009c 0122     		mov	r2, #1
+ 164 009e 9146     		mov	r9, r2
+ 430:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****       acc = SWAP_BYTES_IN_WORD(acc);
+ 165              		.loc 1 430 0
+ 166 00a0 FF27     		mov	r7, #255
+ 167 00a2 3F02     		lsl	r7, r7, #8
+ 168              	.L15:
+ 169              		.loc 1 426 0
+ 170 00a4 6068     		ldr	r0, [r4, #4]
+ 171              	.LVL26:
+ 172 00a6 6189     		ldrh	r1, [r4, #10]
+ 173 00a8 FFF7AAFF 		bl	lwip_standard_chksum
+ 174 00ac 4019     		add	r0, r0, r5
+ 175              	.LVL27:
+ 176              		.loc 1 427 0
+ 177 00ae 030C     		lsr	r3, r0, #16
+ 178 00b0 4246     		mov	r2, r8
+ 179 00b2 1040     		and	r0, r0, r2
+ 180              	.LVL28:
+ 181 00b4 C518     		add	r5, r0, r3
+ 182              	.LVL29:
+ 183              		.loc 1 428 0
+ 184 00b6 6389     		ldrh	r3, [r4, #10]
+ 185 00b8 5246     		mov	r2, sl
+ 186 00ba 1342     		tst	r3, r2
+ 187 00bc 0BD0     		beq	.L14
+ 188              		.loc 1 429 0
+ 189 00be 4A46     		mov	r2, r9
+ 190 00c0 931B     		sub	r3, r2, r6
+ 191 00c2 1B06     		lsl	r3, r3, #24
+ 192 00c4 1E0E     		lsr	r6, r3, #24
+ 193              	.LVL30:
+ 194              		.loc 1 430 0
+ 195 00c6 2A02     		lsl	r2, r5, #8
+ 196 00c8 4346     		mov	r3, r8
+ 197 00ca 1A40     		and	r2, r2, r3
+ 198 00cc 2B1C     		mov	r3, r5
+ 199 00ce 3B40     		and	r3, r3, r7
+ 200 00d0 1B0A     		lsr	r3, r3, #8
+ 201 00d2 1D1C     		mov	r5, r3
+ 202 00d4 1543     		orr	r5, r5, r2
+ 203              	.L14:
+ 204              		.loc 1 425 0
+ 205 00d6 2468     		ldr	r4, [r4]
+ 206 00d8 002C     		cmp	r4, #0
+ 207 00da E3D1     		bne	.L15
+ 431:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     }
+ 432:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 433:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** 
+ 434:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   if (swapped) {
+ 208              		.loc 1 434 0
+ 209 00dc 002E     		cmp	r6, #0
+ 210 00de 06D0     		beq	.L13
+ 435:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****     acc = SWAP_BYTES_IN_WORD(acc);
+ 211              		.loc 1 435 0
+ 212 00e0 2A02     		lsl	r2, r5, #8
+ 213 00e2 084B     		ldr	r3, .L18
+ 214 00e4 1A40     		and	r2, r2, r3
+ 215 00e6 2B04     		lsl	r3, r5, #16
+ 216 00e8 1B0E     		lsr	r3, r3, #24
+ 217 00ea 1D1C     		mov	r5, r3
+ 218 00ec 1543     		orr	r5, r5, r2
+ 219              	.LVL31:
+ 220              	.L13:
+ 221 00ee E843     		mvn	r0, r5
+ 222              	.LVL32:
+ 223 00f0 0004     		lsl	r0, r0, #16
+ 224 00f2 000C     		lsr	r0, r0, #16
+ 436:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   }
+ 437:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c ****   return (u16_t)~(acc & 0xffffUL);
+ 438:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet_chksum.c **** }
+ 225              		.loc 1 438 0
+ 226              		@ sp needed for prologue
+ 227              	.LVL33:
+ 228              	.LVL34:
+ 229              	.LVL35:
+ 230 00f4 1CBC     		pop	{r2, r3, r4}
+ 231 00f6 9046     		mov	r8, r2
+ 232 00f8 9946     		mov	r9, r3
+ 233 00fa A246     		mov	sl, r4
+ 234 00fc F0BC     		pop	{r4, r5, r6, r7}
+ 235 00fe 02BC     		pop	{r1}
+ 236 0100 0847     		bx	r1
+ 237              	.L19:
+ 238 0102 C046     		.align	2
+ 239              	.L18:
+ 240 0104 FFFF0000 		.word	65535
+ 241              	.LFE5:
+ 243              		.align	2
+ 244              		.global	inet_chksum
+ 245              		.code	16
+ 246              		.thumb_func
+ 248              	inet_chksum:
+ 249              	.LFB4:
+ 250              		.loc 1 405 0
+ 251 0108 00B5     		push	{lr}
+ 252              	.LCFI3:
+ 253              	.LVL36:
+ 254 010a 0904     		lsl	r1, r1, #16
+ 255              	.LVL37:
+ 256 010c 090C     		lsr	r1, r1, #16
+ 257              	.LVL38:
+ 258              		.loc 1 406 0
+ 259 010e FFF777FF 		bl	lwip_standard_chksum
+ 260              	.LVL39:
+ 261 0112 C043     		mvn	r0, r0
+ 262 0114 0004     		lsl	r0, r0, #16
+ 263 0116 000C     		lsr	r0, r0, #16
+ 264              		.loc 1 407 0
+ 265              		@ sp needed for prologue
+ 266 0118 02BC     		pop	{r1}
+ 267 011a 0847     		bx	r1
+ 268              	.LFE4:
+ 270              		.align	2
+ 271              		.global	inet_chksum_pseudo
+ 272              		.code	16
+ 273              		.thumb_func
+ 275              	inet_chksum_pseudo:
+ 276              	.LFB3:
+ 277              		.loc 1 286 0
+ 278 011c F0B5     		push	{r4, r5, r6, r7, lr}
+ 279              	.LCFI4:
+ 280 011e 5F46     		mov	r7, fp
+ 281 0120 5646     		mov	r6, sl
+ 282 0122 4D46     		mov	r5, r9
+ 283 0124 4446     		mov	r4, r8
+ 284 0126 F0B4     		push	{r4, r5, r6, r7}
+ 285              	.LCFI5:
+ 286              	.LVL40:
+ 287 0128 83B0     		sub	sp, sp, #12
+ 288              	.LCFI6:
+ 289 012a 0291     		str	r1, [sp, #8]
+ 290 012c 0192     		str	r2, [sp, #4]
+ 291 012e 0C9A     		ldr	r2, [sp, #48]
+ 292              	.LVL41:
+ 293 0130 1B06     		lsl	r3, r3, #24
+ 294              	.LVL42:
+ 295 0132 1B0E     		lsr	r3, r3, #24
+ 296 0134 9B46     		mov	fp, r3
+ 297              	.LVL43:
+ 298 0136 1204     		lsl	r2, r2, #16
+ 299 0138 120C     		lsr	r2, r2, #16
+ 300 013a 0092     		str	r2, [sp]
+ 301              	.LVL44:
+ 302              		.loc 1 294 0
+ 303 013c 0028     		cmp	r0, #0
+ 304 013e 01D1     		bne	.L23
+ 305              	.LVL45:
+ 306 0140 0027     		mov	r7, #0
+ 307              	.LVL46:
+ 308 0142 2FE0     		b	.L24
+ 309              	.LVL47:
+ 310              	.L23:
+ 311 0144 061C     		mov	r6, r0
+ 312              	.LVL48:
+ 313 0146 0027     		mov	r7, #0
+ 314              	.LVL49:
+ 315 0148 0024     		mov	r4, #0
+ 316              	.LVL50:
+ 317              		.loc 1 301 0
+ 318 014a 2B4A     		ldr	r2, .L29
+ 319 014c 9046     		mov	r8, r2
+ 320              		.loc 1 302 0
+ 321 014e 0123     		mov	r3, #1
+ 322 0150 9A46     		mov	sl, r3
+ 323              		.loc 1 303 0
+ 324 0152 0122     		mov	r2, #1
+ 325 0154 9146     		mov	r9, r2
+ 326              		.loc 1 304 0
+ 327 0156 FF25     		mov	r5, #255
+ 328 0158 2D02     		lsl	r5, r5, #8
+ 329              	.L26:
+ 330              		.loc 1 297 0
+ 331 015a 7068     		ldr	r0, [r6, #4]
+ 332              	.LVL51:
+ 333 015c 7189     		ldrh	r1, [r6, #10]
+ 334 015e FFF74FFF 		bl	lwip_standard_chksum
+ 335 0162 C019     		add	r0, r0, r7
+ 336              	.LVL52:
+ 337              		.loc 1 301 0
+ 338 0164 030C     		lsr	r3, r0, #16
+ 339 0166 4246     		mov	r2, r8
+ 340 0168 1040     		and	r0, r0, r2
+ 341              	.LVL53:
+ 342 016a C718     		add	r7, r0, r3
+ 343              	.LVL54:
+ 344              		.loc 1 302 0
+ 345 016c 7389     		ldrh	r3, [r6, #10]
+ 346 016e 5246     		mov	r2, sl
+ 347 0170 1342     		tst	r3, r2
+ 348 0172 0BD0     		beq	.L25
+ 349              		.loc 1 303 0
+ 350 0174 4A46     		mov	r2, r9
+ 351 0176 131B     		sub	r3, r2, r4
+ 352 0178 1B06     		lsl	r3, r3, #24
+ 353 017a 1C0E     		lsr	r4, r3, #24
+ 354              	.LVL55:
+ 355              		.loc 1 304 0
+ 356 017c 3A02     		lsl	r2, r7, #8
+ 357 017e 4346     		mov	r3, r8
+ 358 0180 1A40     		and	r2, r2, r3
+ 359 0182 3B1C     		mov	r3, r7
+ 360 0184 2B40     		and	r3, r3, r5
+ 361 0186 1B0A     		lsr	r3, r3, #8
+ 362 0188 1F1C     		mov	r7, r3
+ 363 018a 1743     		orr	r7, r7, r2
+ 364              	.L25:
+ 365              		.loc 1 294 0
+ 366 018c 3668     		ldr	r6, [r6]
+ 367 018e 002E     		cmp	r6, #0
+ 368 0190 E3D1     		bne	.L26
+ 369              		.loc 1 309 0
+ 370 0192 002C     		cmp	r4, #0
+ 371 0194 06D0     		beq	.L24
+ 372              		.loc 1 310 0
+ 373 0196 3A02     		lsl	r2, r7, #8
+ 374 0198 174B     		ldr	r3, .L29
+ 375 019a 1A40     		and	r2, r2, r3
+ 376 019c 3B04     		lsl	r3, r7, #16
+ 377 019e 1B0E     		lsr	r3, r3, #24
+ 378 01a0 1F1C     		mov	r7, r3
+ 379 01a2 1743     		orr	r7, r7, r2
+ 380              	.LVL56:
+ 381              	.L24:
+ 382              		.loc 1 312 0
+ 383 01a4 029A     		ldr	r2, [sp, #8]
+ 384 01a6 1468     		ldr	r4, [r2]
+ 385              	.LVL57:
+ 386              		.loc 1 314 0
+ 387 01a8 019B     		ldr	r3, [sp, #4]
+ 388 01aa 1D68     		ldr	r5, [r3]
+ 389              		.loc 1 316 0
+ 390 01ac 5846     		mov	r0, fp
+ 391              	.LVL58:
+ 392 01ae FFF7FEFF 		bl	htons
+ 393 01b2 061C     		mov	r6, r0
+ 394              	.LVL59:
+ 395              		.loc 1 317 0
+ 396 01b4 0098     		ldr	r0, [sp]
+ 397 01b6 FFF7FEFF 		bl	htons
+ 398 01ba 011C     		mov	r1, r0
+ 399              		.loc 1 312 0
+ 400 01bc 200C     		lsr	r0, r4, #16
+ 401 01be 0E4A     		ldr	r2, .L29
+ 402 01c0 1440     		and	r4, r4, r2
+ 403 01c2 0019     		add	r0, r0, r4
+ 404              	.LVL60:
+ 405              		.loc 1 313 0
+ 406 01c4 2B1C     		mov	r3, r5
+ 407 01c6 1340     		and	r3, r3, r2
+ 408 01c8 C018     		add	r0, r0, r3
+ 409              	.LVL61:
+ 410              		.loc 1 314 0
+ 411 01ca 2D0C     		lsr	r5, r5, #16
+ 412 01cc 4019     		add	r0, r0, r5
+ 413              	.LVL62:
+ 414              		.loc 1 315 0
+ 415 01ce C019     		add	r0, r0, r7
+ 416              	.LVL63:
+ 417              		.loc 1 316 0
+ 418 01d0 8019     		add	r0, r0, r6
+ 419              	.LVL64:
+ 420              		.loc 1 317 0
+ 421 01d2 4018     		add	r0, r0, r1
+ 422              	.LVL65:
+ 423              		.loc 1 321 0
+ 424 01d4 030C     		lsr	r3, r0, #16
+ 425 01d6 1040     		and	r0, r0, r2
+ 426              	.LVL66:
+ 427 01d8 C018     		add	r0, r0, r3
+ 428              	.LVL67:
+ 429              		.loc 1 322 0
+ 430 01da 030C     		lsr	r3, r0, #16
+ 431 01dc 1040     		and	r0, r0, r2
+ 432              	.LVL68:
+ 433 01de C018     		add	r0, r0, r3
+ 434 01e0 C043     		mvn	r0, r0
+ 435 01e2 0004     		lsl	r0, r0, #16
+ 436 01e4 000C     		lsr	r0, r0, #16
+ 437              		.loc 1 325 0
+ 438 01e6 03B0     		add	sp, sp, #12
+ 439              		@ sp needed for prologue
+ 440              	.LVL69:
+ 441 01e8 3CBC     		pop	{r2, r3, r4, r5}
+ 442 01ea 9046     		mov	r8, r2
+ 443 01ec 9946     		mov	r9, r3
+ 444 01ee A246     		mov	sl, r4
+ 445 01f0 AB46     		mov	fp, r5
+ 446 01f2 F0BC     		pop	{r4, r5, r6, r7}
+ 447 01f4 02BC     		pop	{r1}
+ 448 01f6 0847     		bx	r1
+ 449              	.L30:
+ 450              		.align	2
+ 451              	.L29:
+ 452 01f8 FFFF0000 		.word	65535
+ 453              	.LFE3:
+ 575              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 inet_chksum.c
+     /tmp/ccuLiZpI.s:1      .text:00000000 $t
+     /tmp/ccuLiZpI.s:15     .text:00000000 lwip_standard_chksum
+     /tmp/ccuLiZpI.s:122    .text:00000074 $d
+     /tmp/ccuLiZpI.s:131    .text:0000007c inet_chksum_pbuf
+     /tmp/ccuLiZpI.s:128    .text:0000007c $t
+     /tmp/ccuLiZpI.s:240    .text:00000104 $d
+     /tmp/ccuLiZpI.s:248    .text:00000108 inet_chksum
+     /tmp/ccuLiZpI.s:245    .text:00000108 $t
+     /tmp/ccuLiZpI.s:275    .text:0000011c inet_chksum_pseudo
+     /tmp/ccuLiZpI.s:452    .text:000001f8 $d
+
+UNDEFINED SYMBOLS
+htons

@@ -1,0 +1,3295 @@
+   1              		.code	16
+   2              		.file	"tcp_out.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.code	16
+  13              		.thumb_func
+  15              	tcp_output_set_header:
+  16              	.LFB290:
+  17              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/tcp_out.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Transmission Control Protocol, outgoing traffic
+   4:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * The output functions of TCP.
+   6:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+   7:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+   8:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+   9:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /*
+  10:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+  11:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * All rights reserved.
+  12:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  13:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  14:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * are permitted provided that the following conditions are met:
+  15:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  16:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *    this list of conditions and the following disclaimer.
+  18:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  19:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *    this list of conditions and the following disclaimer in the documentation
+  20:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *    and/or other materials provided with the distribution.
+  21:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * 3. The name of the author may not be used to endorse or promote products
+  22:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *    derived from this software without specific prior written permission.
+  23:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  24:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  25:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  26:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  27:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  28:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  29:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  30:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  31:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  32:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  33:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * OF SUCH DAMAGE.
+  34:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * This file is part of the lwIP TCP/IP stack.
+  36:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Author: Adam Dunkels <adam@sics.se>
+  38:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+  40:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/opt.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  43:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP /* don't build if not configured for use in lwipopts.h */
+  44:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  45:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/tcp.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/def.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/mem.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/memp.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/sys.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/ip_addr.h"
+  51:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/netif.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/inet.h"
+  53:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/inet_chksum.h"
+  54:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/stats.h"
+  55:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include "lwip/snmp.h"
+  56:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  57:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #include <string.h>
+  58:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  59:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /* Forward declarations.*/
+  60:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** static void tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb);
+  61:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  62:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** static struct tcp_hdr *
+  63:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_output_set_header(struct tcp_pcb *pcb, struct pbuf *p, int optlen,
+  64:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                       u32_t seqno_be /* already in network byte order */)
+  65:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+  18              		.loc 1 65 0
+  19 0000 70B5     		push	{r4, r5, r6, lr}
+  20              	.LCFI0:
+  21 0002 5646     		mov	r6, sl
+  22 0004 4546     		mov	r5, r8
+  23 0006 60B4     		push	{r5, r6}
+  24              	.LCFI1:
+  25              	.LVL0:
+  26 0008 061C     		mov	r6, r0
+  27 000a 9246     		mov	sl, r2
+  28 000c 1C1C     		mov	r4, r3
+  66:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_hdr *tcphdr = p->payload;
+  29              		.loc 1 66 0
+  30 000e 4D68     		ldr	r5, [r1, #4]
+  31              	.LVL1:
+  67:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->src = htons(pcb->local_port);
+  32              		.loc 1 67 0
+  33 0010 808B     		ldrh	r0, [r0, #28]
+  34              	.LVL2:
+  35 0012 FFF7FEFF 		bl	htons
+  36              	.LVL3:
+  37 0016 2880     		strh	r0, [r5]
+  68:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->dest = htons(pcb->remote_port);
+  38              		.loc 1 68 0
+  39 0018 B08C     		ldrh	r0, [r6, #36]
+  40 001a FFF7FEFF 		bl	htons
+  41 001e 6880     		strh	r0, [r5, #2]
+  69:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->seqno = seqno_be;
+  42              		.loc 1 69 0
+  43 0020 6C60     		str	r4, [r5, #4]
+  70:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->ackno = htonl(pcb->rcv_nxt);
+  44              		.loc 1 70 0
+  45 0022 B06A     		ldr	r0, [r6, #40]
+  46 0024 FFF7FEFF 		bl	htonl
+  47 0028 A860     		str	r0, [r5, #8]
+  71:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCPH_FLAGS_SET(tcphdr, TCP_ACK);
+  48              		.loc 1 71 0
+  49 002a AA89     		ldrh	r2, [r5, #12]
+  50 002c 9046     		mov	r8, r2
+  51 002e 1748     		ldr	r0, .L3
+  52 0030 FFF7FEFF 		bl	htons
+  53 0034 041C     		mov	r4, r0
+  54              	.LVL4:
+  55 0036 1020     		mov	r0, #16
+  56 0038 FFF7FEFF 		bl	htons
+  57 003c 4346     		mov	r3, r8
+  58 003e 1C40     		and	r4, r4, r3
+  59 0040 2043     		orr	r0, r0, r4
+  60 0042 A881     		strh	r0, [r5, #12]
+  72:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->wnd = htons(pcb->rcv_ann_wnd);
+  61              		.loc 1 72 0
+  62 0044 F08D     		ldrh	r0, [r6, #46]
+  63 0046 FFF7FEFF 		bl	htons
+  64 004a E881     		strh	r0, [r5, #14]
+  73:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->urgp = 0;
+  65              		.loc 1 73 0
+  66 004c 0024     		mov	r4, #0
+  67 004e 6C82     		strh	r4, [r5, #18]
+  74:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCPH_HDRLEN_SET(tcphdr, (5 + optlen / 4));
+  68              		.loc 1 74 0
+  69 0050 A889     		ldrh	r0, [r5, #12]
+  70 0052 FFF7FEFF 		bl	ntohs
+  71 0056 5246     		mov	r2, sl
+  72 0058 D317     		asr	r3, r2, #31
+  73 005a 9B0F     		lsr	r3, r3, #30
+  74 005c 5344     		add	r3, r3, sl
+  75 005e 9B08     		lsr	r3, r3, #2
+  76 0060 0533     		add	r3, r3, #5
+  77 0062 3F22     		mov	r2, #63
+  78 0064 1040     		and	r0, r0, r2
+  79 0066 1B03     		lsl	r3, r3, #12
+  80 0068 1843     		orr	r0, r0, r3
+  81 006a 0004     		lsl	r0, r0, #16
+  82 006c 000C     		lsr	r0, r0, #16
+  83 006e FFF7FEFF 		bl	htons
+  84 0072 A881     		strh	r0, [r5, #12]
+  75:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = 0;
+  85              		.loc 1 75 0
+  86 0074 2C82     		strh	r4, [r5, #16]
+  76:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* If we're sending a packet, update the announced right window edge */
+  78:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->rcv_ann_right_edge = pcb->rcv_nxt + pcb->rcv_ann_wnd;
+  87              		.loc 1 78 0
+  88 0076 F38D     		ldrh	r3, [r6, #46]
+  89 0078 B26A     		ldr	r2, [r6, #40]
+  90 007a 9B18     		add	r3, r3, r2
+  91 007c 3363     		str	r3, [r6, #48]
+  79:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  80:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return tcphdr;
+  81:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+  92              		.loc 1 81 0
+  93 007e 281C     		mov	r0, r5
+  94              		@ sp needed for prologue
+  95              	.LVL5:
+  96              	.LVL6:
+  97              	.LVL7:
+  98 0080 0CBC     		pop	{r2, r3}
+  99 0082 9046     		mov	r8, r2
+ 100 0084 9A46     		mov	sl, r3
+ 101 0086 70BC     		pop	{r4, r5, r6}
+ 102 0088 02BC     		pop	{r1}
+ 103 008a 0847     		bx	r1
+ 104              	.L4:
+ 105              		.align	2
+ 106              	.L3:
+ 107 008c C0FF0000 		.word	65472
+ 108              	.LFE290:
+ 110              		.align	2
+ 111              		.global	tcp_zero_window_probe
+ 112              		.code	16
+ 113              		.thumb_func
+ 115              	tcp_zero_window_probe:
+ 116              	.LFB302:
+  82:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  83:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+  84:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_close() to send a segment including flags but not data.
+  85:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+  86:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb over which to send a segment
+  87:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param flags the flags to set in the segment header
+  88:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @return ERR_OK if sent, another err_t otherwise
+  89:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+  90:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** err_t
+  91:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_send_ctrl(struct tcp_pcb *pcb, u8_t flags)
+  92:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+  93:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* no data, no length, flags, copy=1, no optdata */
+  94:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return tcp_enqueue(pcb, NULL, 0, flags, TCP_WRITE_FLAG_COPY, 0);
+  95:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+  96:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+  97:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+  98:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Write data for sending (but does not send it immediately).
+  99:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 100:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * It waits in the expectation of more data being sent soon (as
+ 101:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * it can send them more efficiently by combining them together).
+ 102:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * To prompt the system to send data now, call tcp_output() after
+ 103:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * calling tcp_write().
+ 104:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * 
+ 105:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb Protocol control block of the TCP connection to enqueue data for.
+ 106:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param data pointer to the data to send
+ 107:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param len length (in bytes) of the data to send
+ 108:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param apiflags combination of following flags :
+ 109:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * - TCP_WRITE_FLAG_COPY (0x01) data will be copied into memory belonging to the stack
+ 110:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * - TCP_WRITE_FLAG_MORE (0x02) for TCP connection, PSH flag will be set on last segment sent,
+ 111:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @return ERR_OK if enqueued, another err_t on error
+ 112:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * 
+ 113:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @see tcp_write()
+ 114:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 115:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** err_t
+ 116:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_write(struct tcp_pcb *pcb, const void *data, u16_t len, u8_t apiflags)
+ 117:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 118:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_OUTPUT_DEBUG, ("tcp_write(pcb=%p, data=%p, len=%"U16_F", apiflags=%"U16_F")\n", (
+ 119:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     data, len, (u16_t)apiflags));
+ 120:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* connection is in valid state for data transmission? */
+ 121:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->state == ESTABLISHED ||
+ 122:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      pcb->state == CLOSE_WAIT ||
+ 123:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      pcb->state == SYN_SENT ||
+ 124:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      pcb->state == SYN_RCVD) {
+ 125:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (len > 0) {
+ 126:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP_TIMESTAMPS
+ 127:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       return tcp_enqueue(pcb, (void *)data, len, 0, apiflags, 
+ 128:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                          pcb->flags & TF_TIMESTAMP ? TF_SEG_OPTS_TS : 0);
+ 129:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #else
+ 130:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       return tcp_enqueue(pcb, (void *)data, len, 0, apiflags, 0);
+ 131:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 132:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 133:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_OK;
+ 134:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   } else {
+ 135:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_STATE | LWIP_DBG_LEVEL_SEVERE, ("tcp_write() called in 
+ 136:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_CONN;
+ 137:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 138:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 139:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 140:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 141:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Enqueue data and/or TCP options for transmission
+ 142:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 143:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_connect(), tcp_listen_input(), tcp_send_ctrl() and tcp_write().
+ 144:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 145:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb Protocol control block for the TCP connection to enqueue data for.
+ 146:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param arg Pointer to the data to be enqueued for sending.
+ 147:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param len Data length in bytes
+ 148:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param flags tcp header flags to set in the outgoing segment
+ 149:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param apiflags combination of following flags :
+ 150:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * - TCP_WRITE_FLAG_COPY (0x01) data will be copied into memory belonging to the stack
+ 151:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * - TCP_WRITE_FLAG_MORE (0x02) for TCP connection, PSH flag will be set on last segment sent,
+ 152:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param optflags options to include in segment later on (see definition of struct tcp_seg)
+ 153:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 154:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** err_t
+ 155:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_enqueue(struct tcp_pcb *pcb, void *arg, u16_t len,
+ 156:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****             u8_t flags, u8_t apiflags, u8_t optflags)
+ 157:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 158:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct pbuf *p;
+ 159:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg *seg, *useg, *queue;
+ 160:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u32_t seqno;
+ 161:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u16_t left, seglen;
+ 162:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   void *ptr;
+ 163:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u16_t queuelen;
+ 164:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u8_t optlen;
+ 165:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 166:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_OUTPUT_DEBUG, 
+ 167:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               ("tcp_enqueue(pcb=%p, arg=%p, len=%"U16_F", flags=%"X16_F", apiflags=%"U16_F")\n",
+ 168:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                (void *)pcb, arg, len, (u16_t)flags, (u16_t)apiflags));
+ 169:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_ERROR("tcp_enqueue: packet needs payload, options, or SYN/FIN (programmer violates API)",
+ 170:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              ((len != 0) || (optflags != 0) || ((flags & (TCP_SYN | TCP_FIN)) != 0)),
+ 171:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              return ERR_ARG;);
+ 172:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_ERROR("tcp_enqueue: len != 0 || arg == NULL (programmer violates API)", 
+ 173:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              ((len != 0) || (arg == NULL)), return ERR_ARG;);
+ 174:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 175:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* fail on too much data */
+ 176:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (len > pcb->snd_buf) {
+ 177:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_WARNING,
+ 178:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ("tcp_enqueue: too much data (len=%"U16_F" > snd_buf=%"U16_F")\n", len, pcb->snd_buf));
+ 179:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->flags |= TF_NAGLEMEMERR;
+ 180:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_MEM;
+ 181:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 182:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   left = len;
+ 183:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ptr = arg;
+ 184:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 185:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   optlen = LWIP_TCP_OPT_LENGTH(optflags);
+ 186:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 187:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* seqno will be the sequence number of the first segment enqueued
+ 188:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * by the call to this function. */
+ 189:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seqno = pcb->snd_lbb;
+ 190:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 191:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_QLEN_DEBUG, ("tcp_enqueue: queuelen: %"U16_F"\n", (u16_t)pcb->snd_queuelen));
+ 192:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 193:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* If total number of pbufs on the unsent/unacked queues exceeds the
+ 194:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * configured maximum, return an error */
+ 195:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   queuelen = pcb->snd_queuelen;
+ 196:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* check for configured max queuelen and possible overflow */
+ 197:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if ((queuelen >= TCP_SND_QUEUELEN) || (queuelen > TCP_SNDQUEUELEN_OVERFLOW)) {
+ 198:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_WARNING,
+ 199:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ("tcp_enqueue: too long queue %"U16_F" (max %"U16_F")\n", queuelen, TCP_SND_QUEUELEN));
+ 200:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCP_STATS_INC(tcp.memerr);
+ 201:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->flags |= TF_NAGLEMEMERR;
+ 202:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_MEM;
+ 203:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 204:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (queuelen != 0) {
+ 205:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_ASSERT("tcp_enqueue: pbufs on queue => at least one queue non-empty",
+ 206:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->unacked != NULL || pcb->unsent != NULL);
+ 207:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   } else {
+ 208:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_ASSERT("tcp_enqueue: no pbufs on queue => both queues empty",
+ 209:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->unacked == NULL && pcb->unsent == NULL);
+ 210:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 211:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* First, break up the data into segments and tuck them together in
+ 213:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * the local "queue" variable. */
+ 214:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   useg = queue = seg = NULL;
+ 215:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seglen = 0;
+ 216:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   while (queue == NULL || left > 0) {
+ 217:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* The segment length (including options) should be at most the MSS */
+ 218:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seglen = left > (pcb->mss - optlen) ? (pcb->mss - optlen) : left;
+ 219:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 220:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Allocate memory for tcp_seg, and fill in fields. */
+ 221:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg = memp_malloc(MEMP_TCP_SEG);
+ 222:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (seg == NULL) {
+ 223:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, 
+ 224:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                   ("tcp_enqueue: could not allocate memory for tcp_seg\n"));
+ 225:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       goto memerr;
+ 226:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 227:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->next = NULL;
+ 228:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->p = NULL;
+ 229:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 230:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* first segment of to-be-queued data? */
+ 231:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (queue == NULL) {
+ 232:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       queue = seg;
+ 233:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 234:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* subsequent segments of to-be-queued data */
+ 235:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     else {
+ 236:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* Attach the segment to the end of the queued segments */
+ 237:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_ASSERT("useg != NULL", useg != NULL);
+ 238:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       useg->next = seg;
+ 239:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 240:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* remember last segment of to-be-queued data for next iteration */
+ 241:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     useg = seg;
+ 242:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 243:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* If copy is set, memory should be allocated
+ 244:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * and data copied into pbuf, otherwise data comes from
+ 245:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * ROM or other static memory, and need not be copied.  */
+ 246:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (apiflags & TCP_WRITE_FLAG_COPY) {
+ 247:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       if ((seg->p = pbuf_alloc(PBUF_TRANSPORT, seglen + optlen, PBUF_RAM)) == NULL) {
+ 248:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, 
+ 249:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                     ("tcp_enqueue : could not allocate memory for pbuf copy size %"U16_F"\n", segle
+ 250:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         goto memerr;
+ 251:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       }
+ 252:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_ASSERT("check that first pbuf can hold the complete seglen",
+ 253:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                   (seg->p->len >= seglen + optlen));
+ 254:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       queuelen += pbuf_clen(seg->p);
+ 255:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       if (arg != NULL) {
+ 256:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         MEMCPY((char *)seg->p->payload + optlen, ptr, seglen);
+ 257:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       }
+ 258:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       seg->dataptr = seg->p->payload;
+ 259:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 260:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* do not copy data */
+ 261:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     else {
+ 262:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* First, allocate a pbuf for the headers. */
+ 263:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       if ((seg->p = pbuf_alloc(PBUF_TRANSPORT, optlen, PBUF_RAM)) == NULL) {
+ 264:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, 
+ 265:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                     ("tcp_enqueue: could not allocate memory for header pbuf\n"));
+ 266:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         goto memerr;
+ 267:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       }
+ 268:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       queuelen += pbuf_clen(seg->p);
+ 269:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 270:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* Second, allocate a pbuf for holding the data.
+ 271:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****        * since the referenced data is available at least until it is sent out on the
+ 272:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****        * link (as it has to be ACKed by the remote party) we can safely use PBUF_ROM
+ 273:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****        * instead of PBUF_REF here.
+ 274:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****        */
+ 275:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       if (left > 0) {
+ 276:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         if ((p = pbuf_alloc(PBUF_RAW, seglen, PBUF_ROM)) == NULL) {
+ 277:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           /* If allocation fails, we have to deallocate the header pbuf as well. */
+ 278:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           pbuf_free(seg->p);
+ 279:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           seg->p = NULL;
+ 280:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, 
+ 281:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                       ("tcp_enqueue: could not allocate memory for zero-copy pbuf\n"));
+ 282:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           goto memerr;
+ 283:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         }
+ 284:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         ++queuelen;
+ 285:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         /* reference the non-volatile payload data */
+ 286:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         p->payload = ptr;
+ 287:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         seg->dataptr = ptr;
+ 288:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 289:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         /* Concatenate the headers and data pbufs together. */
+ 290:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         pbuf_cat(seg->p/*header*/, p/*data*/);
+ 291:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         p = NULL;
+ 292:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       }
+ 293:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 294:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 295:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Now that there are more segments queued, we check again if the
+ 296:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     length of the queue exceeds the configured maximum or overflows. */
+ 297:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if ((queuelen > TCP_SND_QUEUELEN) || (queuelen > TCP_SNDQUEUELEN_OVERFLOW)) {
+ 298:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 299:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         ("tcp_enqueue: queue too long %"U16_F" (%"U16_F")\n", queuelen, TCP_SND_QUEUELEN));
+ 300:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       goto memerr;
+ 301:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 302:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 303:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->len = seglen;
+ 304:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 305:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* build TCP header */
+ 306:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (pbuf_header(seg->p, TCP_HLEN)) {
+ 307:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_enqueue: no room for TCP header 
+ 308:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       TCP_STATS_INC(tcp.err);
+ 309:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       goto memerr;
+ 310:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 311:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->tcphdr = seg->p->payload;
+ 312:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->tcphdr->src = htons(pcb->local_port);
+ 313:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->tcphdr->dest = htons(pcb->remote_port);
+ 314:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->tcphdr->seqno = htonl(seqno);
+ 315:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->tcphdr->urgp = 0;
+ 316:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCPH_FLAGS_SET(seg->tcphdr, flags);
+ 317:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* don't fill in tcphdr->ackno and tcphdr->wnd until later */
+ 318:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 319:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg->flags = optflags;
+ 320:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 321:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Set the length of the header */
+ 322:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCPH_HDRLEN_SET(seg->tcphdr, (5 + optlen / 4));
+ 323:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_TRACE, ("tcp_enqueue: queueing %"U32_F":%"U32_F" (0x%"X
+ 324:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ntohl(seg->tcphdr->seqno),
+ 325:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ntohl(seg->tcphdr->seqno) + TCP_TCPLEN(seg),
+ 326:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       (u16_t)flags));
+ 327:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 328:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     left -= seglen;
+ 329:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seqno += seglen;
+ 330:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     ptr = (void *)((u8_t *)ptr + seglen);
+ 331:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 332:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 333:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Now that the data to be enqueued has been broken up into TCP
+ 334:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   segments in the queue variable, we add them to the end of the
+ 335:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->unsent queue. */
+ 336:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->unsent == NULL) {
+ 337:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     useg = NULL;
+ 338:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 339:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   else {
+ 340:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     for (useg = pcb->unsent; useg->next != NULL; useg = useg->next);
+ 341:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 342:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* { useg is last segment on the unsent queue, NULL if list is empty } */
+ 343:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 344:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* If there is room in the last pbuf on the unsent queue,
+ 345:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   chain the first pbuf on the queue together with that. */
+ 346:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (useg != NULL &&
+ 347:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCP_TCPLEN(useg) != 0 &&
+ 348:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     !(TCPH_FLAGS(useg->tcphdr) & (TCP_SYN | TCP_FIN)) &&
+ 349:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     (!(flags & (TCP_SYN | TCP_FIN)) || (flags == TCP_FIN)) &&
+ 350:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* fit within max seg size */
+ 351:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     (useg->len + queue->len <= pcb->mss) &&
+ 352:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* only concatenate segments with the same options */
+ 353:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     (useg->flags == queue->flags) &&
+ 354:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* segments are consecutive */
+ 355:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     (ntohl(useg->tcphdr->seqno) + useg->len == ntohl(queue->tcphdr->seqno)) ) {
+ 356:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Remove TCP header from first segment of our to-be-queued list */
+ 357:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if(pbuf_header(queue->p, -(TCP_HLEN + optlen))) {
+ 358:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* Can we cope with this failing?  Just assert for now */
+ 359:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_ASSERT("pbuf_header failed\n", 0);
+ 360:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       TCP_STATS_INC(tcp.err);
+ 361:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       goto memerr;
+ 362:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 363:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (queue->p->len == 0) {
+ 364:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* free the first (header-only) pbuf if it is now empty (contained only headers) */
+ 365:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       struct pbuf *old_q = queue->p;
+ 366:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       queue->p = queue->p->next;
+ 367:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       old_q->next = NULL;
+ 368:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       queuelen--;
+ 369:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pbuf_free(old_q);
+ 370:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 371:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (flags & TCP_FIN) {
+ 372:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* the new segment contains only FIN, no data -> put the FIN into the last segment */
+ 373:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_ASSERT("FIN enqueued together with data", queue->p == NULL && queue->len == 0);
+ 374:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       TCPH_SET_FLAG(useg->tcphdr, TCP_FIN);
+ 375:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     } else {
+ 376:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_ASSERT("zero-length pbuf", (queue->p != NULL) && (queue->p->len > 0));
+ 377:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pbuf_cat(useg->p, queue->p);
+ 378:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       useg->len += queue->len;
+ 379:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       useg->next = queue->next;
+ 380:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 381:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 382:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("tcp_enqueue: chaining segment
+ 383:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (seg == queue) {
+ 384:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       seg = useg;
+ 385:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       seglen = useg->len;
+ 386:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 387:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     memp_free(MEMP_TCP_SEG, queue);
+ 388:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 389:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   else {
+ 390:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* empty list */
+ 391:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (useg == NULL) {
+ 392:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* initialize list with this segment */
+ 393:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->unsent = queue;
+ 394:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 395:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* enqueue segment */
+ 396:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     else {
+ 397:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       useg->next = queue;
+ 398:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 399:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 400:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if ((flags & TCP_SYN) || (flags & TCP_FIN)) {
+ 401:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     ++len;
+ 402:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 403:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (flags & TCP_FIN) {
+ 404:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->flags |= TF_FIN;
+ 405:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 406:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->snd_lbb += len;
+ 407:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 408:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->snd_buf -= len;
+ 409:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 410:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* update number of segments on the queues */
+ 411:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->snd_queuelen = queuelen;
+ 412:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_QLEN_DEBUG, ("tcp_enqueue: %"S16_F" (after enqueued)\n", pcb->snd_queuelen));
+ 413:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->snd_queuelen != 0) {
+ 414:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_ASSERT("tcp_enqueue: valid queue length",
+ 415:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->unacked != NULL || pcb->unsent != NULL);
+ 416:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 417:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 418:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Set the PSH flag in the last segment that we enqueued, but only
+ 419:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if the segment has data (indicated by seglen > 0). */
+ 420:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg != NULL && seglen > 0 && seg->tcphdr != NULL && ((apiflags & TCP_WRITE_FLAG_MORE)==0)) {
+ 421:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCPH_SET_FLAG(seg->tcphdr, TCP_PSH);
+ 422:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 423:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 424:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return ERR_OK;
+ 425:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** memerr:
+ 426:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->flags |= TF_NAGLEMEMERR;
+ 427:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCP_STATS_INC(tcp.memerr);
+ 428:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 429:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (queue != NULL) {
+ 430:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     tcp_segs_free(queue);
+ 431:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 432:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->snd_queuelen != 0) {
+ 433:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_ASSERT("tcp_enqueue: valid queue length", pcb->unacked != NULL ||
+ 434:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->unsent != NULL);
+ 435:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 436:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_QLEN_DEBUG | LWIP_DBG_STATE, ("tcp_enqueue: %"S16_F" (with mem err)\n", pcb->snd_
+ 437:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return ERR_MEM;
+ 438:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 439:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 440:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 441:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP_TIMESTAMPS
+ 442:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /* Build a timestamp option (12 bytes long) at the specified options pointer)
+ 443:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 444:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb tcp_pcb
+ 445:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param opts option pointer where to store the timestamp option
+ 446:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 447:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** static void
+ 448:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_build_timestamp_option(struct tcp_pcb *pcb, u32_t *opts)
+ 449:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 450:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Pad with two NOP options to make everything nicely aligned */
+ 451:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   opts[0] = htonl(0x0101080A);
+ 452:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   opts[1] = htonl(sys_now());
+ 453:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   opts[2] = htonl(pcb->ts_recent);
+ 454:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 455:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 456:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 457:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /** Send an ACK without data.
+ 458:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 459:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb Protocol control block for the TCP connection to send the ACK
+ 460:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 461:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** err_t
+ 462:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_send_empty_ack(struct tcp_pcb *pcb)
+ 463:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 464:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct pbuf *p;
+ 465:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_hdr *tcphdr;
+ 466:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u8_t optlen = 0;
+ 467:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 468:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP_TIMESTAMPS
+ 469:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->flags & TF_TIMESTAMP) {
+ 470:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     optlen = LWIP_TCP_OPT_LENGTH(TF_SEG_OPTS_TS);
+ 471:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 472:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 473:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   p = pbuf_alloc(PBUF_IP, TCP_HLEN + optlen, PBUF_RAM);
+ 474:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (p == NULL) {
+ 475:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG, ("tcp_output: (ACK) could not allocate pbuf\n"));
+ 476:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_BUF;
+ 477:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 478:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_OUTPUT_DEBUG, 
+ 479:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               ("tcp_output: sending ACK for %"U32_F"\n", pcb->rcv_nxt));
+ 480:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* remove ACK flags from the PCB, as we send an empty ACK now */
+ 481:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+ 482:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 483:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr = tcp_output_set_header(pcb, p, optlen, htonl(pcb->snd_nxt));
+ 484:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 485:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* NB. MSS option is only sent on SYNs, so ignore it here */
+ 486:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP_TIMESTAMPS
+ 487:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->ts_lastacksent = pcb->rcv_nxt;
+ 488:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 489:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->flags & TF_TIMESTAMP) {
+ 490:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     tcp_build_timestamp_option(pcb, (u32_t *)(tcphdr + 1));
+ 491:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 492:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif 
+ 493:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 494:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if CHECKSUM_GEN_TCP
+ 495:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = inet_chksum_pseudo(p, &(pcb->local_ip), &(pcb->remote_ip),
+ 496:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         IP_PROTO_TCP, p->tot_len);
+ 497:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 498:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_NETIF_HWADDRHINT
+ 499:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output_hinted(p, &(pcb->local_ip), &(pcb->remote_ip), pcb->ttl, pcb->tos,
+ 500:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       IP_PROTO_TCP, &(pcb->addr_hint));
+ 501:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #else /* LWIP_NETIF_HWADDRHINT*/
+ 502:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output(p, &(pcb->local_ip), &(pcb->remote_ip), pcb->ttl, pcb->tos,
+ 503:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       IP_PROTO_TCP);
+ 504:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 505:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pbuf_free(p);
+ 506:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 507:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return ERR_OK;
+ 508:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 509:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 510:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 511:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Find out what we can send and send it
+ 512:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 513:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb Protocol control block for the TCP connection to send data
+ 514:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @return ERR_OK if data has been sent or nothing to send
+ 515:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *         another err_t on error
+ 516:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 517:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** err_t
+ 518:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_output(struct tcp_pcb *pcb)
+ 519:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 520:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg *seg, *useg;
+ 521:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u32_t wnd, snd_nxt;
+ 522:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if TCP_CWND_DEBUG
+ 523:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   s16_t i = 0;
+ 524:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* TCP_CWND_DEBUG */
+ 525:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 526:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* First, check if we are invoked by the TCP input processing
+ 527:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      code. If so, we do not output anything. Instead, we rely on the
+ 528:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      input processing code to call us when input processing is done
+ 529:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      with. */
+ 530:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (tcp_input_pcb == pcb) {
+ 531:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return ERR_OK;
+ 532:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 533:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 534:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   wnd = LWIP_MIN(pcb->snd_wnd, pcb->cwnd);
+ 535:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 536:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg = pcb->unsent;
+ 537:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 538:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* If the TF_ACK_NOW flag is set and no data will be sent (either
+ 539:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * because the ->unsent queue is empty or because the window does
+ 540:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * not allow it), construct an empty ACK segment and send it.
+ 541:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    *
+ 542:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    * If data is to be sent, we will just piggyback the ACK (see below).
+ 543:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    */
+ 544:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->flags & TF_ACK_NOW &&
+ 545:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      (seg == NULL ||
+ 546:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ntohl(seg->tcphdr->seqno) - pcb->lastack + seg->len > wnd)) {
+ 547:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      return tcp_send_empty_ack(pcb);
+ 548:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 549:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 550:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* useg should point to last segment on unacked queue */
+ 551:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   useg = pcb->unacked;
+ 552:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (useg != NULL) {
+ 553:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     for (; useg->next != NULL; useg = useg->next);
+ 554:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 555:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 556:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if TCP_OUTPUT_DEBUG
+ 557:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg == NULL) {
+ 558:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_OUTPUT_DEBUG, ("tcp_output: nothing to send (%p)\n",
+ 559:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                    (void*)pcb->unsent));
+ 560:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 561:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* TCP_OUTPUT_DEBUG */
+ 562:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if TCP_CWND_DEBUG
+ 563:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg == NULL) {
+ 564:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_output: snd_wnd %"U16_F
+ 565:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                  ", cwnd %"U16_F", wnd %"U32_F
+ 566:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                  ", seg == NULL, ack %"U32_F"\n",
+ 567:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                  pcb->snd_wnd, pcb->cwnd, wnd, pcb->lastack));
+ 568:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   } else {
+ 569:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_CWND_DEBUG, 
+ 570:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                 ("tcp_output: snd_wnd %"U16_F", cwnd %"U16_F", wnd %"U32_F
+ 571:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  ", effwnd %"U32_F", seq %"U32_F", ack %"U32_F"\n",
+ 572:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  pcb->snd_wnd, pcb->cwnd, wnd,
+ 573:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  ntohl(seg->tcphdr->seqno) - pcb->lastack + seg->len,
+ 574:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  ntohl(seg->tcphdr->seqno), pcb->lastack));
+ 575:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 576:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* TCP_CWND_DEBUG */
+ 577:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* data available and window allows it to be sent? */
+ 578:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   while (seg != NULL &&
+ 579:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****          ntohl(seg->tcphdr->seqno) - pcb->lastack + seg->len <= wnd) {
+ 580:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_ASSERT("RST not expected here!", 
+ 581:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                 (TCPH_FLAGS(seg->tcphdr) & TCP_RST) == 0);
+ 582:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Stop sending if the nagle algorithm would prevent it
+ 583:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * Don't stop:
+ 584:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * - if tcp_enqueue had a memory error before (prevent delayed ACK timeout) or
+ 585:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * - if FIN was already enqueued for this PCB (SYN is always alone in a segment -
+ 586:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      *   either seg->next != NULL or pcb->unacked == NULL;
+ 587:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      *   RST is no sent using tcp_enqueue/tcp_output.
+ 588:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      */
+ 589:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if((tcp_do_output_nagle(pcb) == 0) &&
+ 590:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ((pcb->flags & (TF_NAGLEMEMERR | TF_FIN)) == 0)){
+ 591:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       break;
+ 592:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 593:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if TCP_CWND_DEBUG
+ 594:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_output: snd_wnd %"U16_F", cwnd %"U16_F", wnd %"U32_F", effwnd
+ 595:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                             pcb->snd_wnd, pcb->cwnd, wnd,
+ 596:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                             ntohl(seg->tcphdr->seqno) + seg->len -
+ 597:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                             pcb->lastack,
+ 598:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                             ntohl(seg->tcphdr->seqno), pcb->lastack, i));
+ 599:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     ++i;
+ 600:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* TCP_CWND_DEBUG */
+ 601:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 602:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->unsent = seg->next;
+ 603:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 604:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (pcb->state != SYN_SENT) {
+ 605:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       TCPH_SET_FLAG(seg->tcphdr, TCP_ACK);
+ 606:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+ 607:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 608:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 609:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     tcp_output_segment(seg, pcb);
+ 610:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     snd_nxt = ntohl(seg->tcphdr->seqno) + TCP_TCPLEN(seg);
+ 611:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (TCP_SEQ_LT(pcb->snd_nxt, snd_nxt)) {
+ 612:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->snd_nxt = snd_nxt;
+ 613:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 614:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* put segment on unacknowledged list if length > 0 */
+ 615:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (TCP_TCPLEN(seg) > 0) {
+ 616:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       seg->next = NULL;
+ 617:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* unacked list is empty? */
+ 618:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       if (pcb->unacked == NULL) {
+ 619:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         pcb->unacked = seg;
+ 620:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         useg = seg;
+ 621:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       /* unacked list is not empty? */
+ 622:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       } else {
+ 623:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         /* In the case of fast retransmit, the packet should not go to the tail
+ 624:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****          * of the unacked queue, but rather somewhere before it. We need to check for
+ 625:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****          * this case. -STJ Jul 27, 2004 */
+ 626:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         if (TCP_SEQ_LT(ntohl(seg->tcphdr->seqno), ntohl(useg->tcphdr->seqno))){
+ 627:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           /* add segment to before tail of unacked list, keeping the list sorted */
+ 628:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           struct tcp_seg **cur_seg = &(pcb->unacked);
+ 629:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           while (*cur_seg &&
+ 630:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****             TCP_SEQ_LT(ntohl((*cur_seg)->tcphdr->seqno), ntohl(seg->tcphdr->seqno))) {
+ 631:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               cur_seg = &((*cur_seg)->next );
+ 632:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           }
+ 633:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           seg->next = (*cur_seg);
+ 634:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           (*cur_seg) = seg;
+ 635:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         } else {
+ 636:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           /* add segment to tail of unacked list */
+ 637:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           useg->next = seg;
+ 638:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           useg = useg->next;
+ 639:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****         }
+ 640:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       }
+ 641:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* do not queue empty segments on the unacked list */
+ 642:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     } else {
+ 643:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       tcp_seg_free(seg);
+ 644:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 645:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg = pcb->unsent;
+ 646:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 647:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 648:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg != NULL && pcb->persist_backoff == 0 && 
+ 649:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       ntohl(seg->tcphdr->seqno) - pcb->lastack + seg->len > pcb->snd_wnd) {
+ 650:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* prepare for persist timer */
+ 651:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->persist_cnt = 0;
+ 652:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->persist_backoff = 1;
+ 653:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 654:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 655:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->flags &= ~TF_NAGLEMEMERR;
+ 656:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   return ERR_OK;
+ 657:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 658:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 659:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 660:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_output() to actually send a TCP segment over IP.
+ 661:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 662:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param seg the tcp_seg to send
+ 663:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for the TCP connection used to send the segment
+ 664:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 665:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** static void
+ 666:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
+ 667:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 668:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u16_t len;
+ 669:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct netif *netif;
+ 670:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u32_t *opts;
+ 671:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 672:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /** @bug Exclude retransmitted segments from this count. */
+ 673:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   snmp_inc_tcpoutsegs();
+ 674:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 675:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* The TCP header has already been constructed, but the ackno and
+ 676:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    wnd fields remain. */
+ 677:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->tcphdr->ackno = htonl(pcb->rcv_nxt);
+ 678:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 679:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* advertise our receive window size in this TCP segment */
+ 680:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->tcphdr->wnd = htons(pcb->rcv_ann_wnd);
+ 681:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 682:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->rcv_ann_right_edge = pcb->rcv_nxt + pcb->rcv_ann_wnd;
+ 683:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 684:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Add any requested options.  NB MSS option is only set on SYN
+ 685:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      packets, so ignore it here */
+ 686:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   opts = (u32_t *)(seg->tcphdr + 1);
+ 687:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg->flags & TF_SEG_OPTS_MSS) {
+ 688:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCP_BUILD_MSS_OPTION(*opts);
+ 689:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     opts += 1;
+ 690:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 691:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_TCP_TIMESTAMPS
+ 692:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->ts_lastacksent = pcb->rcv_nxt;
+ 693:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 694:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (seg->flags & TF_SEG_OPTS_TS) {
+ 695:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     tcp_build_timestamp_option(pcb, opts);
+ 696:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     opts += 3;
+ 697:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 698:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 699:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 700:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* If we don't have a local IP address, we get one by
+ 701:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      calling ip_route(). */
+ 702:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (ip_addr_isany(&(pcb->local_ip))) {
+ 703:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     netif = ip_route(&(pcb->remote_ip));
+ 704:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (netif == NULL) {
+ 705:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       return;
+ 706:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 707:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     ip_addr_set(&(pcb->local_ip), &(netif->ip_addr));
+ 708:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 709:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 710:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Set retransmission timer running if it is not currently enabled */
+ 711:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if(pcb->rtime == -1)
+ 712:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->rtime = 0;
+ 713:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 714:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->rttest == 0) {
+ 715:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->rttest = tcp_ticks;
+ 716:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->rtseq = ntohl(seg->tcphdr->seqno);
+ 717:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 718:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_RTO_DEBUG, ("tcp_output_segment: rtseq %"U32_F"\n", pcb->rtseq));
+ 719:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 720:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_OUTPUT_DEBUG, ("tcp_output_segment: %"U32_F":%"U32_F"\n",
+ 721:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           htonl(seg->tcphdr->seqno), htonl(seg->tcphdr->seqno) +
+ 722:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****           seg->len));
+ 723:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 724:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   len = (u16_t)((u8_t *)seg->tcphdr - (u8_t *)seg->p->payload);
+ 725:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 726:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->p->len -= len;
+ 727:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->p->tot_len -= len;
+ 728:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 729:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->p->payload = seg->tcphdr;
+ 730:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 731:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->tcphdr->chksum = 0;
+ 732:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if CHECKSUM_GEN_TCP
+ 733:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->tcphdr->chksum = inet_chksum_pseudo(seg->p,
+ 734:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              &(pcb->local_ip),
+ 735:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              &(pcb->remote_ip),
+ 736:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****              IP_PROTO_TCP, seg->p->tot_len);
+ 737:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 738:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCP_STATS_INC(tcp.xmit);
+ 739:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 740:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_NETIF_HWADDRHINT
+ 741:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output_hinted(seg->p, &(pcb->local_ip), &(pcb->remote_ip), pcb->ttl, pcb->tos,
+ 742:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       IP_PROTO_TCP, &(pcb->addr_hint));
+ 743:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #else /* LWIP_NETIF_HWADDRHINT*/
+ 744:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output(seg->p, &(pcb->local_ip), &(pcb->remote_ip), pcb->ttl, pcb->tos,
+ 745:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       IP_PROTO_TCP);
+ 746:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 747:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 748:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 749:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 750:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Send a TCP RESET packet (empty segment with RST flag set) either to
+ 751:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * abort a connection or to show that there is no matching local connection
+ 752:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * for a received segment.
+ 753:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 754:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_abort() (to abort a local connection), tcp_input() (if no
+ 755:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * matching local pcb was found), tcp_listen_input() (if incoming segment
+ 756:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * has ACK flag set) and tcp_process() (received segment in the wrong state)
+ 757:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 758:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Since a RST segment is in most cases not sent for an active connection,
+ 759:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * tcp_rst() has a number of arguments that are taken from a tcp_pcb for
+ 760:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * most other segment output functions.
+ 761:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 762:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param seqno the sequence number to use for the outgoing segment
+ 763:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param ackno the acknowledge number to use for the outgoing segment
+ 764:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param local_ip the local IP address to send the segment from
+ 765:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param remote_ip the remote IP address to send the segment to
+ 766:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param local_port the local TCP port to send the segment from
+ 767:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param remote_port the remote TCP port to send the segment to
+ 768:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 769:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void
+ 770:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_rst(u32_t seqno, u32_t ackno,
+ 771:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct ip_addr *local_ip, struct ip_addr *remote_ip,
+ 772:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u16_t local_port, u16_t remote_port)
+ 773:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 774:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct pbuf *p;
+ 775:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_hdr *tcphdr;
+ 776:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   p = pbuf_alloc(PBUF_IP, TCP_HLEN, PBUF_RAM);
+ 777:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (p == NULL) {
+ 778:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_DEBUGF(TCP_DEBUG, ("tcp_rst: could not allocate memory for pbuf\n"));
+ 779:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       return;
+ 780:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 781:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_ASSERT("check that first pbuf can hold struct tcp_hdr",
+ 782:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               (p->len >= sizeof(struct tcp_hdr)));
+ 783:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 784:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr = p->payload;
+ 785:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->src = htons(local_port);
+ 786:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->dest = htons(remote_port);
+ 787:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->seqno = htonl(seqno);
+ 788:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->ackno = htonl(ackno);
+ 789:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCPH_FLAGS_SET(tcphdr, TCP_RST | TCP_ACK);
+ 790:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->wnd = htons(TCP_WND);
+ 791:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->urgp = 0;
+ 792:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCPH_HDRLEN_SET(tcphdr, 5);
+ 793:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 794:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = 0;
+ 795:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if CHECKSUM_GEN_TCP
+ 796:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = inet_chksum_pseudo(p, local_ip, remote_ip,
+ 797:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               IP_PROTO_TCP, p->tot_len);
+ 798:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 799:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCP_STATS_INC(tcp.xmit);
+ 800:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   snmp_inc_tcpoutrsts();
+ 801:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    /* Send output with hardcoded TTL since we have no access to the pcb */
+ 802:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output(p, local_ip, remote_ip, TCP_TTL, 0, IP_PROTO_TCP);
+ 803:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pbuf_free(p);
+ 804:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_RST_DEBUG, ("tcp_rst: seqno %"U32_F" ackno %"U32_F".\n", seqno, ackno));
+ 805:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 806:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 807:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 808:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Requeue all unacked segments for retransmission
+ 809:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 810:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_slowtmr() for slow retransmission.
+ 811:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 812:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for which to re-enqueue all unacked segments
+ 813:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 814:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void
+ 815:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_rexmit_rto(struct tcp_pcb *pcb)
+ 816:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 817:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg *seg;
+ 818:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 819:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->unacked == NULL) {
+ 820:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return;
+ 821:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 822:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 823:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Move all unacked segments to the head of the unsent queue */
+ 824:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   for (seg = pcb->unacked; seg->next != NULL; seg = seg->next);
+ 825:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* concatenate unsent queue after unacked queue */
+ 826:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->next = pcb->unsent;
+ 827:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* unsent queue is the concatenated queue (of unacked, unsent) */
+ 828:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->unsent = pcb->unacked;
+ 829:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* unacked queue is now empty */
+ 830:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->unacked = NULL;
+ 831:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 832:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* increment number of retransmissions */
+ 833:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ++pcb->nrtx;
+ 834:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 835:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Don't take any RTT measurements after retransmitting. */
+ 836:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->rttest = 0;
+ 837:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 838:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Do the actual retransmission */
+ 839:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcp_output(pcb);
+ 840:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 841:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 842:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 843:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Requeue the first unacked segment for retransmission
+ 844:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 845:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_receive() for fast retramsmit.
+ 846:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 847:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for which to retransmit the first unacked segment
+ 848:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 849:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void
+ 850:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_rexmit(struct tcp_pcb *pcb)
+ 851:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 852:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg *seg;
+ 853:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg **cur_seg;
+ 854:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 855:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->unacked == NULL) {
+ 856:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return;
+ 857:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 858:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 859:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Move the first unacked segment to the unsent queue */
+ 860:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Keep the unsent queue sorted. */
+ 861:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg = pcb->unacked;
+ 862:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->unacked = seg->next;
+ 863:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 864:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   cur_seg = &(pcb->unsent);
+ 865:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   while (*cur_seg &&
+ 866:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCP_SEQ_LT(ntohl((*cur_seg)->tcphdr->seqno), ntohl(seg->tcphdr->seqno))) {
+ 867:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       cur_seg = &((*cur_seg)->next );
+ 868:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 869:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg->next = *cur_seg;
+ 870:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   *cur_seg = seg;
+ 871:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 872:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ++pcb->nrtx;
+ 873:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 874:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Don't take any rtt measurements after retransmitting. */
+ 875:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pcb->rttest = 0;
+ 876:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 877:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Do the actual retransmission. */
+ 878:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   snmp_inc_tcpretranssegs();
+ 879:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* No need to call tcp_output: we are always called from tcp_input()
+ 880:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      and thus tcp_output directly returns. */
+ 881:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 882:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 883:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 884:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 885:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Handle retransmission after three dupacks received
+ 886:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 887:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for which to retransmit the first unacked segment
+ 888:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 889:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void 
+ 890:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_rexmit_fast(struct tcp_pcb *pcb)
+ 891:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 892:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (pcb->unacked != NULL && !(pcb->flags & TF_INFR)) {
+ 893:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* This is fast retransmit. Retransmit the first unacked segment. */
+ 894:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_FR_DEBUG, 
+ 895:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                 ("tcp_receive: dupacks %"U16_F" (%"U32_F
+ 896:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  "), fast retransmit %"U32_F"\n",
+ 897:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  (u16_t)pcb->dupacks, pcb->lastack,
+ 898:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                  ntohl(pcb->unacked->tcphdr->seqno)));
+ 899:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     tcp_rexmit(pcb);
+ 900:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 901:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Set ssthresh to half of the minimum of the current
+ 902:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****      * cwnd and the advertised window */
+ 903:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (pcb->cwnd > pcb->snd_wnd)
+ 904:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->ssthresh = pcb->snd_wnd / 2;
+ 905:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     else
+ 906:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->ssthresh = pcb->cwnd / 2;
+ 907:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     
+ 908:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* The minimum value for ssthresh should be 2 MSS */
+ 909:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     if (pcb->ssthresh < 2*pcb->mss) {
+ 910:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       LWIP_DEBUGF(TCP_FR_DEBUG, 
+ 911:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                   ("tcp_receive: The minimum value for ssthresh %"U16_F
+ 912:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                    " should be min 2 mss %"U16_F"...\n",
+ 913:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                    pcb->ssthresh, 2*pcb->mss));
+ 914:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****       pcb->ssthresh = 2*pcb->mss;
+ 915:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     }
+ 916:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     
+ 917:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->cwnd = pcb->ssthresh + 3 * pcb->mss;
+ 918:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     pcb->flags |= TF_INFR;
+ 919:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   } 
+ 920:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 921:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 922:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 923:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 924:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Send keepalive packets to keep a connection active although
+ 925:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * no data is sent over it.
+ 926:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 927:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_slowtmr()
+ 928:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 929:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for which to send a keepalive packet
+ 930:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 931:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void
+ 932:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_keepalive(struct tcp_pcb *pcb)
+ 933:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 934:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct pbuf *p;
+ 935:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_hdr *tcphdr;
+ 936:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 937:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, ("tcp_keepalive: sending KEEPALIVE probe to %"U16_F".%"U16_F".%"U16_F".%"U
+ 938:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           ip4_addr1(&pcb->remote_ip), ip4_addr2(&pcb->remote_ip),
+ 939:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           ip4_addr3(&pcb->remote_ip), ip4_addr4(&pcb->remote_ip)));
+ 940:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 941:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, ("tcp_keepalive: tcp_ticks %"U32_F"   pcb->tmr %"U32_F" pcb->keep_cnt_sent
+ 942:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           tcp_ticks, pcb->tmr, pcb->keep_cnt_sent));
+ 943:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    
+ 944:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   p = pbuf_alloc(PBUF_IP, TCP_HLEN, PBUF_RAM);
+ 945:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****    
+ 946:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if(p == NULL) {
+ 947:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_DEBUG, 
+ 948:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                 ("tcp_keepalive: could not allocate memory for pbuf\n"));
+ 949:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return;
+ 950:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+ 951:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_ASSERT("check that first pbuf can hold struct tcp_hdr",
+ 952:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               (p->len >= sizeof(struct tcp_hdr)));
+ 953:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 954:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr = tcp_output_set_header(pcb, p, 0, htonl(pcb->snd_nxt - 1));
+ 955:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 956:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if CHECKSUM_GEN_TCP
+ 957:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = inet_chksum_pseudo(p, &pcb->local_ip, &pcb->remote_ip,
+ 958:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                       IP_PROTO_TCP, p->tot_len);
+ 959:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+ 960:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCP_STATS_INC(tcp.xmit);
+ 961:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 962:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Send output to IP */
+ 963:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_NETIF_HWADDRHINT
+ 964:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output_hinted(p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, 0, IP_PROTO_TCP,
+ 965:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     &(pcb->addr_hint));
+ 966:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #else /* LWIP_NETIF_HWADDRHINT*/
+ 967:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output(p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, 0, IP_PROTO_TCP);
+ 968:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 969:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 970:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pbuf_free(p);
+ 971:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 972:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, ("tcp_keepalive: seqno %"U32_F" ackno %"U32_F".\n",
+ 973:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           pcb->snd_nxt - 1, pcb->rcv_nxt));
+ 974:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 975:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 976:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 977:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** /**
+ 978:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Send persist timer zero-window probes to keep a connection active
+ 979:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * when a window update is lost.
+ 980:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 981:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * Called by tcp_slowtmr()
+ 982:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  *
+ 983:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  * @param pcb the tcp_pcb for which to send a zero-window probe packet
+ 984:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****  */
+ 985:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** void
+ 986:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** tcp_zero_window_probe(struct tcp_pcb *pcb)
+ 987:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** {
+ 117              		.loc 1 987 0
+ 118 0090 F0B5     		push	{r4, r5, r6, r7, lr}
+ 119              	.LCFI2:
+ 120 0092 4746     		mov	r7, r8
+ 121 0094 80B4     		push	{r7}
+ 122              	.LCFI3:
+ 123              	.LVL8:
+ 124 0096 82B0     		sub	sp, sp, #8
+ 125              	.LCFI4:
+ 126 0098 071C     		mov	r7, r0
+ 988:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct pbuf *p;
+ 989:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_hdr *tcphdr;
+ 990:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   struct tcp_seg *seg;
+ 991:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u16_t len;
+ 992:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   u8_t is_fin;
+ 993:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+ 994:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, 
+ 995:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               ("tcp_zero_window_probe: sending ZERO WINDOW probe to %"
+ 996:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                U16_F".%"U16_F".%"U16_F".%"U16_F"\n",
+ 997:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                ip4_addr1(&pcb->remote_ip), ip4_addr2(&pcb->remote_ip),
+ 998:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                ip4_addr3(&pcb->remote_ip), ip4_addr4(&pcb->remote_ip)));
+ 999:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1000:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, 
+1001:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               ("tcp_zero_window_probe: tcp_ticks %"U32_F
+1002:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                "   pcb->tmr %"U32_F" pcb->keep_cnt_sent %"U16_F"\n", 
+1003:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                tcp_ticks, pcb->tmr, pcb->keep_cnt_sent));
+1004:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1005:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   seg = pcb->unacked;
+ 127              		.loc 1 1005 0
+ 128 009a C46F     		ldr	r4, [r0, #124]
+ 129              	.LVL9:
+1006:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1007:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if(seg == NULL)
+ 130              		.loc 1 1007 0
+ 131 009c 002C     		cmp	r4, #0
+ 132 009e 02D1     		bne	.L6
+1008:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     seg = pcb->unsent;
+ 133              		.loc 1 1008 0
+ 134 00a0 846F     		ldr	r4, [r0, #120]
+1009:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1010:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if(seg == NULL)
+ 135              		.loc 1 1010 0
+ 136 00a2 002C     		cmp	r4, #0
+ 137 00a4 4FD0     		beq	.L12
+ 138              	.L6:
+1011:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return;
+1012:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1013:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   is_fin = ((TCPH_FLAGS(seg->tcphdr) & TCP_FIN) != 0) && (seg->len == 0);
+ 139              		.loc 1 1013 0
+ 140 00a6 2369     		ldr	r3, [r4, #16]
+ 141 00a8 9889     		ldrh	r0, [r3, #12]
+ 142              	.LVL10:
+ 143 00aa FFF7FEFF 		bl	ntohs
+ 144 00ae C307     		lsl	r3, r0, #31
+ 145 00b0 06D5     		bpl	.L8
+ 146 00b2 A389     		ldrh	r3, [r4, #12]
+ 147 00b4 002B     		cmp	r3, #0
+ 148 00b6 03D1     		bne	.L8
+ 149 00b8 1421     		mov	r1, #20
+ 150              	.LVL11:
+ 151 00ba 0123     		mov	r3, #1
+ 152 00bc 9846     		mov	r8, r3
+ 153              	.LVL12:
+ 154 00be 02E0     		b	.L9
+ 155              	.LVL13:
+ 156              	.L8:
+ 157 00c0 1521     		mov	r1, #21
+ 158              	.LVL14:
+ 159 00c2 0023     		mov	r3, #0
+ 160 00c4 9846     		mov	r8, r3
+ 161              	.LVL15:
+ 162              	.L9:
+1014:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   len = is_fin ? TCP_HLEN : TCP_HLEN + 1;
+1015:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1016:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   p = pbuf_alloc(PBUF_IP, len, PBUF_RAM);
+ 163              		.loc 1 1016 0
+ 164 00c6 0120     		mov	r0, #1
+ 165 00c8 0022     		mov	r2, #0
+ 166 00ca FFF7FEFF 		bl	pbuf_alloc
+ 167              	.LVL16:
+ 168 00ce 061C     		mov	r6, r0
+ 169              	.LVL17:
+1017:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if(p == NULL) {
+ 170              		.loc 1 1017 0
+ 171 00d0 0028     		cmp	r0, #0
+ 172 00d2 38D0     		beq	.L12
+ 173              	.LVL18:
+1018:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     LWIP_DEBUGF(TCP_DEBUG, ("tcp_zero_window_probe: no memory for pbuf\n"));
+1019:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     return;
+1020:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+1021:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_ASSERT("check that first pbuf can hold struct tcp_hdr",
+1022:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****               (p->len >= sizeof(struct tcp_hdr)));
+1023:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1024:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr = tcp_output_set_header(pcb, p, 0, seg->tcphdr->seqno);
+ 174              		.loc 1 1024 0
+ 175 00d4 2369     		ldr	r3, [r4, #16]
+ 176 00d6 5B68     		ldr	r3, [r3, #4]
+ 177 00d8 381C     		mov	r0, r7
+ 178              	.LVL19:
+ 179 00da 311C     		mov	r1, r6
+ 180 00dc 0022     		mov	r2, #0
+ 181 00de FFF78FFF 		bl	tcp_output_set_header
+ 182 00e2 051C     		mov	r5, r0
+ 183              	.LVL20:
+1025:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1026:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   if (is_fin) {
+ 184              		.loc 1 1026 0
+ 185 00e4 4346     		mov	r3, r8
+ 186 00e6 002B     		cmp	r3, #0
+ 187 00e8 0DD0     		beq	.L10
+1027:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* FIN segment, no data */
+1028:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     TCPH_FLAGS_SET(tcphdr, TCP_ACK | TCP_FIN);
+ 188              		.loc 1 1028 0
+ 189 00ea 8389     		ldrh	r3, [r0, #12]
+ 190 00ec 9846     		mov	r8, r3
+ 191              	.LVL21:
+ 192 00ee 1948     		ldr	r0, .L13
+ 193 00f0 FFF7FEFF 		bl	htons
+ 194 00f4 041C     		mov	r4, r0
+ 195              	.LVL22:
+ 196 00f6 1120     		mov	r0, #17
+ 197 00f8 FFF7FEFF 		bl	htons
+ 198 00fc 4346     		mov	r3, r8
+ 199 00fe 1C40     		and	r4, r4, r3
+ 200 0100 2043     		orr	r0, r0, r4
+ 201 0102 A881     		strh	r0, [r5, #12]
+ 202 0104 03E0     		b	.L11
+ 203              	.LVL23:
+ 204              	.L10:
+1029:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   } else {
+1030:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     /* Data segment, copy in one byte from the head of the unacked queue */
+1031:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     *((char *)p->payload + sizeof(struct tcp_hdr)) = *(char *)seg->dataptr;
+ 205              		.loc 1 1031 0
+ 206 0106 7368     		ldr	r3, [r6, #4]
+ 207 0108 A268     		ldr	r2, [r4, #8]
+ 208 010a 1278     		ldrb	r2, [r2]
+ 209 010c 1A75     		strb	r2, [r3, #20]
+ 210              	.L11:
+1032:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   }
+1033:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1034:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if CHECKSUM_GEN_TCP
+1035:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   tcphdr->chksum = inet_chksum_pseudo(p, &pcb->local_ip, &pcb->remote_ip,
+ 211              		.loc 1 1035 0
+ 212 010e 3C1D     		add	r4, r7, #4
+ 213              	.LVL24:
+ 214 0110 3389     		ldrh	r3, [r6, #8]
+ 215 0112 0093     		str	r3, [sp]
+ 216 0114 301C     		mov	r0, r6
+ 217 0116 391C     		mov	r1, r7
+ 218 0118 221C     		mov	r2, r4
+ 219 011a 0623     		mov	r3, #6
+ 220 011c FFF7FEFF 		bl	inet_chksum_pseudo
+ 221 0120 2882     		strh	r0, [r5, #16]
+1036:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                                       IP_PROTO_TCP, p->tot_len);
+1037:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif
+1038:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   TCP_STATS_INC(tcp.xmit);
+ 222              		.loc 1 1038 0
+ 223 0122 0D49     		ldr	r1, .L13+4
+ 224 0124 9022     		mov	r2, #144
+ 225 0126 8B5A     		ldrh	r3, [r1, r2]
+ 226 0128 0133     		add	r3, r3, #1
+ 227 012a 8B52     		strh	r3, [r1, r2]
+1039:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1040:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   /* Send output to IP */
+1041:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #if LWIP_NETIF_HWADDRHINT
+1042:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output_hinted(p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, 0, IP_PROTO_TCP,
+1043:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****     &(pcb->addr_hint));
+1044:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #else /* LWIP_NETIF_HWADDRHINT*/
+1045:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   ip_output(p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, 0, IP_PROTO_TCP);
+ 228              		.loc 1 1045 0
+ 229 012c FB7A     		ldrb	r3, [r7, #11]
+ 230 012e 0022     		mov	r2, #0
+ 231 0130 0092     		str	r2, [sp]
+ 232 0132 0622     		mov	r2, #6
+ 233 0134 0192     		str	r2, [sp, #4]
+ 234 0136 301C     		mov	r0, r6
+ 235 0138 391C     		mov	r1, r7
+ 236 013a 221C     		mov	r2, r4
+ 237 013c FFF7FEFF 		bl	ip_output
+1046:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+1047:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1048:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   pbuf_free(p);
+ 238              		.loc 1 1048 0
+ 239 0140 301C     		mov	r0, r6
+ 240 0142 FFF7FEFF 		bl	pbuf_free
+ 241              	.LVL25:
+ 242              	.L12:
+1049:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** 
+1050:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****   LWIP_DEBUGF(TCP_DEBUG, ("tcp_zero_window_probe: seqno %"U32_F
+1051:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           " ackno %"U32_F".\n",
+1052:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c ****                           pcb->snd_nxt - 1, pcb->rcv_nxt));
+1053:rtos/common/ethernet/lwIP_132/src/core/tcp_out.c **** }
+ 243              		.loc 1 1053 0
+ 244 0146 02B0     		add	sp, sp, #8
+ 245              		@ sp needed for prologue
+ 246              	.LVL26:
+ 247              	.LVL27:
+ 248              	.LVL28:
+ 249              	.LVL29:
+ 250              	.LVL30:
+ 251 0148 04BC     		pop	{r2}
+ 252 014a 9046     		mov	r8, r2
+ 253 014c F0BC     		pop	{r4, r5, r6, r7}
+ 254 014e 01BC     		pop	{r0}
+ 255 0150 0047     		bx	r0
+ 256              	.L14:
+ 257 0152 C046     		.align	2
+ 258              	.L13:
+ 259 0154 C0FF0000 		.word	65472
+ 260 0158 00000000 		.word	lwip_stats
+ 261              	.LFE302:
+ 263              		.align	2
+ 264              		.global	tcp_keepalive
+ 265              		.code	16
+ 266              		.thumb_func
+ 268              	tcp_keepalive:
+ 269              	.LFB301:
+ 270              		.loc 1 933 0
+ 271 015c F0B5     		push	{r4, r5, r6, r7, lr}
+ 272              	.LCFI5:
+ 273              	.LVL31:
+ 274 015e 82B0     		sub	sp, sp, #8
+ 275              	.LCFI6:
+ 276 0160 071C     		mov	r7, r0
+ 277              		.loc 1 944 0
+ 278 0162 0120     		mov	r0, #1
+ 279              	.LVL32:
+ 280 0164 1421     		mov	r1, #20
+ 281 0166 0022     		mov	r2, #0
+ 282 0168 FFF7FEFF 		bl	pbuf_alloc
+ 283 016c 061C     		mov	r6, r0
+ 284              	.LVL33:
+ 285              		.loc 1 946 0
+ 286 016e 0028     		cmp	r0, #0
+ 287 0170 26D0     		beq	.L17
+ 288              	.LVL34:
+ 289              		.loc 1 954 0
+ 290 0172 F86D     		ldr	r0, [r7, #92]
+ 291              	.LVL35:
+ 292 0174 0138     		sub	r0, r0, #1
+ 293 0176 FFF7FEFF 		bl	htonl
+ 294 017a 031C     		mov	r3, r0
+ 295 017c 381C     		mov	r0, r7
+ 296 017e 311C     		mov	r1, r6
+ 297 0180 0022     		mov	r2, #0
+ 298 0182 FFF73DFF 		bl	tcp_output_set_header
+ 299 0186 041C     		mov	r4, r0
+ 300              	.LVL36:
+ 301              		.loc 1 957 0
+ 302 0188 3D1D     		add	r5, r7, #4
+ 303 018a 3389     		ldrh	r3, [r6, #8]
+ 304 018c 0093     		str	r3, [sp]
+ 305 018e 301C     		mov	r0, r6
+ 306 0190 391C     		mov	r1, r7
+ 307 0192 2A1C     		mov	r2, r5
+ 308 0194 0623     		mov	r3, #6
+ 309 0196 FFF7FEFF 		bl	inet_chksum_pseudo
+ 310 019a 2082     		strh	r0, [r4, #16]
+ 311              		.loc 1 960 0
+ 312 019c 0A49     		ldr	r1, .L18
+ 313 019e 9022     		mov	r2, #144
+ 314 01a0 8B5A     		ldrh	r3, [r1, r2]
+ 315 01a2 0133     		add	r3, r3, #1
+ 316 01a4 8B52     		strh	r3, [r1, r2]
+ 317              		.loc 1 967 0
+ 318 01a6 FB7A     		ldrb	r3, [r7, #11]
+ 319 01a8 0022     		mov	r2, #0
+ 320 01aa 0092     		str	r2, [sp]
+ 321 01ac 0622     		mov	r2, #6
+ 322 01ae 0192     		str	r2, [sp, #4]
+ 323 01b0 301C     		mov	r0, r6
+ 324 01b2 391C     		mov	r1, r7
+ 325 01b4 2A1C     		mov	r2, r5
+ 326 01b6 FFF7FEFF 		bl	ip_output
+ 327              		.loc 1 970 0
+ 328 01ba 301C     		mov	r0, r6
+ 329 01bc FFF7FEFF 		bl	pbuf_free
+ 330              	.LVL37:
+ 331              	.L17:
+ 332              		.loc 1 974 0
+ 333 01c0 02B0     		add	sp, sp, #8
+ 334              		@ sp needed for prologue
+ 335              	.LVL38:
+ 336              	.LVL39:
+ 337              	.LVL40:
+ 338 01c2 F0BC     		pop	{r4, r5, r6, r7}
+ 339 01c4 01BC     		pop	{r0}
+ 340 01c6 0047     		bx	r0
+ 341              	.L19:
+ 342              		.align	2
+ 343              	.L18:
+ 344 01c8 00000000 		.word	lwip_stats
+ 345              	.LFE301:
+ 347              		.align	2
+ 348              		.global	tcp_rst
+ 349              		.code	16
+ 350              		.thumb_func
+ 352              	tcp_rst:
+ 353              	.LFB297:
+ 354              		.loc 1 773 0
+ 355 01cc F0B5     		push	{r4, r5, r6, r7, lr}
+ 356              	.LCFI7:
+ 357 01ce 5F46     		mov	r7, fp
+ 358 01d0 5646     		mov	r6, sl
+ 359 01d2 4D46     		mov	r5, r9
+ 360 01d4 4446     		mov	r4, r8
+ 361 01d6 F0B4     		push	{r4, r5, r6, r7}
+ 362              	.LCFI8:
+ 363              	.LVL41:
+ 364 01d8 82B0     		sub	sp, sp, #8
+ 365              	.LCFI9:
+ 366 01da 8046     		mov	r8, r0
+ 367 01dc 8A46     		mov	sl, r1
+ 368 01de 9146     		mov	r9, r2
+ 369 01e0 9B46     		mov	fp, r3
+ 370 01e2 0B9B     		ldr	r3, [sp, #44]
+ 371              	.LVL42:
+ 372 01e4 0C9A     		ldr	r2, [sp, #48]
+ 373              	.LVL43:
+ 374 01e6 1B04     		lsl	r3, r3, #16
+ 375 01e8 1C0C     		lsr	r4, r3, #16
+ 376              	.LVL44:
+ 377 01ea 1204     		lsl	r2, r2, #16
+ 378 01ec 160C     		lsr	r6, r2, #16
+ 379              	.LVL45:
+ 380              		.loc 1 776 0
+ 381 01ee 0120     		mov	r0, #1
+ 382              	.LVL46:
+ 383 01f0 1421     		mov	r1, #20
+ 384              	.LVL47:
+ 385 01f2 0022     		mov	r2, #0
+ 386 01f4 FFF7FEFF 		bl	pbuf_alloc
+ 387 01f8 071C     		mov	r7, r0
+ 388              	.LVL48:
+ 389              		.loc 1 777 0
+ 390 01fa 0028     		cmp	r0, #0
+ 391 01fc 4AD0     		beq	.L22
+ 392              	.LVL49:
+ 393              		.loc 1 784 0
+ 394 01fe 4568     		ldr	r5, [r0, #4]
+ 395              	.LVL50:
+ 396              		.loc 1 785 0
+ 397 0200 201C     		mov	r0, r4
+ 398              	.LVL51:
+ 399 0202 FFF7FEFF 		bl	htons
+ 400 0206 2880     		strh	r0, [r5]
+ 401              		.loc 1 786 0
+ 402 0208 301C     		mov	r0, r6
+ 403 020a FFF7FEFF 		bl	htons
+ 404 020e 6880     		strh	r0, [r5, #2]
+ 405              		.loc 1 787 0
+ 406 0210 4046     		mov	r0, r8
+ 407 0212 FFF7FEFF 		bl	htonl
+ 408 0216 6860     		str	r0, [r5, #4]
+ 409              		.loc 1 788 0
+ 410 0218 5046     		mov	r0, sl
+ 411 021a FFF7FEFF 		bl	htonl
+ 412 021e A860     		str	r0, [r5, #8]
+ 413              		.loc 1 789 0
+ 414 0220 AE89     		ldrh	r6, [r5, #12]
+ 415              	.LVL52:
+ 416 0222 2148     		ldr	r0, .L23
+ 417 0224 FFF7FEFF 		bl	htons
+ 418 0228 041C     		mov	r4, r0
+ 419              	.LVL53:
+ 420 022a 1420     		mov	r0, #20
+ 421 022c FFF7FEFF 		bl	htons
+ 422 0230 3440     		and	r4, r4, r6
+ 423 0232 2043     		orr	r0, r0, r4
+ 424 0234 A881     		strh	r0, [r5, #12]
+ 425              		.loc 1 790 0
+ 426 0236 8020     		mov	r0, #128
+ 427 0238 8000     		lsl	r0, r0, #2
+ 428 023a FFF7FEFF 		bl	htons
+ 429 023e E881     		strh	r0, [r5, #14]
+ 430              		.loc 1 791 0
+ 431 0240 0024     		mov	r4, #0
+ 432 0242 6C82     		strh	r4, [r5, #18]
+ 433              		.loc 1 792 0
+ 434 0244 A889     		ldrh	r0, [r5, #12]
+ 435 0246 FFF7FEFF 		bl	ntohs
+ 436 024a 3F23     		mov	r3, #63
+ 437 024c 1840     		and	r0, r0, r3
+ 438 024e A023     		mov	r3, #160
+ 439 0250 DB01     		lsl	r3, r3, #7
+ 440 0252 1843     		orr	r0, r0, r3
+ 441 0254 0004     		lsl	r0, r0, #16
+ 442 0256 000C     		lsr	r0, r0, #16
+ 443 0258 FFF7FEFF 		bl	htons
+ 444 025c A881     		strh	r0, [r5, #12]
+ 445              		.loc 1 794 0
+ 446 025e 2C82     		strh	r4, [r5, #16]
+ 447              		.loc 1 796 0
+ 448 0260 3B89     		ldrh	r3, [r7, #8]
+ 449 0262 0093     		str	r3, [sp]
+ 450 0264 381C     		mov	r0, r7
+ 451 0266 4946     		mov	r1, r9
+ 452 0268 5A46     		mov	r2, fp
+ 453 026a 0623     		mov	r3, #6
+ 454 026c FFF7FEFF 		bl	inet_chksum_pseudo
+ 455 0270 2882     		strh	r0, [r5, #16]
+ 456              		.loc 1 799 0
+ 457 0272 0E49     		ldr	r1, .L23+4
+ 458 0274 9022     		mov	r2, #144
+ 459 0276 8B5A     		ldrh	r3, [r1, r2]
+ 460 0278 0133     		add	r3, r3, #1
+ 461 027a 8B52     		strh	r3, [r1, r2]
+ 462              		.loc 1 802 0
+ 463 027c 0094     		str	r4, [sp]
+ 464 027e 0623     		mov	r3, #6
+ 465 0280 0193     		str	r3, [sp, #4]
+ 466 0282 381C     		mov	r0, r7
+ 467 0284 4946     		mov	r1, r9
+ 468 0286 5A46     		mov	r2, fp
+ 469 0288 FF23     		mov	r3, #255
+ 470 028a FFF7FEFF 		bl	ip_output
+ 471              		.loc 1 803 0
+ 472 028e 381C     		mov	r0, r7
+ 473 0290 FFF7FEFF 		bl	pbuf_free
+ 474              	.LVL54:
+ 475              	.L22:
+ 476              		.loc 1 805 0
+ 477 0294 02B0     		add	sp, sp, #8
+ 478              		@ sp needed for prologue
+ 479              	.LVL55:
+ 480              	.LVL56:
+ 481              	.LVL57:
+ 482              	.LVL58:
+ 483              	.LVL59:
+ 484              	.LVL60:
+ 485              	.LVL61:
+ 486              	.LVL62:
+ 487 0296 3CBC     		pop	{r2, r3, r4, r5}
+ 488 0298 9046     		mov	r8, r2
+ 489 029a 9946     		mov	r9, r3
+ 490 029c A246     		mov	sl, r4
+ 491 029e AB46     		mov	fp, r5
+ 492 02a0 F0BC     		pop	{r4, r5, r6, r7}
+ 493 02a2 01BC     		pop	{r0}
+ 494 02a4 0047     		bx	r0
+ 495              	.L24:
+ 496 02a6 C046     		.align	2
+ 497              	.L23:
+ 498 02a8 C0FF0000 		.word	65472
+ 499 02ac 00000000 		.word	lwip_stats
+ 500              	.LFE297:
+ 502              		.align	2
+ 503              		.global	tcp_send_empty_ack
+ 504              		.code	16
+ 505              		.thumb_func
+ 507              	tcp_send_empty_ack:
+ 508              	.LFB294:
+ 509              		.loc 1 463 0
+ 510 02b0 F0B5     		push	{r4, r5, r6, r7, lr}
+ 511              	.LCFI10:
+ 512              	.LVL63:
+ 513 02b2 82B0     		sub	sp, sp, #8
+ 514              	.LCFI11:
+ 515 02b4 061C     		mov	r6, r0
+ 516              		.loc 1 473 0
+ 517 02b6 0120     		mov	r0, #1
+ 518              	.LVL64:
+ 519 02b8 1421     		mov	r1, #20
+ 520 02ba 0022     		mov	r2, #0
+ 521 02bc FFF7FEFF 		bl	pbuf_alloc
+ 522 02c0 071C     		mov	r7, r0
+ 523              	.LVL65:
+ 524              		.loc 1 474 0
+ 525 02c2 0028     		cmp	r0, #0
+ 526 02c4 01D1     		bne	.L26
+ 527              	.LVL66:
+ 528 02c6 FE20     		mov	r0, #254
+ 529              	.LVL67:
+ 530 02c8 26E0     		b	.L27
+ 531              	.LVL68:
+ 532              	.L26:
+ 533              		.loc 1 481 0
+ 534 02ca 2621     		mov	r1, #38
+ 535 02cc 735C     		ldrb	r3, [r6, r1]
+ 536 02ce 0322     		mov	r2, #3
+ 537 02d0 9343     		bic	r3, r3, r2
+ 538 02d2 7354     		strb	r3, [r6, r1]
+ 539              		.loc 1 483 0
+ 540 02d4 F06D     		ldr	r0, [r6, #92]
+ 541              	.LVL69:
+ 542 02d6 FFF7FEFF 		bl	htonl
+ 543 02da 031C     		mov	r3, r0
+ 544 02dc 301C     		mov	r0, r6
+ 545 02de 391C     		mov	r1, r7
+ 546 02e0 0022     		mov	r2, #0
+ 547 02e2 FFF78DFE 		bl	tcp_output_set_header
+ 548 02e6 041C     		mov	r4, r0
+ 549              	.LVL70:
+ 550              		.loc 1 495 0
+ 551 02e8 351D     		add	r5, r6, #4
+ 552 02ea 3B89     		ldrh	r3, [r7, #8]
+ 553 02ec 0093     		str	r3, [sp]
+ 554 02ee 381C     		mov	r0, r7
+ 555 02f0 311C     		mov	r1, r6
+ 556 02f2 2A1C     		mov	r2, r5
+ 557 02f4 0623     		mov	r3, #6
+ 558 02f6 FFF7FEFF 		bl	inet_chksum_pseudo
+ 559 02fa 2082     		strh	r0, [r4, #16]
+ 560              		.loc 1 502 0
+ 561 02fc F37A     		ldrb	r3, [r6, #11]
+ 562 02fe B27A     		ldrb	r2, [r6, #10]
+ 563 0300 0092     		str	r2, [sp]
+ 564 0302 0622     		mov	r2, #6
+ 565 0304 0192     		str	r2, [sp, #4]
+ 566 0306 381C     		mov	r0, r7
+ 567 0308 311C     		mov	r1, r6
+ 568 030a 2A1C     		mov	r2, r5
+ 569 030c FFF7FEFF 		bl	ip_output
+ 570              		.loc 1 505 0
+ 571 0310 381C     		mov	r0, r7
+ 572 0312 FFF7FEFF 		bl	pbuf_free
+ 573 0316 0020     		mov	r0, #0
+ 574              	.L27:
+ 575 0318 0006     		lsl	r0, r0, #24
+ 576 031a 0016     		asr	r0, r0, #24
+ 577              		.loc 1 508 0
+ 578 031c 02B0     		add	sp, sp, #8
+ 579              		@ sp needed for prologue
+ 580              	.LVL71:
+ 581              	.LVL72:
+ 582              	.LVL73:
+ 583 031e F0BC     		pop	{r4, r5, r6, r7}
+ 584 0320 02BC     		pop	{r1}
+ 585 0322 0847     		bx	r1
+ 586              	.LFE294:
+ 588              		.align	2
+ 589              		.global	tcp_rexmit
+ 590              		.code	16
+ 591              		.thumb_func
+ 593              	tcp_rexmit:
+ 594              	.LFB299:
+ 595              		.loc 1 851 0
+ 596 0324 F0B5     		push	{r4, r5, r6, r7, lr}
+ 597              	.LCFI12:
+ 598              	.LVL74:
+ 599 0326 071C     		mov	r7, r0
+ 600              		.loc 1 855 0
+ 601 0328 C66F     		ldr	r6, [r0, #124]
+ 602 032a 002E     		cmp	r6, #0
+ 603 032c 1FD0     		beq	.L34
+ 604              		.loc 1 862 0
+ 605 032e 3368     		ldr	r3, [r6]
+ 606 0330 C367     		str	r3, [r0, #124]
+ 607              		.loc 1 864 0
+ 608 0332 051C     		mov	r5, r0
+ 609              	.LVL75:
+ 610 0334 7835     		add	r5, r5, #120
+ 611              		.loc 1 865 0
+ 612 0336 836F     		ldr	r3, [r0, #120]
+ 613 0338 002B     		cmp	r3, #0
+ 614 033a 04D1     		bne	.L35
+ 615 033c 0EE0     		b	.L31
+ 616              	.LVL76:
+ 617              	.L33:
+ 618              		.loc 1 867 0
+ 619 033e 2D68     		ldr	r5, [r5]
+ 620              		.loc 1 865 0
+ 621 0340 2B68     		ldr	r3, [r5]
+ 622 0342 002B     		cmp	r3, #0
+ 623 0344 0AD0     		beq	.L31
+ 624              	.LVL77:
+ 625              	.L35:
+ 626 0346 1B69     		ldr	r3, [r3, #16]
+ 627 0348 5868     		ldr	r0, [r3, #4]
+ 628 034a FFF7FEFF 		bl	ntohl
+ 629 034e 041C     		mov	r4, r0
+ 630 0350 3369     		ldr	r3, [r6, #16]
+ 631 0352 5868     		ldr	r0, [r3, #4]
+ 632 0354 FFF7FEFF 		bl	ntohl
+ 633 0358 8442     		cmp	r4, r0
+ 634 035a F0D4     		bmi	.L33
+ 635              	.LVL78:
+ 636              	.L31:
+ 637              		.loc 1 869 0
+ 638 035c 2B68     		ldr	r3, [r5]
+ 639 035e 3360     		str	r3, [r6]
+ 640              		.loc 1 870 0
+ 641 0360 2E60     		str	r6, [r5]
+ 642              		.loc 1 872 0
+ 643 0362 4E22     		mov	r2, #78
+ 644 0364 BB5C     		ldrb	r3, [r7, r2]
+ 645 0366 0133     		add	r3, r3, #1
+ 646 0368 BB54     		strb	r3, [r7, r2]
+ 647              		.loc 1 875 0
+ 648 036a 0023     		mov	r3, #0
+ 649 036c 3B64     		str	r3, [r7, #64]
+ 650              	.L34:
+ 651              		.loc 1 881 0
+ 652              		@ sp needed for prologue
+ 653              	.LVL79:
+ 654              	.LVL80:
+ 655 036e F0BC     		pop	{r4, r5, r6, r7}
+ 656 0370 01BC     		pop	{r0}
+ 657 0372 0047     		bx	r0
+ 658              	.LFE299:
+ 660              		.align	2
+ 661              		.global	tcp_rexmit_fast
+ 662              		.code	16
+ 663              		.thumb_func
+ 665              	tcp_rexmit_fast:
+ 666              	.LFB300:
+ 667              		.loc 1 891 0
+ 668 0374 10B5     		push	{r4, lr}
+ 669              	.LCFI13:
+ 670              	.LVL81:
+ 671 0376 041C     		mov	r4, r0
+ 672              		.loc 1 892 0
+ 673 0378 C36F     		ldr	r3, [r0, #124]
+ 674 037a 002B     		cmp	r3, #0
+ 675 037c 27D0     		beq	.L41
+ 676 037e 2623     		mov	r3, #38
+ 677 0380 C35C     		ldrb	r3, [r0, r3]
+ 678 0382 5A07     		lsl	r2, r3, #29
+ 679 0384 23D4     		bmi	.L41
+ 680              		.loc 1 899 0
+ 681 0386 FFF7FEFF 		bl	tcp_rexmit
+ 682              	.LVL82:
+ 683              		.loc 1 903 0
+ 684 038a 5623     		mov	r3, #86
+ 685 038c E15A     		ldrh	r1, [r4, r3]
+ 686 038e 6023     		mov	r3, #96
+ 687 0390 E25A     		ldrh	r2, [r4, r3]
+ 688 0392 9142     		cmp	r1, r2
+ 689 0394 03D9     		bls	.L38
+ 690              		.loc 1 904 0
+ 691 0396 5208     		lsr	r2, r2, #1
+ 692 0398 5823     		mov	r3, #88
+ 693 039a E252     		strh	r2, [r4, r3]
+ 694 039c 02E0     		b	.L39
+ 695              	.L38:
+ 696              		.loc 1 906 0
+ 697 039e 4A08     		lsr	r2, r1, #1
+ 698 03a0 5823     		mov	r3, #88
+ 699 03a2 E252     		strh	r2, [r4, r3]
+ 700              	.L39:
+ 701              		.loc 1 909 0
+ 702 03a4 A38F     		ldrh	r3, [r4, #60]
+ 703 03a6 5A00     		lsl	r2, r3, #1
+ 704 03a8 5823     		mov	r3, #88
+ 705 03aa E35A     		ldrh	r3, [r4, r3]
+ 706 03ac 9342     		cmp	r3, r2
+ 707 03ae 01DA     		bge	.L40
+ 708              		.loc 1 914 0
+ 709 03b0 5823     		mov	r3, #88
+ 710 03b2 E252     		strh	r2, [r4, r3]
+ 711              	.L40:
+ 712              		.loc 1 917 0
+ 713 03b4 A28F     		ldrh	r2, [r4, #60]
+ 714 03b6 5300     		lsl	r3, r2, #1
+ 715 03b8 9B18     		add	r3, r3, r2
+ 716 03ba 5822     		mov	r2, #88
+ 717 03bc A25A     		ldrh	r2, [r4, r2]
+ 718 03be 9B18     		add	r3, r3, r2
+ 719 03c0 5622     		mov	r2, #86
+ 720 03c2 A352     		strh	r3, [r4, r2]
+ 721              		.loc 1 918 0
+ 722 03c4 2621     		mov	r1, #38
+ 723 03c6 635C     		ldrb	r3, [r4, r1]
+ 724 03c8 0422     		mov	r2, #4
+ 725 03ca 1343     		orr	r3, r3, r2
+ 726 03cc 6354     		strb	r3, [r4, r1]
+ 727              	.LVL83:
+ 728              	.L41:
+ 729              		.loc 1 920 0
+ 730              		@ sp needed for prologue
+ 731              	.LVL84:
+ 732 03ce 10BC     		pop	{r4}
+ 733 03d0 01BC     		pop	{r0}
+ 734 03d2 0047     		bx	r0
+ 735              	.LFE300:
+ 737              		.align	2
+ 738              		.global	tcp_output
+ 739              		.code	16
+ 740              		.thumb_func
+ 742              	tcp_output:
+ 743              	.LFB295:
+ 744              		.loc 1 519 0
+ 745 03d4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 746              	.LCFI14:
+ 747 03d6 5F46     		mov	r7, fp
+ 748 03d8 5646     		mov	r6, sl
+ 749 03da 4D46     		mov	r5, r9
+ 750 03dc 4446     		mov	r4, r8
+ 751 03de F0B4     		push	{r4, r5, r6, r7}
+ 752              	.LCFI15:
+ 753              	.LVL85:
+ 754 03e0 85B0     		sub	sp, sp, #20
+ 755              	.LCFI16:
+ 756 03e2 071C     		mov	r7, r0
+ 757              		.loc 1 530 0
+ 758 03e4 AD4B     		ldr	r3, .L77
+ 759 03e6 1B68     		ldr	r3, [r3]
+ 760 03e8 BB42     		cmp	r3, r7
+ 761 03ea 01D1     		bne	.L43
+ 762              	.LVL86:
+ 763 03ec 0020     		mov	r0, #0
+ 764 03ee 45E1     		b	.L44
+ 765              	.LVL87:
+ 766              	.L43:
+ 767              		.loc 1 534 0
+ 768 03f0 5623     		mov	r3, #86
+ 769 03f2 C05A     		ldrh	r0, [r0, r3]
+ 770 03f4 6023     		mov	r3, #96
+ 771 03f6 F95A     		ldrh	r1, [r7, r3]
+ 772 03f8 0A04     		lsl	r2, r1, #16
+ 773 03fa 0304     		lsl	r3, r0, #16
+ 774 03fc 9342     		cmp	r3, r2
+ 775 03fe 00D2     		bcs	.L45
+ 776 0400 011C     		add	r1, r0, #0
+ 777              	.L45:
+ 778 0402 0B04     		lsl	r3, r1, #16
+ 779 0404 1B0C     		lsr	r3, r3, #16
+ 780 0406 0393     		str	r3, [sp, #12]
+ 781              	.LVL88:
+ 782              		.loc 1 536 0
+ 783 0408 BE6F     		ldr	r6, [r7, #120]
+ 784              	.LVL89:
+ 785              		.loc 1 544 0
+ 786 040a 2623     		mov	r3, #38
+ 787 040c FB5C     		ldrb	r3, [r7, r3]
+ 788 040e 9907     		lsl	r1, r3, #30
+ 789 0410 12D5     		bpl	.L46
+ 790 0412 002E     		cmp	r6, #0
+ 791 0414 0AD0     		beq	.L47
+ 792 0416 3369     		ldr	r3, [r6, #16]
+ 793 0418 5868     		ldr	r0, [r3, #4]
+ 794 041a FFF7FEFF 		bl	ntohl
+ 795 041e B389     		ldrh	r3, [r6, #12]
+ 796 0420 3A6D     		ldr	r2, [r7, #80]
+ 797 0422 9B1A     		sub	r3, r3, r2
+ 798 0424 1B18     		add	r3, r3, r0
+ 799 0426 039A     		ldr	r2, [sp, #12]
+ 800 0428 9A42     		cmp	r2, r3
+ 801 042a 05D2     		bcs	.L46
+ 802              	.L47:
+ 803              		.loc 1 547 0
+ 804 042c 381C     		mov	r0, r7
+ 805 042e FFF7FEFF 		bl	tcp_send_empty_ack
+ 806 0432 0006     		lsl	r0, r0, #24
+ 807 0434 000E     		lsr	r0, r0, #24
+ 808 0436 21E1     		b	.L44
+ 809              	.L46:
+ 810              		.loc 1 551 0
+ 811 0438 FB6F     		ldr	r3, [r7, #124]
+ 812 043a 9846     		mov	r8, r3
+ 813              	.LVL90:
+ 814              		.loc 1 552 0
+ 815 043c 002B     		cmp	r3, #0
+ 816 043e 0ED1     		bne	.L76
+ 817              	.LVL91:
+ 818              	.L52:
+ 819              		.loc 1 578 0
+ 820 0440 002E     		cmp	r6, #0
+ 821 0442 00D1     		bne	.LCB745
+ 822 0444 14E1     		b	.L49	@long jump
+ 823              	.LCB745:
+ 824              	.LBB5:
+ 825              	.LBB7:
+ 826              		.loc 1 702 0
+ 827 0446 BA46     		mov	sl, r7
+ 828              		.loc 1 703 0
+ 829 0448 391D     		add	r1, r7, #4
+ 830 044a 8946     		mov	r9, r1
+ 831              	.LBE7:
+ 832              	.LBE5:
+ 833              	.LBB15:
+ 834              		.loc 1 628 0
+ 835 044c 3A1C     		mov	r2, r7
+ 836 044e 7C32     		add	r2, r2, #124
+ 837 0450 0492     		str	r2, [sp, #16]
+ 838              	.LVL92:
+ 839              	.LBE15:
+ 840              		.loc 1 606 0
+ 841 0452 0323     		mov	r3, #3
+ 842 0454 9B46     		mov	fp, r3
+ 843              	.LBB16:
+ 844              	.LBB6:
+ 845              		.loc 1 738 0
+ 846 0456 9249     		ldr	r1, .L77+4
+ 847 0458 0291     		str	r1, [sp, #8]
+ 848 045a E7E0     		b	.L50
+ 849              	.LVL93:
+ 850              	.L51:
+ 851              	.LBE6:
+ 852              	.LBE16:
+ 853              	.LBB17:
+ 854              		.loc 1 628 0
+ 855 045c 9846     		mov	r8, r3
+ 856              	.LVL94:
+ 857              	.L76:
+ 858              	.LBE17:
+ 859              		.loc 1 553 0
+ 860 045e 4246     		mov	r2, r8
+ 861 0460 1368     		ldr	r3, [r2]
+ 862              	.LVL95:
+ 863 0462 002B     		cmp	r3, #0
+ 864 0464 FAD1     		bne	.L51
+ 865 0466 EBE7     		b	.L52
+ 866              	.LVL96:
+ 867              	.L73:
+ 868              		.loc 1 589 0
+ 869 0468 FB6F     		ldr	r3, [r7, #124]
+ 870 046a 002B     		cmp	r3, #0
+ 871 046c 10D0     		beq	.L53
+ 872 046e 2623     		mov	r3, #38
+ 873 0470 F95C     		ldrb	r1, [r7, r3]
+ 874 0472 4422     		mov	r2, #68
+ 875 0474 1142     		tst	r1, r2
+ 876 0476 0BD1     		bne	.L53
+ 877 0478 BA6F     		ldr	r2, [r7, #120]
+ 878 047a 002A     		cmp	r2, #0
+ 879 047c 00D1     		bne	.LCB808
+ 880 047e 08E1     		b	.L54	@long jump
+ 881              	.LCB808:
+ 882 0480 1368     		ldr	r3, [r2]
+ 883 0482 002B     		cmp	r3, #0
+ 884 0484 04D1     		bne	.L53
+ 885 0486 9289     		ldrh	r2, [r2, #12]
+ 886 0488 BB8F     		ldrh	r3, [r7, #60]
+ 887 048a 9A42     		cmp	r2, r3
+ 888 048c 00D2     		bcs	.LCB815
+ 889 048e 00E1     		b	.L54	@long jump
+ 890              	.LCB815:
+ 891              	.L53:
+ 892              		.loc 1 602 0
+ 893 0490 3368     		ldr	r3, [r6]
+ 894 0492 BB67     		str	r3, [r7, #120]
+ 895              		.loc 1 604 0
+ 896 0494 3B69     		ldr	r3, [r7, #16]
+ 897 0496 022B     		cmp	r3, #2
+ 898 0498 0BD0     		beq	.L55
+ 899              		.loc 1 605 0
+ 900 049a 3469     		ldr	r4, [r6, #16]
+ 901 049c A589     		ldrh	r5, [r4, #12]
+ 902 049e 1020     		mov	r0, #16
+ 903 04a0 FFF7FEFF 		bl	htons
+ 904 04a4 2843     		orr	r0, r0, r5
+ 905 04a6 A081     		strh	r0, [r4, #12]
+ 906              		.loc 1 606 0
+ 907 04a8 2621     		mov	r1, #38
+ 908 04aa 7B5C     		ldrb	r3, [r7, r1]
+ 909 04ac 5A46     		mov	r2, fp
+ 910 04ae 9343     		bic	r3, r3, r2
+ 911 04b0 7B54     		strb	r3, [r7, r1]
+ 912              	.LVL97:
+ 913              	.L55:
+ 914              	.LBB18:
+ 915              	.LBB8:
+ 916              		.loc 1 677 0
+ 917 04b2 3469     		ldr	r4, [r6, #16]
+ 918              	.LBE8:
+ 919 04b4 B86A     		ldr	r0, [r7, #40]
+ 920 04b6 FFF7FEFF 		bl	htonl
+ 921              	.LBB9:
+ 922 04ba A060     		str	r0, [r4, #8]
+ 923              		.loc 1 680 0
+ 924 04bc 3469     		ldr	r4, [r6, #16]
+ 925              	.LBE9:
+ 926 04be F88D     		ldrh	r0, [r7, #46]
+ 927 04c0 FFF7FEFF 		bl	htons
+ 928              	.LBB10:
+ 929 04c4 E081     		strh	r0, [r4, #14]
+ 930              		.loc 1 682 0
+ 931 04c6 FB8D     		ldrh	r3, [r7, #46]
+ 932 04c8 BA6A     		ldr	r2, [r7, #40]
+ 933 04ca 9B18     		add	r3, r3, r2
+ 934 04cc 3B63     		str	r3, [r7, #48]
+ 935              		.loc 1 686 0
+ 936 04ce 3469     		ldr	r4, [r6, #16]
+ 937              	.LBE10:
+ 938              		.loc 1 687 0
+ 939 04d0 B37B     		ldrb	r3, [r6, #14]
+ 940 04d2 0121     		mov	r1, #1
+ 941 04d4 0B42     		tst	r3, r1
+ 942 04d6 03D0     		beq	.L56
+ 943              		.loc 1 688 0
+ 944 04d8 7248     		ldr	r0, .L77+8
+ 945 04da FFF7FEFF 		bl	htonl
+ 946              	.LBB11:
+ 947 04de 6061     		str	r0, [r4, #20]
+ 948              	.L56:
+ 949              		.loc 1 702 0
+ 950 04e0 5246     		mov	r2, sl
+ 951 04e2 002A     		cmp	r2, #0
+ 952 04e4 02D0     		beq	.L57
+ 953 04e6 3B68     		ldr	r3, [r7]
+ 954 04e8 002B     		cmp	r3, #0
+ 955 04ea 0AD1     		bne	.L58
+ 956              	.L57:
+ 957              	.LBE11:
+ 958              		.loc 1 703 0
+ 959 04ec 4846     		mov	r0, r9
+ 960 04ee FFF7FEFF 		bl	ip_route
+ 961              	.LBB12:
+ 962              		.loc 1 704 0
+ 963 04f2 0028     		cmp	r0, #0
+ 964 04f4 42D0     		beq	.L59
+ 965              	.LVL98:
+ 966              		.loc 1 707 0
+ 967 04f6 031D     		add	r3, r0, #4
+ 968 04f8 01D1     		bne	.L60
+ 969 04fa 0020     		mov	r0, #0
+ 970              	.LVL99:
+ 971 04fc 00E0     		b	.L61
+ 972              	.LVL100:
+ 973              	.L60:
+ 974 04fe 4068     		ldr	r0, [r0, #4]
+ 975              	.LVL101:
+ 976              	.L61:
+ 977 0500 3860     		str	r0, [r7]
+ 978              	.L58:
+ 979              		.loc 1 711 0
+ 980 0502 3A21     		mov	r1, #58
+ 981 0504 7B5E     		ldrsh	r3, [r7, r1]
+ 982 0506 0133     		add	r3, r3, #1
+ 983 0508 01D1     		bne	.L62
+ 984              		.loc 1 712 0
+ 985 050a 0022     		mov	r2, #0
+ 986 050c 7A87     		strh	r2, [r7, #58]
+ 987              	.L62:
+ 988              		.loc 1 714 0
+ 989 050e 3B6C     		ldr	r3, [r7, #64]
+ 990 0510 002B     		cmp	r3, #0
+ 991 0512 07D1     		bne	.L63
+ 992              		.loc 1 715 0
+ 993 0514 644B     		ldr	r3, .L77+12
+ 994 0516 1B68     		ldr	r3, [r3]
+ 995 0518 3B64     		str	r3, [r7, #64]
+ 996              	.LBE12:
+ 997              		.loc 1 716 0
+ 998 051a 3369     		ldr	r3, [r6, #16]
+ 999 051c 5868     		ldr	r0, [r3, #4]
+ 1000 051e FFF7FEFF 		bl	ntohl
+ 1001              	.LBB13:
+ 1002 0522 7864     		str	r0, [r7, #68]
+ 1003              	.L63:
+ 1004              		.loc 1 724 0
+ 1005 0524 7168     		ldr	r1, [r6, #4]
+ 1006 0526 328A     		ldrh	r2, [r6, #16]
+ 1007 0528 8B88     		ldrh	r3, [r1, #4]
+ 1008 052a D21A     		sub	r2, r2, r3
+ 1009 052c 1204     		lsl	r2, r2, #16
+ 1010 052e 120C     		lsr	r2, r2, #16
+ 1011              	.LVL102:
+ 1012              		.loc 1 726 0
+ 1013 0530 4B89     		ldrh	r3, [r1, #10]
+ 1014 0532 9B1A     		sub	r3, r3, r2
+ 1015 0534 4B81     		strh	r3, [r1, #10]
+ 1016              		.loc 1 727 0
+ 1017 0536 7168     		ldr	r1, [r6, #4]
+ 1018 0538 0B89     		ldrh	r3, [r1, #8]
+ 1019 053a 9B1A     		sub	r3, r3, r2
+ 1020 053c 0B81     		strh	r3, [r1, #8]
+ 1021              		.loc 1 729 0
+ 1022 053e 7268     		ldr	r2, [r6, #4]
+ 1023              	.LVL103:
+ 1024 0540 3369     		ldr	r3, [r6, #16]
+ 1025 0542 5360     		str	r3, [r2, #4]
+ 1026              		.loc 1 731 0
+ 1027 0544 3369     		ldr	r3, [r6, #16]
+ 1028 0546 0021     		mov	r1, #0
+ 1029 0548 1982     		strh	r1, [r3, #16]
+ 1030              		.loc 1 733 0
+ 1031 054a 3469     		ldr	r4, [r6, #16]
+ 1032 054c 7068     		ldr	r0, [r6, #4]
+ 1033              	.LBE13:
+ 1034 054e 0389     		ldrh	r3, [r0, #8]
+ 1035 0550 0093     		str	r3, [sp]
+ 1036 0552 5146     		mov	r1, sl
+ 1037 0554 4A46     		mov	r2, r9
+ 1038 0556 0623     		mov	r3, #6
+ 1039 0558 FFF7FEFF 		bl	inet_chksum_pseudo
+ 1040              	.LBB14:
+ 1041 055c 2082     		strh	r0, [r4, #16]
+ 1042              		.loc 1 738 0
+ 1043 055e 9022     		mov	r2, #144
+ 1044 0560 0299     		ldr	r1, [sp, #8]
+ 1045 0562 8B5A     		ldrh	r3, [r1, r2]
+ 1046 0564 0133     		add	r3, r3, #1
+ 1047 0566 8B52     		strh	r3, [r1, r2]
+ 1048              		.loc 1 744 0
+ 1049 0568 7068     		ldr	r0, [r6, #4]
+ 1050 056a FB7A     		ldrb	r3, [r7, #11]
+ 1051 056c BA7A     		ldrb	r2, [r7, #10]
+ 1052 056e 0092     		str	r2, [sp]
+ 1053 0570 0622     		mov	r2, #6
+ 1054 0572 0192     		str	r2, [sp, #4]
+ 1055 0574 5146     		mov	r1, sl
+ 1056 0576 4A46     		mov	r2, r9
+ 1057 0578 FFF7FEFF 		bl	ip_output
+ 1058              	.LVL104:
+ 1059              	.L59:
+ 1060              	.LBE14:
+ 1061              	.LBE18:
+ 1062              		.loc 1 610 0
+ 1063 057c 3369     		ldr	r3, [r6, #16]
+ 1064 057e 5868     		ldr	r0, [r3, #4]
+ 1065              	.LVL105:
+ 1066 0580 FFF7FEFF 		bl	ntohl
+ 1067 0584 051C     		mov	r5, r0
+ 1068 0586 B489     		ldrh	r4, [r6, #12]
+ 1069 0588 3369     		ldr	r3, [r6, #16]
+ 1070 058a 9889     		ldrh	r0, [r3, #12]
+ 1071 058c FFF7FEFF 		bl	ntohs
+ 1072 0590 5A46     		mov	r2, fp
+ 1073 0592 1040     		and	r0, r0, r2
+ 1074 0594 431E     		sub	r3, r0, #1
+ 1075 0596 9841     		sbc	r0, r0, r3
+ 1076 0598 0019     		add	r0, r0, r4
+ 1077 059a 4019     		add	r0, r0, r5
+ 1078              	.LVL106:
+ 1079              		.loc 1 611 0
+ 1080 059c FB6D     		ldr	r3, [r7, #92]
+ 1081 059e 8342     		cmp	r3, r0
+ 1082 05a0 00D5     		bpl	.L64
+ 1083              		.loc 1 612 0
+ 1084 05a2 F865     		str	r0, [r7, #92]
+ 1085              	.L64:
+ 1086              		.loc 1 615 0
+ 1087 05a4 B489     		ldrh	r4, [r6, #12]
+ 1088 05a6 3369     		ldr	r3, [r6, #16]
+ 1089 05a8 9889     		ldrh	r0, [r3, #12]
+ 1090              	.LVL107:
+ 1091 05aa FFF7FEFF 		bl	ntohs
+ 1092 05ae 5B46     		mov	r3, fp
+ 1093 05b0 1840     		and	r0, r0, r3
+ 1094 05b2 431E     		sub	r3, r0, #1
+ 1095 05b4 9841     		sbc	r0, r0, r3
+ 1096 05b6 0019     		add	r0, r0, r4
+ 1097 05b8 0028     		cmp	r0, #0
+ 1098 05ba 31DD     		ble	.L65
+ 1099              		.loc 1 616 0
+ 1100 05bc 0021     		mov	r1, #0
+ 1101 05be 3160     		str	r1, [r6]
+ 1102              		.loc 1 618 0
+ 1103 05c0 FB6F     		ldr	r3, [r7, #124]
+ 1104 05c2 002B     		cmp	r3, #0
+ 1105 05c4 02D1     		bne	.L66
+ 1106              		.loc 1 619 0
+ 1107 05c6 FE67     		str	r6, [r7, #124]
+ 1108 05c8 B046     		mov	r8, r6
+ 1109 05ca 2CE0     		b	.L67
+ 1110              	.L66:
+ 1111              		.loc 1 626 0
+ 1112 05cc 3369     		ldr	r3, [r6, #16]
+ 1113 05ce 5868     		ldr	r0, [r3, #4]
+ 1114 05d0 FFF7FEFF 		bl	ntohl
+ 1115 05d4 041C     		mov	r4, r0
+ 1116 05d6 4246     		mov	r2, r8
+ 1117 05d8 1369     		ldr	r3, [r2, #16]
+ 1118 05da 5868     		ldr	r0, [r3, #4]
+ 1119 05dc FFF7FEFF 		bl	ntohl
+ 1120 05e0 8442     		cmp	r4, r0
+ 1121 05e2 19D5     		bpl	.L68
+ 1122              	.LBB19:
+ 1123              		.loc 1 629 0
+ 1124 05e4 FB6F     		ldr	r3, [r7, #124]
+ 1125 05e6 002B     		cmp	r3, #0
+ 1126 05e8 01D1     		bne	.L69
+ 1127 05ea 049D     		ldr	r5, [sp, #16]
+ 1128 05ec 10E0     		b	.L70
+ 1129              	.LVL108:
+ 1130              	.L69:
+ 1131 05ee 049D     		ldr	r5, [sp, #16]
+ 1132 05f0 03E0     		b	.L71
+ 1133              	.LVL109:
+ 1134              	.L72:
+ 1135              		.loc 1 631 0
+ 1136 05f2 2D68     		ldr	r5, [r5]
+ 1137              		.loc 1 629 0
+ 1138 05f4 2B68     		ldr	r3, [r5]
+ 1139 05f6 002B     		cmp	r3, #0
+ 1140 05f8 0AD0     		beq	.L70
+ 1141              	.LVL110:
+ 1142              	.L71:
+ 1143 05fa 1B69     		ldr	r3, [r3, #16]
+ 1144 05fc 5868     		ldr	r0, [r3, #4]
+ 1145 05fe FFF7FEFF 		bl	ntohl
+ 1146 0602 041C     		mov	r4, r0
+ 1147 0604 3369     		ldr	r3, [r6, #16]
+ 1148 0606 5868     		ldr	r0, [r3, #4]
+ 1149 0608 FFF7FEFF 		bl	ntohl
+ 1150 060c 8442     		cmp	r4, r0
+ 1151 060e F0D4     		bmi	.L72
+ 1152              	.L70:
+ 1153              		.loc 1 633 0
+ 1154 0610 2B68     		ldr	r3, [r5]
+ 1155 0612 3360     		str	r3, [r6]
+ 1156              		.loc 1 634 0
+ 1157 0614 2E60     		str	r6, [r5]
+ 1158 0616 06E0     		b	.L67
+ 1159              	.LVL111:
+ 1160              	.L68:
+ 1161              	.LBE19:
+ 1162              		.loc 1 637 0
+ 1163 0618 4346     		mov	r3, r8
+ 1164 061a 1E60     		str	r6, [r3]
+ 1165 061c B046     		mov	r8, r6
+ 1166 061e 02E0     		b	.L67
+ 1167              	.L65:
+ 1168              		.loc 1 643 0
+ 1169 0620 301C     		mov	r0, r6
+ 1170 0622 FFF7FEFF 		bl	tcp_seg_free
+ 1171              	.LVL112:
+ 1172              	.L67:
+ 1173              		.loc 1 645 0
+ 1174 0626 BE6F     		ldr	r6, [r7, #120]
+ 1175              		.loc 1 578 0
+ 1176 0628 002E     		cmp	r6, #0
+ 1177 062a 21D0     		beq	.L49
+ 1178              	.LVL113:
+ 1179              	.L50:
+ 1180 062c 3369     		ldr	r3, [r6, #16]
+ 1181 062e 5868     		ldr	r0, [r3, #4]
+ 1182 0630 FFF7FEFF 		bl	ntohl
+ 1183 0634 B389     		ldrh	r3, [r6, #12]
+ 1184 0636 3A6D     		ldr	r2, [r7, #80]
+ 1185 0638 9B1A     		sub	r3, r3, r2
+ 1186 063a 1B18     		add	r3, r3, r0
+ 1187 063c 0399     		ldr	r1, [sp, #12]
+ 1188 063e 9942     		cmp	r1, r3
+ 1189 0640 00D3     		bcc	.LCB1099
+ 1190 0642 11E7     		b	.L73	@long jump
+ 1191              	.LCB1099:
+ 1192              	.L74:
+ 1193              		.loc 1 648 0
+ 1194 0644 A423     		mov	r3, #164
+ 1195 0646 FB5C     		ldrb	r3, [r7, r3]
+ 1196 0648 002B     		cmp	r3, #0
+ 1197 064a 11D1     		bne	.L49
+ 1198 064c 3369     		ldr	r3, [r6, #16]
+ 1199 064e 5868     		ldr	r0, [r3, #4]
+ 1200 0650 FFF7FEFF 		bl	ntohl
+ 1201 0654 B389     		ldrh	r3, [r6, #12]
+ 1202 0656 3A6D     		ldr	r2, [r7, #80]
+ 1203 0658 9B1A     		sub	r3, r3, r2
+ 1204 065a 1B18     		add	r3, r3, r0
+ 1205 065c 6022     		mov	r2, #96
+ 1206 065e BA5A     		ldrh	r2, [r7, r2]
+ 1207 0660 9342     		cmp	r3, r2
+ 1208 0662 05D9     		bls	.L49
+ 1209              		.loc 1 651 0
+ 1210 0664 0022     		mov	r2, #0
+ 1211 0666 A023     		mov	r3, #160
+ 1212 0668 FA50     		str	r2, [r7, r3]
+ 1213              		.loc 1 652 0
+ 1214 066a 0122     		mov	r2, #1
+ 1215 066c A423     		mov	r3, #164
+ 1216 066e FA54     		strb	r2, [r7, r3]
+ 1217              	.LVL114:
+ 1218              	.L49:
+ 1219              		.loc 1 655 0
+ 1220 0670 2623     		mov	r3, #38
+ 1221 0672 FA5C     		ldrb	r2, [r7, r3]
+ 1222 0674 7F21     		mov	r1, #127
+ 1223 0676 0A40     		and	r2, r2, r1
+ 1224 0678 FA54     		strb	r2, [r7, r3]
+ 1225 067a 0020     		mov	r0, #0
+ 1226              	.L44:
+ 1227 067c 0006     		lsl	r0, r0, #24
+ 1228 067e 0016     		asr	r0, r0, #24
+ 1229              		.loc 1 657 0
+ 1230 0680 05B0     		add	sp, sp, #20
+ 1231              		@ sp needed for prologue
+ 1232              	.LVL115:
+ 1233              	.LVL116:
+ 1234              	.LVL117:
+ 1235 0682 3CBC     		pop	{r2, r3, r4, r5}
+ 1236 0684 9046     		mov	r8, r2
+ 1237 0686 9946     		mov	r9, r3
+ 1238 0688 A246     		mov	sl, r4
+ 1239 068a AB46     		mov	fp, r5
+ 1240 068c F0BC     		pop	{r4, r5, r6, r7}
+ 1241 068e 02BC     		pop	{r1}
+ 1242 0690 0847     		bx	r1
+ 1243              	.LVL118:
+ 1244              	.L54:
+ 1245              		.loc 1 589 0
+ 1246 0692 A022     		mov	r2, #160
+ 1247 0694 1142     		tst	r1, r2
+ 1248 0696 00D0     		beq	.LCB1164
+ 1249 0698 FAE6     		b	.L53	@long jump
+ 1250              	.LCB1164:
+ 1251 069a D3E7     		b	.L74
+ 1252              	.L78:
+ 1253              		.align	2
+ 1254              	.L77:
+ 1255 069c 00000000 		.word	tcp_input_pcb
+ 1256 06a0 00000000 		.word	lwip_stats
+ 1257 06a4 00020402 		.word	33817088
+ 1258 06a8 00000000 		.word	tcp_ticks
+ 1259              	.LFE295:
+ 1261              		.align	2
+ 1262              		.global	tcp_rexmit_rto
+ 1263              		.code	16
+ 1264              		.thumb_func
+ 1266              	tcp_rexmit_rto:
+ 1267              	.LFB298:
+ 1268              		.loc 1 816 0
+ 1269 06ac 00B5     		push	{lr}
+ 1270              	.LCFI17:
+ 1271              	.LVL119:
+ 1272              		.loc 1 819 0
+ 1273 06ae C36F     		ldr	r3, [r0, #124]
+ 1274              	.LVL120:
+ 1275 06b0 002B     		cmp	r3, #0
+ 1276 06b2 10D0     		beq	.L82
+ 1277              	.L83:
+ 1278              		.loc 1 824 0
+ 1279 06b4 1A1C     		mov	r2, r3
+ 1280 06b6 1B68     		ldr	r3, [r3]
+ 1281 06b8 002B     		cmp	r3, #0
+ 1282 06ba FBD1     		bne	.L83
+ 1283              		.loc 1 826 0
+ 1284 06bc 836F     		ldr	r3, [r0, #120]
+ 1285              	.LVL121:
+ 1286 06be 1360     		str	r3, [r2]
+ 1287              	.LVL122:
+ 1288              		.loc 1 828 0
+ 1289 06c0 C36F     		ldr	r3, [r0, #124]
+ 1290 06c2 8367     		str	r3, [r0, #120]
+ 1291              		.loc 1 830 0
+ 1292 06c4 0021     		mov	r1, #0
+ 1293 06c6 C167     		str	r1, [r0, #124]
+ 1294              		.loc 1 833 0
+ 1295 06c8 4E22     		mov	r2, #78
+ 1296              	.LVL123:
+ 1297 06ca 835C     		ldrb	r3, [r0, r2]
+ 1298 06cc 0133     		add	r3, r3, #1
+ 1299 06ce 8354     		strb	r3, [r0, r2]
+ 1300              		.loc 1 836 0
+ 1301 06d0 0164     		str	r1, [r0, #64]
+ 1302              		.loc 1 839 0
+ 1303 06d2 FFF7FEFF 		bl	tcp_output
+ 1304              	.LVL124:
+ 1305              	.L82:
+ 1306              		.loc 1 840 0
+ 1307              		@ sp needed for prologue
+ 1308 06d6 01BC     		pop	{r0}
+ 1309 06d8 0047     		bx	r0
+ 1310              	.LFE298:
+ 1312 06da C046     		.align	2
+ 1313              		.global	tcp_enqueue
+ 1314              		.code	16
+ 1315              		.thumb_func
+ 1317              	tcp_enqueue:
+ 1318              	.LFB293:
+ 1319              		.loc 1 157 0
+ 1320 06dc F0B5     		push	{r4, r5, r6, r7, lr}
+ 1321              	.LCFI18:
+ 1322 06de 5F46     		mov	r7, fp
+ 1323 06e0 5646     		mov	r6, sl
+ 1324 06e2 4D46     		mov	r5, r9
+ 1325 06e4 4446     		mov	r4, r8
+ 1326 06e6 F0B4     		push	{r4, r5, r6, r7}
+ 1327              	.LCFI19:
+ 1328              	.LVL125:
+ 1329 06e8 92B0     		sub	sp, sp, #72
+ 1330              	.LCFI20:
+ 1331 06ea 0890     		str	r0, [sp, #32]
+ 1332 06ec 0C1C     		mov	r4, r1
+ 1333 06ee 1B99     		ldr	r1, [sp, #108]
+ 1334              	.LVL126:
+ 1335 06f0 1C98     		ldr	r0, [sp, #112]
+ 1336              	.LVL127:
+ 1337 06f2 1204     		lsl	r2, r2, #16
+ 1338              	.LVL128:
+ 1339 06f4 120C     		lsr	r2, r2, #16
+ 1340 06f6 0792     		str	r2, [sp, #28]
+ 1341              	.LVL129:
+ 1342 06f8 1B06     		lsl	r3, r3, #24
+ 1343              	.LVL130:
+ 1344 06fa 1B0E     		lsr	r3, r3, #24
+ 1345 06fc 0693     		str	r3, [sp, #24]
+ 1346              	.LVL131:
+ 1347 06fe 0906     		lsl	r1, r1, #24
+ 1348 0700 090E     		lsr	r1, r1, #24
+ 1349              	.LVL132:
+ 1350 0702 0006     		lsl	r0, r0, #24
+ 1351 0704 000E     		lsr	r0, r0, #24
+ 1352 0706 0590     		str	r0, [sp, #20]
+ 1353              	.LVL133:
+ 1354              		.loc 1 169 0
+ 1355 0708 101C     		mov	r0, r2
+ 1356 070a 4342     		neg	r3, r0
+ 1357 070c 4341     		adc	r3, r3, r0
+ 1358 070e 002B     		cmp	r3, #0
+ 1359 0710 06D0     		beq	.L86
+ 1360 0712 059A     		ldr	r2, [sp, #20]
+ 1361 0714 002A     		cmp	r2, #0
+ 1362 0716 03D1     		bne	.L86
+ 1363              	.LVL134:
+ 1364 0718 0698     		ldr	r0, [sp, #24]
+ 1365 071a 8007     		lsl	r0, r0, #30
+ 1366 071c 00D1     		bne	.LCB1270
+ 1367 071e F6E1     		b	.L87	@long jump
+ 1368              	.LCB1270:
+ 1369              	.LVL135:
+ 1370              	.L86:
+ 1371              		.loc 1 172 0
+ 1372 0720 201C     		mov	r0, r4
+ 1373 0722 421E     		sub	r2, r0, #1
+ 1374 0724 9041     		sbc	r0, r0, r2
+ 1375 0726 0990     		str	r0, [sp, #36]
+ 1376 0728 002B     		cmp	r3, #0
+ 1377 072a 02D0     		beq	.L123
+ 1378 072c 0028     		cmp	r0, #0
+ 1379 072e 00D0     		beq	.LCB1282
+ 1380 0730 EDE1     		b	.L87	@long jump
+ 1381              	.LCB1282:
+ 1382              	.L123:
+ 1383              		.loc 1 176 0
+ 1384 0732 7223     		mov	r3, #114
+ 1385 0734 089A     		ldr	r2, [sp, #32]
+ 1386 0736 D35A     		ldrh	r3, [r2, r3]
+ 1387 0738 0798     		ldr	r0, [sp, #28]
+ 1388 073a 8342     		cmp	r3, r0
+ 1389 073c 08D2     		bcs	.L89
+ 1390              	.LVL136:
+ 1391              		.loc 1 179 0
+ 1392 073e 2623     		mov	r3, #38
+ 1393 0740 D25C     		ldrb	r2, [r2, r3]
+ 1394 0742 8021     		mov	r1, #128
+ 1395              	.LVL137:
+ 1396 0744 4942     		neg	r1, r1
+ 1397 0746 0A43     		orr	r2, r2, r1
+ 1398 0748 0899     		ldr	r1, [sp, #32]
+ 1399 074a CA54     		strb	r2, [r1, r3]
+ 1400 074c FF20     		mov	r0, #255
+ 1401 074e E1E1     		b	.L90
+ 1402              	.LVL138:
+ 1403              	.L89:
+ 1404              		.loc 1 185 0
+ 1405 0750 059A     		ldr	r2, [sp, #20]
+ 1406 0752 131C     		mov	r3, r2
+ 1407 0754 DB07     		lsl	r3, r3, #31
+ 1408 0756 01D4     		bmi	.L91
+ 1409              	.LVL139:
+ 1410 0758 0020     		mov	r0, #0
+ 1411 075a 00E0     		b	.L92
+ 1412              	.L91:
+ 1413 075c 0420     		mov	r0, #4
+ 1414              	.L92:
+ 1415 075e 9307     		lsl	r3, r2, #30
+ 1416 0760 01D4     		bmi	.L93
+ 1417 0762 0023     		mov	r3, #0
+ 1418 0764 00E0     		b	.L94
+ 1419              	.L93:
+ 1420 0766 0C23     		mov	r3, #12
+ 1421              	.L94:
+ 1422 0768 1818     		add	r0, r3, r0
+ 1423 076a 1090     		str	r0, [sp, #64]
+ 1424              	.LVL140:
+ 1425              		.loc 1 189 0
+ 1426 076c 0898     		ldr	r0, [sp, #32]
+ 1427 076e C06E     		ldr	r0, [r0, #108]
+ 1428 0770 0E90     		str	r0, [sp, #56]
+ 1429              	.LVL141:
+ 1430              		.loc 1 195 0
+ 1431 0772 7423     		mov	r3, #116
+ 1432 0774 089A     		ldr	r2, [sp, #32]
+ 1433 0776 D35A     		ldrh	r3, [r2, r3]
+ 1434 0778 1193     		str	r3, [sp, #68]
+ 1435              	.LVL142:
+ 1436              		.loc 1 197 0
+ 1437 077a 032B     		cmp	r3, #3
+ 1438 077c 00D8     		bhi	.LCB1351
+ 1439 077e D8E1     		b	.L95	@long jump
+ 1440              	.LCB1351:
+ 1441              		.loc 1 200 0
+ 1442 0780 B849     		ldr	r1, .L126
+ 1443              	.LVL143:
+ 1444 0782 9C22     		mov	r2, #156
+ 1445 0784 8B5A     		ldrh	r3, [r1, r2]
+ 1446 0786 0133     		add	r3, r3, #1
+ 1447 0788 8B52     		strh	r3, [r1, r2]
+ 1448              		.loc 1 201 0
+ 1449 078a 2621     		mov	r1, #38
+ 1450 078c 0898     		ldr	r0, [sp, #32]
+ 1451 078e 435C     		ldrb	r3, [r0, r1]
+ 1452 0790 8022     		mov	r2, #128
+ 1453 0792 5242     		neg	r2, r2
+ 1454 0794 1343     		orr	r3, r3, r2
+ 1455 0796 4354     		strb	r3, [r0, r1]
+ 1456 0798 FF20     		mov	r0, #255
+ 1457 079a BBE1     		b	.L90
+ 1458              	.LVL144:
+ 1459              	.L105:
+ 1460              		.loc 1 329 0
+ 1461 079c 0E99     		ldr	r1, [sp, #56]
+ 1462 079e 5144     		add	r1, r1, sl
+ 1463 07a0 0E91     		str	r1, [sp, #56]
+ 1464              	.LVL145:
+ 1465              		.loc 1 330 0
+ 1466 07a2 0F9A     		ldr	r2, [sp, #60]
+ 1467 07a4 5244     		add	r2, r2, sl
+ 1468 07a6 0F92     		str	r2, [sp, #60]
+ 1469              	.LVL146:
+ 1470 07a8 3E1C     		mov	r6, r7
+ 1471              	.LVL147:
+ 1472              	.L121:
+ 1473              		.loc 1 218 0
+ 1474 07aa 089B     		ldr	r3, [sp, #32]
+ 1475 07ac 9D8F     		ldrh	r5, [r3, #60]
+ 1476              		.loc 1 221 0
+ 1477 07ae 0420     		mov	r0, #4
+ 1478 07b0 FFF7FEFF 		bl	memp_malloc
+ 1479 07b4 071C     		mov	r7, r0
+ 1480              		.loc 1 222 0
+ 1481 07b6 0028     		cmp	r0, #0
+ 1482 07b8 00D1     		bne	.LCB1405
+ 1483 07ba 92E1     		b	.L96	@long jump
+ 1484              	.LCB1405:
+ 1485              	.LVL148:
+ 1486              		.loc 1 227 0
+ 1487 07bc 5846     		mov	r0, fp
+ 1488              	.LVL149:
+ 1489 07be 3860     		str	r0, [r7]
+ 1490              		.loc 1 228 0
+ 1491 07c0 7860     		str	r0, [r7, #4]
+ 1492              		.loc 1 231 0
+ 1493 07c2 002C     		cmp	r4, #0
+ 1494 07c4 01D0     		beq	.L97
+ 1495 07c6 0D97     		str	r7, [sp, #52]
+ 1496              	.LVL150:
+ 1497 07c8 00E0     		b	.L98
+ 1498              	.LVL151:
+ 1499              	.L97:
+ 1500              		.loc 1 238 0
+ 1501 07ca 3760     		str	r7, [r6]
+ 1502              	.L98:
+ 1503              		.loc 1 218 0
+ 1504 07cc 4B46     		mov	r3, r9
+ 1505 07ce 1099     		ldr	r1, [sp, #64]
+ 1506 07d0 6A1A     		sub	r2, r5, r1
+ 1507 07d2 9145     		cmp	r9, r2
+ 1508 07d4 00DD     		ble	.L99
+ 1509 07d6 131C     		mov	r3, r2
+ 1510              	.LVL152:
+ 1511              	.L99:
+ 1512 07d8 1B04     		lsl	r3, r3, #16
+ 1513              	.LVL153:
+ 1514 07da 1B0C     		lsr	r3, r3, #16
+ 1515 07dc 9A46     		mov	sl, r3
+ 1516              	.LVL154:
+ 1517              		.loc 1 246 0
+ 1518 07de 039A     		ldr	r2, [sp, #12]
+ 1519 07e0 0A92     		str	r2, [sp, #40]
+ 1520 07e2 029B     		ldr	r3, [sp, #8]
+ 1521 07e4 002B     		cmp	r3, #0
+ 1522 07e6 23D0     		beq	.L100
+ 1523              		.loc 1 247 0
+ 1524 07e8 6846     		mov	r0, sp
+ 1525 07ea 8188     		ldrh	r1, [r0, #4]
+ 1526 07ec 5144     		add	r1, r1, sl
+ 1527 07ee 0904     		lsl	r1, r1, #16
+ 1528 07f0 090C     		lsr	r1, r1, #16
+ 1529 07f2 5846     		mov	r0, fp
+ 1530 07f4 5A46     		mov	r2, fp
+ 1531 07f6 FFF7FEFF 		bl	pbuf_alloc
+ 1532 07fa 7860     		str	r0, [r7, #4]
+ 1533 07fc 0028     		cmp	r0, #0
+ 1534 07fe 00D1     		bne	.LCB1453
+ 1535 0800 6FE1     		b	.L96	@long jump
+ 1536              	.LCB1453:
+ 1537              		.loc 1 254 0
+ 1538 0802 FFF7FEFF 		bl	pbuf_clen
+ 1539 0806 041C     		mov	r4, r0
+ 1540              		.loc 1 255 0
+ 1541 0808 0999     		ldr	r1, [sp, #36]
+ 1542 080a 0029     		cmp	r1, #0
+ 1543 080c 07D0     		beq	.L101
+ 1544              		.loc 1 256 0
+ 1545 080e 7B68     		ldr	r3, [r7, #4]
+ 1546 0810 5868     		ldr	r0, [r3, #4]
+ 1547 0812 109A     		ldr	r2, [sp, #64]
+ 1548 0814 8018     		add	r0, r0, r2
+ 1549 0816 0F99     		ldr	r1, [sp, #60]
+ 1550 0818 5246     		mov	r2, sl
+ 1551 081a FFF7FEFF 		bl	memcpy
+ 1552              	.L101:
+ 1553              		.loc 1 254 0
+ 1554 081e 1198     		ldr	r0, [sp, #68]
+ 1555 0820 0319     		add	r3, r0, r4
+ 1556 0822 1B04     		lsl	r3, r3, #16
+ 1557 0824 1B0C     		lsr	r3, r3, #16
+ 1558 0826 1193     		str	r3, [sp, #68]
+ 1559              	.LVL155:
+ 1560              		.loc 1 258 0
+ 1561 0828 7B68     		ldr	r3, [r7, #4]
+ 1562 082a 5B68     		ldr	r3, [r3, #4]
+ 1563 082c BB60     		str	r3, [r7, #8]
+ 1564 082e 2BE0     		b	.L102
+ 1565              	.LVL156:
+ 1566              	.L100:
+ 1567              		.loc 1 263 0
+ 1568 0830 5846     		mov	r0, fp
+ 1569 0832 0499     		ldr	r1, [sp, #16]
+ 1570 0834 5A46     		mov	r2, fp
+ 1571 0836 FFF7FEFF 		bl	pbuf_alloc
+ 1572 083a 7860     		str	r0, [r7, #4]
+ 1573 083c 0028     		cmp	r0, #0
+ 1574 083e 00D1     		bne	.LCB1490
+ 1575 0840 4FE1     		b	.L96	@long jump
+ 1576              	.LCB1490:
+ 1577              		.loc 1 268 0
+ 1578 0842 FFF7FEFF 		bl	pbuf_clen
+ 1579 0846 1199     		ldr	r1, [sp, #68]
+ 1580 0848 0818     		add	r0, r1, r0
+ 1581 084a 0004     		lsl	r0, r0, #16
+ 1582 084c 000C     		lsr	r0, r0, #16
+ 1583 084e 1190     		str	r0, [sp, #68]
+ 1584              	.LVL157:
+ 1585              		.loc 1 275 0
+ 1586 0850 4246     		mov	r2, r8
+ 1587 0852 002A     		cmp	r2, #0
+ 1588 0854 18D0     		beq	.L102
+ 1589              		.loc 1 276 0
+ 1590 0856 0320     		mov	r0, #3
+ 1591 0858 5146     		mov	r1, sl
+ 1592 085a 0122     		mov	r2, #1
+ 1593 085c FFF7FEFF 		bl	pbuf_alloc
+ 1594 0860 011C     		mov	r1, r0
+ 1595              	.LVL158:
+ 1596 0862 0028     		cmp	r0, #0
+ 1597 0864 05D1     		bne	.L103
+ 1598              	.LVL159:
+ 1599              		.loc 1 278 0
+ 1600 0866 7868     		ldr	r0, [r7, #4]
+ 1601              	.LVL160:
+ 1602 0868 FFF7FEFF 		bl	pbuf_free
+ 1603              	.LVL161:
+ 1604              		.loc 1 279 0
+ 1605 086c 0023     		mov	r3, #0
+ 1606 086e 7B60     		str	r3, [r7, #4]
+ 1607 0870 37E1     		b	.L96
+ 1608              	.LVL162:
+ 1609              	.L103:
+ 1610              		.loc 1 284 0
+ 1611 0872 119B     		ldr	r3, [sp, #68]
+ 1612 0874 0133     		add	r3, r3, #1
+ 1613 0876 1B04     		lsl	r3, r3, #16
+ 1614 0878 1B0C     		lsr	r3, r3, #16
+ 1615 087a 1193     		str	r3, [sp, #68]
+ 1616              	.LVL163:
+ 1617              		.loc 1 286 0
+ 1618 087c 0F9B     		ldr	r3, [sp, #60]
+ 1619 087e 4360     		str	r3, [r0, #4]
+ 1620              		.loc 1 287 0
+ 1621 0880 BB60     		str	r3, [r7, #8]
+ 1622              		.loc 1 290 0
+ 1623 0882 7868     		ldr	r0, [r7, #4]
+ 1624              	.LVL164:
+ 1625 0884 FFF7FEFF 		bl	pbuf_cat
+ 1626              	.LVL165:
+ 1627              	.L102:
+ 1628              		.loc 1 297 0
+ 1629 0888 1198     		ldr	r0, [sp, #68]
+ 1630 088a 0428     		cmp	r0, #4
+ 1631 088c 00D9     		bls	.LCB1539
+ 1632 088e 28E1     		b	.L96	@long jump
+ 1633              	.LCB1539:
+ 1634              	.LVL166:
+ 1635              		.loc 1 303 0
+ 1636 0890 5146     		mov	r1, sl
+ 1637              	.LVL167:
+ 1638 0892 B981     		strh	r1, [r7, #12]
+ 1639              		.loc 1 306 0
+ 1640 0894 7868     		ldr	r0, [r7, #4]
+ 1641 0896 1421     		mov	r1, #20
+ 1642 0898 FFF7FEFF 		bl	pbuf_header
+ 1643 089c 0028     		cmp	r0, #0
+ 1644 089e 05D0     		beq	.L104
+ 1645              		.loc 1 308 0
+ 1646 08a0 7049     		ldr	r1, .L126
+ 1647 08a2 A422     		mov	r2, #164
+ 1648 08a4 8B5A     		ldrh	r3, [r1, r2]
+ 1649 08a6 0133     		add	r3, r3, #1
+ 1650 08a8 8B52     		strh	r3, [r1, r2]
+ 1651 08aa 1AE1     		b	.L96
+ 1652              	.L104:
+ 1653              		.loc 1 311 0
+ 1654 08ac 7B68     		ldr	r3, [r7, #4]
+ 1655 08ae 5C68     		ldr	r4, [r3, #4]
+ 1656 08b0 3C61     		str	r4, [r7, #16]
+ 1657              		.loc 1 312 0
+ 1658 08b2 089A     		ldr	r2, [sp, #32]
+ 1659 08b4 908B     		ldrh	r0, [r2, #28]
+ 1660 08b6 FFF7FEFF 		bl	htons
+ 1661 08ba 2080     		strh	r0, [r4]
+ 1662              		.loc 1 313 0
+ 1663 08bc 3C69     		ldr	r4, [r7, #16]
+ 1664 08be 089B     		ldr	r3, [sp, #32]
+ 1665 08c0 988C     		ldrh	r0, [r3, #36]
+ 1666 08c2 FFF7FEFF 		bl	htons
+ 1667 08c6 6080     		strh	r0, [r4, #2]
+ 1668              		.loc 1 314 0
+ 1669 08c8 3C69     		ldr	r4, [r7, #16]
+ 1670 08ca 0E98     		ldr	r0, [sp, #56]
+ 1671 08cc FFF7FEFF 		bl	htonl
+ 1672 08d0 6060     		str	r0, [r4, #4]
+ 1673              		.loc 1 315 0
+ 1674 08d2 3B69     		ldr	r3, [r7, #16]
+ 1675 08d4 5846     		mov	r0, fp
+ 1676 08d6 5882     		strh	r0, [r3, #18]
+ 1677              		.loc 1 316 0
+ 1678 08d8 3D69     		ldr	r5, [r7, #16]
+ 1679 08da AE89     		ldrh	r6, [r5, #12]
+ 1680              	.LVL168:
+ 1681 08dc 6248     		ldr	r0, .L126+4
+ 1682 08de FFF7FEFF 		bl	htons
+ 1683 08e2 041C     		mov	r4, r0
+ 1684 08e4 0099     		ldr	r1, [sp]
+ 1685 08e6 0B91     		str	r1, [sp, #44]
+ 1686 08e8 081C     		mov	r0, r1
+ 1687 08ea FFF7FEFF 		bl	htons
+ 1688 08ee 3440     		and	r4, r4, r6
+ 1689 08f0 2043     		orr	r0, r0, r4
+ 1690 08f2 A881     		strh	r0, [r5, #12]
+ 1691              		.loc 1 319 0
+ 1692 08f4 6A46     		mov	r2, sp
+ 1693 08f6 1423     		mov	r3, #20
+ 1694 08f8 9A5C     		ldrb	r2, [r3, r2]
+ 1695 08fa BA73     		strb	r2, [r7, #14]
+ 1696              		.loc 1 322 0
+ 1697 08fc 3C69     		ldr	r4, [r7, #16]
+ 1698 08fe A089     		ldrh	r0, [r4, #12]
+ 1699 0900 FFF7FEFF 		bl	ntohs
+ 1700 0904 3F23     		mov	r3, #63
+ 1701 0906 1840     		and	r0, r0, r3
+ 1702 0908 0C9B     		ldr	r3, [sp, #48]
+ 1703 090a 1843     		orr	r0, r0, r3
+ 1704 090c 0004     		lsl	r0, r0, #16
+ 1705 090e 000C     		lsr	r0, r0, #16
+ 1706 0910 FFF7FEFF 		bl	htons
+ 1707 0914 A081     		strh	r0, [r4, #12]
+ 1708              		.loc 1 328 0
+ 1709 0916 4846     		mov	r0, r9
+ 1710 0918 5146     		mov	r1, sl
+ 1711              	.LVL169:
+ 1712 091a 431A     		sub	r3, r0, r1
+ 1713 091c 1B04     		lsl	r3, r3, #16
+ 1714 091e 1B0C     		lsr	r3, r3, #16
+ 1715 0920 9946     		mov	r9, r3
+ 1716              	.LVL170:
+ 1717              		.loc 1 216 0
+ 1718 0922 0D9A     		ldr	r2, [sp, #52]
+ 1719 0924 5442     		neg	r4, r2
+ 1720 0926 5441     		adc	r4, r4, r2
+ 1721 0928 4846     		mov	r0, r9
+ 1722 092a 431E     		sub	r3, r0, #1
+ 1723 092c 9841     		sbc	r0, r0, r3
+ 1724 092e 8046     		mov	r8, r0
+ 1725 0930 002C     		cmp	r4, #0
+ 1726 0932 00D0     		beq	.LCB1628
+ 1727 0934 32E7     		b	.L105	@long jump
+ 1728              	.LCB1628:
+ 1729              	.LVL171:
+ 1730 0936 0028     		cmp	r0, #0
+ 1731 0938 00D0     		beq	.LCB1633
+ 1732 093a 2FE7     		b	.L105	@long jump
+ 1733              	.LCB1633:
+ 1734 093c 9146     		mov	r9, r2
+ 1735              	.LVL172:
+ 1736 093e 119D     		ldr	r5, [sp, #68]
+ 1737 0940 BB46     		mov	fp, r7
+ 1738              		.loc 1 336 0
+ 1739 0942 0899     		ldr	r1, [sp, #32]
+ 1740 0944 8E6F     		ldr	r6, [r1, #120]
+ 1741              	.LVL173:
+ 1742 0946 002E     		cmp	r6, #0
+ 1743 0948 00D1     		bne	.LCB1643
+ 1744 094a 8FE0     		b	.L106	@long jump
+ 1745              	.LCB1643:
+ 1746              	.LVL174:
+ 1747              	.L125:
+ 1748              		.loc 1 340 0
+ 1749 094c 3368     		ldr	r3, [r6]
+ 1750              	.LVL175:
+ 1751 094e 002B     		cmp	r3, #0
+ 1752 0950 01D0     		beq	.L107
+ 1753 0952 1E1C     		mov	r6, r3
+ 1754 0954 FAE7     		b	.L125
+ 1755              	.LVL176:
+ 1756              	.L107:
+ 1757 0956 B046     		mov	r8, r6
+ 1758              		.loc 1 346 0
+ 1759 0958 002E     		cmp	r6, #0
+ 1760 095a 00D1     		bne	.LCB1660
+ 1761 095c 86E0     		b	.L106	@long jump
+ 1762              	.LCB1660:
+ 1763              	.LVL177:
+ 1764 095e B489     		ldrh	r4, [r6, #12]
+ 1765 0960 3369     		ldr	r3, [r6, #16]
+ 1766 0962 9889     		ldrh	r0, [r3, #12]
+ 1767 0964 FFF7FEFF 		bl	ntohs
+ 1768 0968 0323     		mov	r3, #3
+ 1769 096a 1840     		and	r0, r0, r3
+ 1770 096c 431E     		sub	r3, r0, #1
+ 1771 096e 9841     		sbc	r0, r0, r3
+ 1772 0970 0019     		add	r0, r0, r4
+ 1773 0972 0028     		cmp	r0, #0
+ 1774 0974 00D1     		bne	.LCB1671
+ 1775 0976 D8E0     		b	.L109	@long jump
+ 1776              	.LCB1671:
+ 1777 0978 3369     		ldr	r3, [r6, #16]
+ 1778 097a 9889     		ldrh	r0, [r3, #12]
+ 1779 097c FFF7FEFF 		bl	ntohs
+ 1780 0980 8207     		lsl	r2, r0, #30
+ 1781 0982 00D0     		beq	.LCB1678
+ 1782 0984 D1E0     		b	.L109	@long jump
+ 1783              	.LCB1678:
+ 1784 0986 069B     		ldr	r3, [sp, #24]
+ 1785 0988 9B07     		lsl	r3, r3, #30
+ 1786 098a 03D0     		beq	.L124
+ 1787 098c 0698     		ldr	r0, [sp, #24]
+ 1788 098e 0128     		cmp	r0, #1
+ 1789 0990 00D0     		beq	.LCB1686
+ 1790 0992 CAE0     		b	.L109	@long jump
+ 1791              	.LCB1686:
+ 1792              	.L124:
+ 1793 0994 4946     		mov	r1, r9
+ 1794 0996 8B89     		ldrh	r3, [r1, #12]
+ 1795 0998 4046     		mov	r0, r8
+ 1796 099a 8289     		ldrh	r2, [r0, #12]
+ 1797 099c 9B18     		add	r3, r3, r2
+ 1798 099e 0899     		ldr	r1, [sp, #32]
+ 1799 09a0 8A8F     		ldrh	r2, [r1, #60]
+ 1800 09a2 9342     		cmp	r3, r2
+ 1801 09a4 00DD     		ble	.LCB1696
+ 1802 09a6 C0E0     		b	.L109	@long jump
+ 1803              	.LCB1696:
+ 1804              	.LVL178:
+ 1805 09a8 827B     		ldrb	r2, [r0, #14]
+ 1806 09aa 4846     		mov	r0, r9
+ 1807 09ac 837B     		ldrb	r3, [r0, #14]
+ 1808 09ae 9A42     		cmp	r2, r3
+ 1809 09b0 00D0     		beq	.LCB1702
+ 1810 09b2 BAE0     		b	.L109	@long jump
+ 1811              	.LCB1702:
+ 1812 09b4 4146     		mov	r1, r8
+ 1813 09b6 0B69     		ldr	r3, [r1, #16]
+ 1814 09b8 5868     		ldr	r0, [r3, #4]
+ 1815 09ba FFF7FEFF 		bl	ntohl
+ 1816 09be 4246     		mov	r2, r8
+ 1817 09c0 9389     		ldrh	r3, [r2, #12]
+ 1818 09c2 C418     		add	r4, r0, r3
+ 1819 09c4 4846     		mov	r0, r9
+ 1820 09c6 0369     		ldr	r3, [r0, #16]
+ 1821 09c8 5868     		ldr	r0, [r3, #4]
+ 1822 09ca FFF7FEFF 		bl	ntohl
+ 1823 09ce 8442     		cmp	r4, r0
+ 1824 09d0 00D0     		beq	.LCB1715
+ 1825 09d2 AAE0     		b	.L109	@long jump
+ 1826              	.LCB1715:
+ 1827              		.loc 1 357 0
+ 1828 09d4 4946     		mov	r1, r9
+ 1829 09d6 4868     		ldr	r0, [r1, #4]
+ 1830 09d8 1421     		mov	r1, #20
+ 1831 09da 4942     		neg	r1, r1
+ 1832 09dc 109A     		ldr	r2, [sp, #64]
+ 1833 09de 891A     		sub	r1, r1, r2
+ 1834 09e0 0904     		lsl	r1, r1, #16
+ 1835 09e2 0914     		asr	r1, r1, #16
+ 1836 09e4 FFF7FEFF 		bl	pbuf_header
+ 1837 09e8 0028     		cmp	r0, #0
+ 1838 09ea 05D0     		beq	.L111
+ 1839              		.loc 1 360 0
+ 1840 09ec 1D49     		ldr	r1, .L126
+ 1841 09ee A422     		mov	r2, #164
+ 1842 09f0 8B5A     		ldrh	r3, [r1, r2]
+ 1843 09f2 0133     		add	r3, r3, #1
+ 1844 09f4 8B52     		strh	r3, [r1, r2]
+ 1845 09f6 74E0     		b	.L96
+ 1846              	.L111:
+ 1847              		.loc 1 363 0
+ 1848 09f8 4B46     		mov	r3, r9
+ 1849 09fa 5868     		ldr	r0, [r3, #4]
+ 1850 09fc 4389     		ldrh	r3, [r0, #10]
+ 1851 09fe 002B     		cmp	r3, #0
+ 1852 0a00 0AD1     		bne	.L112
+ 1853              	.LBB20:
+ 1854              		.loc 1 366 0
+ 1855 0a02 0368     		ldr	r3, [r0]
+ 1856 0a04 4946     		mov	r1, r9
+ 1857 0a06 4B60     		str	r3, [r1, #4]
+ 1858              		.loc 1 367 0
+ 1859 0a08 0023     		mov	r3, #0
+ 1860 0a0a 0360     		str	r3, [r0]
+ 1861              		.loc 1 368 0
+ 1862 0a0c 6B1E     		sub	r3, r5, #1
+ 1863 0a0e 1B04     		lsl	r3, r3, #16
+ 1864 0a10 1B0C     		lsr	r3, r3, #16
+ 1865 0a12 1193     		str	r3, [sp, #68]
+ 1866              	.LVL179:
+ 1867              		.loc 1 369 0
+ 1868 0a14 FFF7FEFF 		bl	pbuf_free
+ 1869              	.LVL180:
+ 1870              	.L112:
+ 1871              	.LBE20:
+ 1872              		.loc 1 371 0
+ 1873 0a18 0B9A     		ldr	r2, [sp, #44]
+ 1874 0a1a D207     		lsl	r2, r2, #31
+ 1875 0a1c 08D5     		bpl	.L113
+ 1876              		.loc 1 374 0
+ 1877 0a1e 4346     		mov	r3, r8
+ 1878 0a20 1C69     		ldr	r4, [r3, #16]
+ 1879 0a22 A589     		ldrh	r5, [r4, #12]
+ 1880 0a24 0120     		mov	r0, #1
+ 1881 0a26 FFF7FEFF 		bl	htons
+ 1882 0a2a 2843     		orr	r0, r0, r5
+ 1883 0a2c A081     		strh	r0, [r4, #12]
+ 1884 0a2e 0EE0     		b	.L114
+ 1885              	.LVL181:
+ 1886              	.L113:
+ 1887              		.loc 1 377 0
+ 1888 0a30 4146     		mov	r1, r8
+ 1889 0a32 4868     		ldr	r0, [r1, #4]
+ 1890 0a34 4A46     		mov	r2, r9
+ 1891 0a36 5168     		ldr	r1, [r2, #4]
+ 1892 0a38 FFF7FEFF 		bl	pbuf_cat
+ 1893              		.loc 1 378 0
+ 1894 0a3c 4846     		mov	r0, r9
+ 1895 0a3e 8389     		ldrh	r3, [r0, #12]
+ 1896 0a40 4146     		mov	r1, r8
+ 1897 0a42 8A89     		ldrh	r2, [r1, #12]
+ 1898 0a44 9B18     		add	r3, r3, r2
+ 1899 0a46 4246     		mov	r2, r8
+ 1900 0a48 9381     		strh	r3, [r2, #12]
+ 1901              		.loc 1 379 0
+ 1902 0a4a 0368     		ldr	r3, [r0]
+ 1903 0a4c 1360     		str	r3, [r2]
+ 1904              	.L114:
+ 1905              		.loc 1 383 0
+ 1906 0a4e D945     		cmp	r9, fp
+ 1907 0a50 03D1     		bne	.L115
+ 1908              		.loc 1 385 0
+ 1909 0a52 4346     		mov	r3, r8
+ 1910 0a54 9B89     		ldrh	r3, [r3, #12]
+ 1911 0a56 9A46     		mov	sl, r3
+ 1912              	.LVL182:
+ 1913 0a58 371C     		mov	r7, r6
+ 1914              	.LVL183:
+ 1915              	.L115:
+ 1916              		.loc 1 387 0
+ 1917 0a5a 0420     		mov	r0, #4
+ 1918 0a5c 4946     		mov	r1, r9
+ 1919 0a5e FFF7FEFF 		bl	memp_free
+ 1920 0a62 06E0     		b	.L116
+ 1921              	.L127:
+ 1922              		.align	2
+ 1923              	.L126:
+ 1924 0a64 00000000 		.word	lwip_stats
+ 1925 0a68 C0FF0000 		.word	65472
+ 1926              	.LVL184:
+ 1927              	.L106:
+ 1928              		.loc 1 393 0
+ 1929 0a6c 4846     		mov	r0, r9
+ 1930 0a6e 0899     		ldr	r1, [sp, #32]
+ 1931 0a70 8867     		str	r0, [r1, #120]
+ 1932              	.LVL185:
+ 1933              	.L116:
+ 1934              		.loc 1 400 0
+ 1935 0a72 069A     		ldr	r2, [sp, #24]
+ 1936 0a74 9207     		lsl	r2, r2, #30
+ 1937 0a76 02D4     		bmi	.L117
+ 1938 0a78 0B9B     		ldr	r3, [sp, #44]
+ 1939 0a7a DB07     		lsl	r3, r3, #31
+ 1940 0a7c 0ED5     		bpl	.L118
+ 1941              	.LVL186:
+ 1942              	.L117:
+ 1943              		.loc 1 401 0
+ 1944 0a7e 079B     		ldr	r3, [sp, #28]
+ 1945 0a80 0133     		add	r3, r3, #1
+ 1946 0a82 1B04     		lsl	r3, r3, #16
+ 1947 0a84 1B0C     		lsr	r3, r3, #16
+ 1948 0a86 0793     		str	r3, [sp, #28]
+ 1949              	.LVL187:
+ 1950              		.loc 1 403 0
+ 1951 0a88 0B98     		ldr	r0, [sp, #44]
+ 1952 0a8a C007     		lsl	r0, r0, #31
+ 1953 0a8c 06D5     		bpl	.L118
+ 1954              		.loc 1 404 0
+ 1955 0a8e 2623     		mov	r3, #38
+ 1956 0a90 0899     		ldr	r1, [sp, #32]
+ 1957 0a92 CA5C     		ldrb	r2, [r1, r3]
+ 1958 0a94 2021     		mov	r1, #32
+ 1959 0a96 0A43     		orr	r2, r2, r1
+ 1960 0a98 0898     		ldr	r0, [sp, #32]
+ 1961 0a9a C254     		strb	r2, [r0, r3]
+ 1962              	.LVL188:
+ 1963              	.L118:
+ 1964              		.loc 1 406 0
+ 1965 0a9c 0899     		ldr	r1, [sp, #32]
+ 1966 0a9e CB6E     		ldr	r3, [r1, #108]
+ 1967 0aa0 079A     		ldr	r2, [sp, #28]
+ 1968 0aa2 9B18     		add	r3, r3, r2
+ 1969 0aa4 CB66     		str	r3, [r1, #108]
+ 1970              		.loc 1 408 0
+ 1971 0aa6 7222     		mov	r2, #114
+ 1972 0aa8 8B5A     		ldrh	r3, [r1, r2]
+ 1973 0aaa 0798     		ldr	r0, [sp, #28]
+ 1974 0aac 1B1A     		sub	r3, r3, r0
+ 1975 0aae 0899     		ldr	r1, [sp, #32]
+ 1976 0ab0 8B52     		strh	r3, [r1, r2]
+ 1977              		.loc 1 411 0
+ 1978 0ab2 7423     		mov	r3, #116
+ 1979 0ab4 11AA     		add	r2, sp, #68
+ 1980 0ab6 1088     		ldrh	r0, [r2]
+ 1981 0ab8 089A     		ldr	r2, [sp, #32]
+ 1982 0aba D052     		strh	r0, [r2, r3]
+ 1983              		.loc 1 420 0
+ 1984 0abc 002F     		cmp	r7, #0
+ 1985 0abe 28D0     		beq	.L119
+ 1986              	.LVL189:
+ 1987 0ac0 5146     		mov	r1, sl
+ 1988 0ac2 0029     		cmp	r1, #0
+ 1989 0ac4 25D0     		beq	.L119
+ 1990 0ac6 3D69     		ldr	r5, [r7, #16]
+ 1991 0ac8 002D     		cmp	r5, #0
+ 1992 0aca 22D0     		beq	.L119
+ 1993 0acc 0A9A     		ldr	r2, [sp, #40]
+ 1994 0ace 9207     		lsl	r2, r2, #30
+ 1995 0ad0 1FD4     		bmi	.L119
+ 1996              		.loc 1 421 0
+ 1997 0ad2 AC89     		ldrh	r4, [r5, #12]
+ 1998 0ad4 0820     		mov	r0, #8
+ 1999 0ad6 FFF7FEFF 		bl	htons
+ 2000 0ada 2043     		orr	r0, r0, r4
+ 2001 0adc A881     		strh	r0, [r5, #12]
+ 2002 0ade 0020     		mov	r0, #0
+ 2003 0ae0 18E0     		b	.L90
+ 2004              	.LVL190:
+ 2005              	.L96:
+ 2006              		.loc 1 426 0
+ 2007 0ae2 2621     		mov	r1, #38
+ 2008 0ae4 0898     		ldr	r0, [sp, #32]
+ 2009 0ae6 435C     		ldrb	r3, [r0, r1]
+ 2010 0ae8 8022     		mov	r2, #128
+ 2011 0aea 5242     		neg	r2, r2
+ 2012 0aec 1343     		orr	r3, r3, r2
+ 2013 0aee 4354     		strb	r3, [r0, r1]
+ 2014              		.loc 1 427 0
+ 2015 0af0 1F49     		ldr	r1, .L128
+ 2016 0af2 9C22     		mov	r2, #156
+ 2017 0af4 8B5A     		ldrh	r3, [r1, r2]
+ 2018 0af6 0133     		add	r3, r3, #1
+ 2019 0af8 8B52     		strh	r3, [r1, r2]
+ 2020              		.loc 1 429 0
+ 2021 0afa 0D99     		ldr	r1, [sp, #52]
+ 2022 0afc 0029     		cmp	r1, #0
+ 2023 0afe 01D1     		bne	.L120
+ 2024              	.LVL191:
+ 2025 0b00 FF20     		mov	r0, #255
+ 2026 0b02 07E0     		b	.L90
+ 2027              	.L120:
+ 2028              		.loc 1 430 0
+ 2029 0b04 0D98     		ldr	r0, [sp, #52]
+ 2030 0b06 FFF7FEFF 		bl	tcp_segs_free
+ 2031 0b0a FF20     		mov	r0, #255
+ 2032 0b0c 02E0     		b	.L90
+ 2033              	.LVL192:
+ 2034              	.L87:
+ 2035 0b0e F620     		mov	r0, #246
+ 2036 0b10 00E0     		b	.L90
+ 2037              	.LVL193:
+ 2038              	.L119:
+ 2039 0b12 0020     		mov	r0, #0
+ 2040              	.LVL194:
+ 2041              	.L90:
+ 2042 0b14 0006     		lsl	r0, r0, #24
+ 2043 0b16 0016     		asr	r0, r0, #24
+ 2044              		.loc 1 438 0
+ 2045 0b18 12B0     		add	sp, sp, #72
+ 2046              		@ sp needed for prologue
+ 2047              	.LVL195:
+ 2048              	.LVL196:
+ 2049              	.LVL197:
+ 2050              	.LVL198:
+ 2051              	.LVL199:
+ 2052              	.LVL200:
+ 2053 0b1a 3CBC     		pop	{r2, r3, r4, r5}
+ 2054 0b1c 9046     		mov	r8, r2
+ 2055 0b1e 9946     		mov	r9, r3
+ 2056 0b20 A246     		mov	sl, r4
+ 2057 0b22 AB46     		mov	fp, r5
+ 2058 0b24 F0BC     		pop	{r4, r5, r6, r7}
+ 2059 0b26 02BC     		pop	{r1}
+ 2060 0b28 0847     		bx	r1
+ 2061              	.LVL201:
+ 2062              	.L109:
+ 2063              		.loc 1 397 0
+ 2064 0b2a 4A46     		mov	r2, r9
+ 2065 0b2c 4346     		mov	r3, r8
+ 2066 0b2e 1A60     		str	r2, [r3]
+ 2067 0b30 9FE7     		b	.L116
+ 2068              	.LVL202:
+ 2069              	.L95:
+ 2070              		.loc 1 216 0
+ 2071 0b32 0798     		ldr	r0, [sp, #28]
+ 2072 0b34 431E     		sub	r3, r0, #1
+ 2073 0b36 9841     		sbc	r0, r0, r3
+ 2074 0b38 8046     		mov	r8, r0
+ 2075              		.loc 1 322 0
+ 2076 0b3a 109A     		ldr	r2, [sp, #64]
+ 2077 0b3c 9306     		lsl	r3, r2, #26
+ 2078 0b3e A020     		mov	r0, #160
+ 2079 0b40 C005     		lsl	r0, r0, #23
+ 2080 0b42 1B18     		add	r3, r3, r0
+ 2081 0b44 1B0C     		lsr	r3, r3, #16
+ 2082 0b46 0C93     		str	r3, [sp, #48]
+ 2083 0b48 079A     		ldr	r2, [sp, #28]
+ 2084 0b4a 9146     		mov	r9, r2
+ 2085              	.LVL203:
+ 2086 0b4c 0F94     		str	r4, [sp, #60]
+ 2087              	.LVL204:
+ 2088 0b4e 0026     		mov	r6, #0
+ 2089              	.LVL205:
+ 2090 0b50 0D96     		str	r6, [sp, #52]
+ 2091              	.LVL206:
+ 2092 0b52 0124     		mov	r4, #1
+ 2093              	.LVL207:
+ 2094              		.loc 1 227 0
+ 2095 0b54 B346     		mov	fp, r6
+ 2096              		.loc 1 218 0
+ 2097 0b56 109B     		ldr	r3, [sp, #64]
+ 2098 0b58 0493     		str	r3, [sp, #16]
+ 2099              		.loc 1 246 0
+ 2100 0b5a 0391     		str	r1, [sp, #12]
+ 2101 0b5c 0120     		mov	r0, #1
+ 2102 0b5e 0840     		and	r0, r0, r1
+ 2103 0b60 0290     		str	r0, [sp, #8]
+ 2104              		.loc 1 247 0
+ 2105 0b62 10A9     		add	r1, sp, #64
+ 2106              	.LVL208:
+ 2107 0b64 0A88     		ldrh	r2, [r1]
+ 2108 0b66 6946     		mov	r1, sp
+ 2109 0b68 8A80     		strh	r2, [r1, #4]
+ 2110              		.loc 1 316 0
+ 2111 0b6a 069B     		ldr	r3, [sp, #24]
+ 2112 0b6c 0093     		str	r3, [sp]
+ 2113 0b6e 1CE6     		b	.L121
+ 2114              	.L129:
+ 2115              		.align	2
+ 2116              	.L128:
+ 2117 0b70 00000000 		.word	lwip_stats
+ 2118              	.LFE293:
+ 2120              		.align	2
+ 2121              		.global	tcp_write
+ 2122              		.code	16
+ 2123              		.thumb_func
+ 2125              	tcp_write:
+ 2126              	.LFB292:
+ 2127              		.loc 1 117 0
+ 2128 0b74 10B5     		push	{r4, lr}
+ 2129              	.LCFI21:
+ 2130              	.LVL209:
+ 2131 0b76 82B0     		sub	sp, sp, #8
+ 2132              	.LCFI22:
+ 2133 0b78 1204     		lsl	r2, r2, #16
+ 2134              	.LVL210:
+ 2135 0b7a 140C     		lsr	r4, r2, #16
+ 2136              	.LVL211:
+ 2137 0b7c 1B06     		lsl	r3, r3, #24
+ 2138              	.LVL212:
+ 2139 0b7e 1A0E     		lsr	r2, r3, #24
+ 2140              	.LVL213:
+ 2141              		.loc 1 121 0
+ 2142 0b80 0369     		ldr	r3, [r0, #16]
+ 2143 0b82 042B     		cmp	r3, #4
+ 2144 0b84 07D0     		beq	.L131
+ 2145 0b86 072B     		cmp	r3, #7
+ 2146 0b88 05D0     		beq	.L131
+ 2147 0b8a 022B     		cmp	r3, #2
+ 2148 0b8c 03D0     		beq	.L131
+ 2149 0b8e 032B     		cmp	r3, #3
+ 2150 0b90 01D0     		beq	.L131
+ 2151 0b92 F820     		mov	r0, #248
+ 2152              	.LVL214:
+ 2153 0b94 0BE0     		b	.L132
+ 2154              	.LVL215:
+ 2155              	.L131:
+ 2156              		.loc 1 125 0
+ 2157 0b96 002C     		cmp	r4, #0
+ 2158 0b98 01D1     		bne	.L133
+ 2159 0b9a 0020     		mov	r0, #0
+ 2160              	.LVL216:
+ 2161 0b9c 07E0     		b	.L132
+ 2162              	.LVL217:
+ 2163              	.L133:
+ 2164              		.loc 1 130 0
+ 2165 0b9e 0092     		str	r2, [sp]
+ 2166 0ba0 0023     		mov	r3, #0
+ 2167 0ba2 0193     		str	r3, [sp, #4]
+ 2168 0ba4 221C     		mov	r2, r4
+ 2169              	.LVL218:
+ 2170 0ba6 FFF7FEFF 		bl	tcp_enqueue
+ 2171              	.LVL219:
+ 2172 0baa 0006     		lsl	r0, r0, #24
+ 2173 0bac 000E     		lsr	r0, r0, #24
+ 2174              	.LVL220:
+ 2175              	.L132:
+ 2176 0bae 0006     		lsl	r0, r0, #24
+ 2177 0bb0 0016     		asr	r0, r0, #24
+ 2178              		.loc 1 138 0
+ 2179 0bb2 02B0     		add	sp, sp, #8
+ 2180              		@ sp needed for prologue
+ 2181              	.LVL221:
+ 2182 0bb4 10BC     		pop	{r4}
+ 2183 0bb6 02BC     		pop	{r1}
+ 2184 0bb8 0847     		bx	r1
+ 2185              	.LFE292:
+ 2187 0bba C046     		.align	2
+ 2188              		.global	tcp_send_ctrl
+ 2189              		.code	16
+ 2190              		.thumb_func
+ 2192              	tcp_send_ctrl:
+ 2193              	.LFB291:
+ 2194              		.loc 1 92 0
+ 2195 0bbc 00B5     		push	{lr}
+ 2196              	.LCFI23:
+ 2197              	.LVL222:
+ 2198 0bbe 82B0     		sub	sp, sp, #8
+ 2199              	.LCFI24:
+ 2200 0bc0 0B06     		lsl	r3, r1, #24
+ 2201 0bc2 1B0E     		lsr	r3, r3, #24
+ 2202              	.LVL223:
+ 2203              		.loc 1 94 0
+ 2204 0bc4 0122     		mov	r2, #1
+ 2205 0bc6 0092     		str	r2, [sp]
+ 2206 0bc8 0022     		mov	r2, #0
+ 2207 0bca 0192     		str	r2, [sp, #4]
+ 2208 0bcc 0021     		mov	r1, #0
+ 2209 0bce FFF7FEFF 		bl	tcp_enqueue
+ 2210              	.LVL224:
+ 2211 0bd2 0006     		lsl	r0, r0, #24
+ 2212 0bd4 0016     		asr	r0, r0, #24
+ 2213              		.loc 1 95 0
+ 2214 0bd6 02B0     		add	sp, sp, #8
+ 2215              		@ sp needed for prologue
+ 2216 0bd8 02BC     		pop	{r1}
+ 2217 0bda 0847     		bx	r1
+ 2218              	.LFE291:
+ 2552              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 tcp_out.c
+     /tmp/ccx2wIG8.s:1      .text:00000000 $t
+     /tmp/ccx2wIG8.s:15     .text:00000000 tcp_output_set_header
+     /tmp/ccx2wIG8.s:107    .text:0000008c $d
+     /tmp/ccx2wIG8.s:115    .text:00000090 tcp_zero_window_probe
+     /tmp/ccx2wIG8.s:112    .text:00000090 $t
+     /tmp/ccx2wIG8.s:259    .text:00000154 $d
+     /tmp/ccx2wIG8.s:268    .text:0000015c tcp_keepalive
+     /tmp/ccx2wIG8.s:265    .text:0000015c $t
+     /tmp/ccx2wIG8.s:344    .text:000001c8 $d
+     /tmp/ccx2wIG8.s:352    .text:000001cc tcp_rst
+     /tmp/ccx2wIG8.s:349    .text:000001cc $t
+     /tmp/ccx2wIG8.s:498    .text:000002a8 $d
+     /tmp/ccx2wIG8.s:507    .text:000002b0 tcp_send_empty_ack
+     /tmp/ccx2wIG8.s:504    .text:000002b0 $t
+     /tmp/ccx2wIG8.s:593    .text:00000324 tcp_rexmit
+     /tmp/ccx2wIG8.s:665    .text:00000374 tcp_rexmit_fast
+     /tmp/ccx2wIG8.s:742    .text:000003d4 tcp_output
+     /tmp/ccx2wIG8.s:1255   .text:0000069c $d
+     /tmp/ccx2wIG8.s:1266   .text:000006ac tcp_rexmit_rto
+     /tmp/ccx2wIG8.s:1263   .text:000006ac $t
+     /tmp/ccx2wIG8.s:1317   .text:000006dc tcp_enqueue
+     /tmp/ccx2wIG8.s:1924   .text:00000a64 $d
+     /tmp/ccx2wIG8.s:1929   .text:00000a6c $t
+     /tmp/ccx2wIG8.s:2117   .text:00000b70 $d
+     /tmp/ccx2wIG8.s:2125   .text:00000b74 tcp_write
+     /tmp/ccx2wIG8.s:2122   .text:00000b74 $t
+     /tmp/ccx2wIG8.s:2192   .text:00000bbc tcp_send_ctrl
+     /tmp/ccx2wIG8.s:2222   .debug_frame:00000000 $d
+     /tmp/ccx2wIG8.s:2556   .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+htons
+htonl
+ntohs
+pbuf_alloc
+inet_chksum_pseudo
+ip_output
+pbuf_free
+lwip_stats
+ntohl
+ip_route
+tcp_seg_free
+tcp_input_pcb
+tcp_ticks
+memp_malloc
+pbuf_clen
+memcpy
+pbuf_cat
+pbuf_header
+memp_free
+tcp_segs_free

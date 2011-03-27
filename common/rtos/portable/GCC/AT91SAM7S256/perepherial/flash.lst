@@ -1,0 +1,364 @@
+   1              		.file	"flash.c"
+   9              	.Ltext0:
+  10              		.align	2
+  11              		.global	Flash_Init
+  13              	Flash_Init:
+  14              	.LFB290:
+  15              		.file 1 "rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c"
+   1:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** // Include Standard files
+   2:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** #include "board.h"
+   3:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** #include "flash.h"
+   4:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** #include "FreeRTOS.h"
+   5:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+   6:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** int Flash_Ready(void) FLASHFUNC;
+   7:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //bool Flash_Write(uint16 page, uint8 *pagebuff)FLASHFUNC;
+   8:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //*----------------------------------------------------------------------------
+   9:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //* \fn    AT91F_Flash_Init
+  10:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //* \brief Flash init
+  11:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //*----------------------------------------------------------------------------
+  12:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** void Flash_Init(void)
+  13:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** {
+  16              		.loc 1 13 0
+  17              		@ Function supports interworking.
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  14:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	AT91C_BASE_MC->MC_FMR = ((AT91C_MC_FMCN) & (72 << 16)) | AT91C_MC_FWS_1FWS;
+  21              		.loc 1 14 0
+  22 0000 1237A0E3 		mov	r3, #4718592
+  23 0004 013C83E2 		add	r3, r3, #256
+  24 0008 0020E0E3 		mvn	r2, #0
+  25 000c 9F3002E5 		str	r3, [r2, #-159]
+  15:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** }
+  26              		.loc 1 15 0
+  27 0010 1EFF2FE1 		bx	lr
+  28              	.LFE290:
+  30              		.align	2
+  31              		.global	Flash_InitPageBuffer
+  33              	Flash_InitPageBuffer:
+  34              	.LFB293:
+  16:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  17:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** bool Flash_Write(uint16 page, unsigned int *pagebuff)
+  18:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** {
+  19:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	unsigned int* flash;
+  20:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	unsigned int i;
+  21:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	portENTER_CRITICAL();
+  22:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	{
+  23:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  24:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  25:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		AT91C_BASE_MC->MC_FCR = (AT91C_MC_CORRECT_KEY | AT91C_MC_FCMD_UNLOCK
+  26:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 					| (AT91C_MC_PAGEN & (page << 8)));
+  27:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  28:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		while ((AT91C_BASE_MC->MC_FSR & AT91C_MC_FRDY) != AT91C_MC_FRDY)
+  29:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		    ;
+  30:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  31:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		flash = (unsigned int *) 0x00100000 + page * FLASH_PAGE_SIZE_BYTE;
+  32:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  33:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		for (i = 0; i < (FLASH_PAGE_SIZE_BYTE/4); i++)
+  34:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		{
+  35:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			flash[i] = pagebuff[i];
+  36:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		}
+  37:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		AT91C_BASE_MC->MC_FCR = (AT91C_MC_CORRECT_KEY
+  38:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 				| AT91C_MC_FCMD_START_PROG | (AT91C_MC_PAGEN & (page << 8)));
+  39:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  40:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		AT91C_BASE_MC->MC_FCR = (AT91C_MC_CORRECT_KEY | AT91C_MC_FCMD_START_PROG
+  41:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 					| (AT91C_MC_PAGEN & (page << 8)));
+  42:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  43:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		while ((AT91C_BASE_MC->MC_FSR & AT91C_MC_FRDY) != AT91C_MC_FRDY)
+  44:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			;
+  45:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	}
+  46:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	portEXIT_CRITICAL();
+  47:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	return true;
+  48:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** }
+  49:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //*----------------------------------------------------------------------------
+  50:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** inline void * Flash_GetPageStartAddress(void *addr)
+  51:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** {
+  52:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	return (void*) ((int) addr - ((int) addr % FLASH_PAGE_SIZE_BYTE));
+  53:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** }
+  54:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** void * Flash_InitPageBuffer(uint8 *pBuff, void *addr)
+  55:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** {
+  35              		.loc 1 55 0
+  36              		@ Function supports interworking.
+  37              		@ args = 0, pretend = 0, frame = 0
+  38              		@ frame_needed = 0, uses_anonymous_args = 0
+  39              		@ link register save eliminated.
+  40              	.LVL0:
+  41              	.LBB9:
+  42              	.LBB10:
+  43              		.loc 1 52 0
+  44 0014 C12FA0E1 		mov	r2, r1, asr #31
+  45 0018 222CA0E1 		mov	r2, r2, lsr #24
+  46 001c 023081E0 		add	r3, r1, r2
+  47 0020 FF3003E2 		and	r3, r3, #255
+  48 0024 033062E0 		rsb	r3, r2, r3
+  49 0028 011063E0 		rsb	r1, r3, r1
+  50              	.LVL1:
+  51 002c 01C0A0E1 		mov	ip, r1
+  52 0030 0020A0E3 		mov	r2, #0
+  53              	.LVL2:
+  54              	.L4:
+  55              	.LBE10:
+  56              	.LBE9:
+  57              	.LBB11:
+  56:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	uint8 *pxData;
+  57:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	// Initialize temp buffer
+  58:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	pxData = Flash_GetPageStartAddress(addr);
+  59:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	for (int i = 0; i < FLASH_PAGE_SIZE_BYTE; i++)
+  60:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	{
+  61:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		*pBuff = *pxData;
+  58              		.loc 1 61 0
+  59 0034 0130D2E7 		ldrb	r3, [r2, r1]	@ zero_extendqisi2
+  60 0038 0230C0E7 		strb	r3, [r0, r2]
+  61              		.loc 1 59 0
+  62 003c 012082E2 		add	r2, r2, #1
+  63 0040 010C52E3 		cmp	r2, #256
+  64 0044 FAFFFF1A 		bne	.L4
+  65              	.LBE11:
+  62:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		pxData++;
+  63:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		pBuff++;
+  64:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	}
+  65:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	return Flash_GetPageStartAddress(addr);
+  66:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** }
+  66              		.loc 1 66 0
+  67 0048 0C00A0E1 		mov	r0, ip
+  68              	.LVL3:
+  69 004c 1EFF2FE1 		bx	lr
+  70              	.LFE293:
+  72              		.section	.fastrun,"ax",%progbits
+  73              		.align	2
+  74              		.global	Flash_Write
+  76              	Flash_Write:
+  77              	.LFB291:
+  78              		.loc 1 18 0
+  79              		@ Function supports interworking.
+  80              		@ args = 0, pretend = 0, frame = 0
+  81              		@ frame_needed = 0, uses_anonymous_args = 0
+  82              	.LVL4:
+  83 0000 30402DE9 		stmfd	sp!, {r4, r5, lr}
+  84              	.LCFI0:
+  85 0004 0150A0E1 		mov	r5, r1
+  86 0008 0048A0E1 		mov	r4, r0, asl #16
+  87 000c 2448A0E1 		mov	r4, r4, lsr #16
+  88              	.LVL5:
+  89              		.loc 1 21 0
+  90 0010 FEFFFFEB 		bl	vPortEnterCritical
+  91              	.LVL6:
+  92              		.loc 1 25 0
+  93 0014 FF3BA0E3 		mov	r3, #261120
+  94 0018 033C83E2 		add	r3, r3, #768
+  95 001c 041403E0 		and	r1, r3, r4, asl #8
+  96              	.LVL7:
+  97 0020 5A34A0E3 		mov	r3, #1509949440
+  98 0024 043083E2 		add	r3, r3, #4
+  99 0028 033081E1 		orr	r3, r1, r3
+ 100 002c 0020E0E3 		mvn	r2, #0
+ 101 0030 9B3002E5 		str	r3, [r2, #-155]
+ 102              	.L8:
+ 103              		.loc 1 28 0
+ 104 0034 973012E5 		ldr	r3, [r2, #-151]
+ 105 0038 010013E3 		tst	r3, #1
+ 106 003c FCFFFF0A 		beq	.L8
+ 107              		.loc 1 31 0
+ 108 0040 0435A0E1 		mov	r3, r4, asl #10
+ 109 0044 014683E2 		add	r4, r3, #1048576
+ 110              	.LVL8:
+ 111 0048 0020A0E3 		mov	r2, #0
+ 112              	.L9:
+ 113              		.loc 1 35 0
+ 114 004c 023095E7 		ldr	r3, [r5, r2]
+ 115 0050 023084E7 		str	r3, [r4, r2]
+ 116 0054 042082E2 		add	r2, r2, #4
+ 117              		.loc 1 33 0
+ 118 0058 010C52E3 		cmp	r2, #256
+ 119 005c FAFFFF1A 		bne	.L9
+ 120              		.loc 1 37 0
+ 121 0060 5A34A0E3 		mov	r3, #1509949440
+ 122 0064 013083E2 		add	r3, r3, #1
+ 123 0068 033081E1 		orr	r3, r1, r3
+ 124 006c 0020E0E3 		mvn	r2, #0
+ 125 0070 9B3002E5 		str	r3, [r2, #-155]
+ 126              		.loc 1 40 0
+ 127 0074 9B3002E5 		str	r3, [r2, #-155]
+ 128              	.L10:
+ 129              		.loc 1 43 0
+ 130 0078 973012E5 		ldr	r3, [r2, #-151]
+ 131 007c 010013E3 		tst	r3, #1
+ 132 0080 FCFFFF0A 		beq	.L10
+ 133              		.loc 1 46 0
+ 134 0084 FEFFFFEB 		bl	vPortExitCritical
+ 135              		.loc 1 48 0
+ 136 0088 0000E0E3 		mvn	r0, #0
+ 137 008c 3040BDE8 		ldmfd	sp!, {r4, r5, lr}
+ 138 0090 1EFF2FE1 		bx	lr
+ 139              	.LFE291:
+ 141              		.text
+ 142              		.align	2
+ 143              		.global	Flash_WriteBuffer
+ 145              	Flash_WriteBuffer:
+ 146              	.LFB294:
+  67:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 
+  68:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** //*----------------------------------------------------------------------------
+  69:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** bool Flash_WriteBuffer(uint8 *pxFlash, uint8 *buf, uint16 len)
+  70:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** {
+ 147              		.loc 1 70 0
+ 148              		@ Function supports interworking.
+ 149              		@ args = 0, pretend = 0, frame = 256
+ 150              		@ frame_needed = 0, uses_anonymous_args = 0
+ 151              	.LVL9:
+ 152 0050 F0452DE9 		stmfd	sp!, {r4, r5, r6, r7, r8, sl, lr}
+ 153              	.LCFI1:
+ 154 0054 01DC4DE2 		sub	sp, sp, #256
+ 155              	.LCFI2:
+ 156 0058 0040A0E1 		mov	r4, r0
+ 157 005c 0150A0E1 		mov	r5, r1
+ 158 0060 0228A0E1 		mov	r2, r2, asl #16
+ 159              	.LVL10:
+  71:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	uint16 i;
+  72:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	uint8 pagebuff[FLASH_PAGE_SIZE_BYTE];
+  73:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	uint32 offset = (int) pxFlash - (int) Flash_GetPageStartAddress(pxFlash);
+  74:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	volatile void *pxCurPageAddr;
+  75:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	volatile void *temppx;
+  76:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	while (len)
+ 160              		.loc 1 76 0
+ 161 0064 2268B0E1 		movs	r6, r2, lsr #16
+ 162              	.LVL11:
+ 163 0068 3200000A 		beq	.L16
+ 164              	.LVL12:
+ 165              		.loc 1 73 0
+ 166 006c C02FA0E1 		mov	r2, r0, asr #31
+ 167 0070 222CA0E1 		mov	r2, r2, lsr #24
+ 168 0074 023080E0 		add	r3, r0, r2
+ 169 0078 FF3003E2 		and	r3, r3, #255
+ 170 007c 037062E0 		rsb	r7, r2, r3
+ 171              	.LVL13:
+  77:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	{
+  78:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		temppx = Flash_InitPageBuffer(pagebuff, pxFlash);
+ 172              		.loc 1 78 0
+ 173 0080 0D80A0E1 		mov	r8, sp
+ 174              		.loc 1 76 0
+ 175 0084 00A0A0E3 		mov	sl, #0
+ 176              	.LVL14:
+ 177              	.L21:
+ 178              		.loc 1 78 0
+ 179 0088 0D00A0E1 		mov	r0, sp
+ 180 008c 0410A0E1 		mov	r1, r4
+ 181 0090 FEFFFFEB 		bl	Flash_InitPageBuffer
+  79:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		pxCurPageAddr = temppx;
+  80:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		// Copy to pbuf
+  81:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		for (i = offset; i < FLASH_PAGE_SIZE_BYTE; i++)
+ 182              		.loc 1 81 0
+ 183 0094 0738A0E1 		mov	r3, r7, asl #16
+ 184 0098 2318A0E1 		mov	r1, r3, lsr #16
+ 185              	.LVL15:
+ 186 009c FF0051E3 		cmp	r1, #255
+ 187 00a0 1900008A 		bhi	.L17
+ 188              	.LVL16:
+  82:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		{
+  83:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			pagebuff[i] = *buf;
+ 189              		.loc 1 83 0
+ 190 00a4 013C8DE2 		add	r3, sp, #256
+ 191 00a8 012083E0 		add	r2, r3, r1
+ 192 00ac 0030D5E5 		ldrb	r3, [r5, #0]	@ zero_extendqisi2
+ 193 00b0 003142E5 		strb	r3, [r2, #-256]
+  84:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			buf++;
+  85:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			pxFlash++;
+  86:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			len--;
+ 194              		.loc 1 86 0
+ 195 00b4 013046E2 		sub	r3, r6, #1
+ 196 00b8 0338A0E1 		mov	r3, r3, asl #16
+  87:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 			if (len == 0)
+ 197              		.loc 1 87 0
+ 198 00bc 2368B0E1 		movs	r6, r3, lsr #16
+ 199              	.LVL17:
+ 200 00c0 2000000A 		beq	.L18
+ 201              		.loc 1 84 0
+ 202 00c4 015085E2 		add	r5, r5, #1
+ 203              		.loc 1 85 0
+ 204 00c8 014084E2 		add	r4, r4, #1
+ 205 00cc 090000EA 		b	.L19
+ 206              	.L20:
+ 207              		.loc 1 83 0
+ 208 00d0 013C8DE2 		add	r3, sp, #256
+ 209 00d4 012083E0 		add	r2, r3, r1
+ 210 00d8 0030D5E5 		ldrb	r3, [r5, #0]	@ zero_extendqisi2
+ 211 00dc 003142E5 		strb	r3, [r2, #-256]
+ 212              		.loc 1 86 0
+ 213 00e0 013046E2 		sub	r3, r6, #1
+ 214 00e4 0338A0E1 		mov	r3, r3, asl #16
+ 215              		.loc 1 87 0
+ 216 00e8 2368B0E1 		movs	r6, r3, lsr #16
+ 217              	.LVL18:
+ 218 00ec 1500000A 		beq	.L18
+ 219              		.loc 1 84 0
+ 220 00f0 015085E2 		add	r5, r5, #1
+ 221              		.loc 1 85 0
+ 222 00f4 014084E2 		add	r4, r4, #1
+ 223              	.L19:
+ 224              		.loc 1 81 0
+ 225 00f8 013081E2 		add	r3, r1, #1
+ 226 00fc 0338A0E1 		mov	r3, r3, asl #16
+ 227 0100 2318A0E1 		mov	r1, r3, lsr #16
+ 228 0104 FF0051E3 		cmp	r1, #255
+ 229 0108 F0FFFF9A 		bls	.L20
+ 230              	.L17:
+  88:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 				break;
+  89:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		}
+  90:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		offset = 0;
+  91:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		// write page
+  92:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 		Flash_Write(((int) ((int) pxCurPageAddr - 0x100000)
+ 231              		.loc 1 92 0
+ 232 010c 010640E2 		sub	r0, r0, #1048576
+ 233              	.LVL19:
+ 234 0110 FF3080E2 		add	r3, r0, #255
+ 235 0114 000050E3 		cmp	r0, #0
+ 236 0118 0300A0B1 		movlt	r0, r3
+ 237 011c 0004A0E1 		mov	r0, r0, asl #8
+ 238 0120 2008A0E1 		mov	r0, r0, lsr #16
+ 239 0124 0D10A0E1 		mov	r1, sp
+ 240              	.LVL20:
+ 241 0128 FEFFFFEB 		bl	Flash_Write
+ 242              		.loc 1 76 0
+ 243 012c 000056E3 		cmp	r6, #0
+ 244 0130 0A70A011 		movne	r7, sl
+ 245 0134 D3FFFF1A 		bne	.L21
+ 246              	.LVL21:
+ 247              	.L16:
+  93:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 				/ FLASH_PAGE_SIZE_BYTE), pagebuff);
+  94:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	}
+  95:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** 	return true;
+  96:rtos/portable/GCC/AT91SAM7S256/perepherial/flash.c **** }
+ 248              		.loc 1 96 0
+ 249 0138 0000E0E3 		mvn	r0, #0
+ 250 013c 01DC8DE2 		add	sp, sp, #256
+ 251 0140 F045BDE8 		ldmfd	sp!, {r4, r5, r6, r7, r8, sl, lr}
+ 252 0144 1EFF2FE1 		bx	lr
+ 253              	.LVL22:
+ 254              	.L18:
+ 255              		.loc 1 92 0
+ 256 0148 010640E2 		sub	r0, r0, #1048576
+ 257              	.LVL23:
+ 258 014c FF3080E2 		add	r3, r0, #255
+ 259 0150 000050E3 		cmp	r0, #0
+ 260 0154 0300A0B1 		movlt	r0, r3
+ 261 0158 0004A0E1 		mov	r0, r0, asl #8
+ 262 015c 2008A0E1 		mov	r0, r0, lsr #16
+ 263 0160 0D10A0E1 		mov	r1, sp
+ 264              	.LVL24:
+ 265 0164 FEFFFFEB 		bl	Flash_Write
+ 266 0168 F2FFFFEA 		b	.L16
+ 267              	.LFE294:
+ 349              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 flash.c
+     /tmp/ccd2MV6D.s:13     .text:00000000 Flash_Init
+     /tmp/ccd2MV6D.s:22     .text:00000000 $a
+     /tmp/ccd2MV6D.s:33     .text:00000014 Flash_InitPageBuffer
+     /tmp/ccd2MV6D.s:76     .fastrun:00000000 Flash_Write
+     /tmp/ccd2MV6D.s:83     .fastrun:00000000 $a
+     /tmp/ccd2MV6D.s:145    .text:00000050 Flash_WriteBuffer
+     /tmp/ccd2MV6D.s:271    .debug_frame:00000000 $d
+     /tmp/ccd2MV6D.s:353    .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+vPortEnterCritical
+vPortExitCritical

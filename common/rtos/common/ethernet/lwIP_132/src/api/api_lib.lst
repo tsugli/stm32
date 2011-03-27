@@ -1,0 +1,1463 @@
+   1              		.code	16
+   2              		.file	"api_lib.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	netconn_close
+  13              		.code	16
+  14              		.thumb_func
+  16              	netconn_close:
+  17              	.LFB302:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/api/api_lib.c"
+   1:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Sequential API External module
+   4:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  
+   7:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * All rights reserved. 
+  10:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * 
+  11:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  12:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *    derived from this software without specific prior written permission. 
+  21:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  23:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  24:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  25:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  26:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  27:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  28:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  29:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  30:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  31:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * 
+  35:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /* This is the part of the API that is linked with
+  40:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****    the application */
+  41:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  42:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/opt.h"
+  43:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if LWIP_NETCONN /* don't build if not configured for use in lwipopts.h */
+  45:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/api.h"
+  47:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/tcpip.h"
+  48:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/memp.h"
+  49:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  50:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/ip.h"
+  51:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/raw.h"
+  52:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/udp.h"
+  53:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include "lwip/tcp.h"
+  54:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  55:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #include <string.h>
+  56:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  57:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+  58:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Create a new netconn (of a specific type) that has a callback function.
+  59:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * The corresponding pcb is also created.
+  60:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  61:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param t the type of 'connection' to create (@see enum netconn_type)
+  62:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param proto the IP protocol for RAW IP pcbs
+  63:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param callback a function to call on status changes (RX available, TX'ed)
+  64:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return a newly allocated struct netconn or
+  65:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *         NULL on memory error
+  66:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+  67:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** struct netconn*
+  68:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_new_with_proto_and_callback(enum netconn_type t, u8_t proto, netconn_callback callback)
+  69:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+  70:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct netconn *conn;
+  71:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+  72:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  73:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   conn = netconn_alloc(t, callback);
+  74:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (conn != NULL ) {
+  75:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     msg.function = do_newconn;
+  76:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     msg.msg.msg.n.proto = proto;
+  77:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     msg.msg.conn = conn;
+  78:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     TCPIP_APIMSG(&msg);
+  79:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  80:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (conn->err != ERR_OK) {
+  81:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       LWIP_ASSERT("freeing conn without freeing pcb", conn->pcb.tcp == NULL);
+  82:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       LWIP_ASSERT("conn has no op_completed", conn->op_completed != SYS_SEM_NULL);
+  83:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       LWIP_ASSERT("conn has no recvmbox", conn->recvmbox != SYS_MBOX_NULL);
+  84:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       LWIP_ASSERT("conn->acceptmbox shouldn't exist", conn->acceptmbox == SYS_MBOX_NULL);
+  85:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       sys_sem_free(conn->op_completed);
+  86:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       sys_mbox_free(conn->recvmbox);
+  87:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       memp_free(MEMP_NETCONN, conn);
+  88:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       return NULL;
+  89:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+  90:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+  91:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn;
+  92:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+  93:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+  94:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+  95:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Close a netconn 'connection' and free its resources.
+  96:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * UDP and RAW connection are completely closed, TCP pcbs might still be in a waitstate
+  97:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * after this returns.
+  98:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+  99:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn to delete
+ 100:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if the connection was deleted
+ 101:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 102:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 103:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_delete(struct netconn *conn)
+ 104:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 105:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 106:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 107:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   /* No ASSERT here because possible to get a (conn == NULL) if we got an accept error */
+ 108:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (conn == NULL) {
+ 109:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     return ERR_OK;
+ 110:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 111:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 112:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_delconn;
+ 113:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 114:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   tcpip_apimsg(&msg);
+ 115:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 116:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   conn->pcb.tcp = NULL;
+ 117:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   netconn_free(conn);
+ 118:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 119:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return ERR_OK;
+ 120:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 121:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 122:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 123:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Get the local or remote IP address and port of a netconn.
+ 124:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * For RAW netconns, this returns the protocol instead of a port!
+ 125:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 126:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn to query
+ 127:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param addr a pointer to which to save the IP address
+ 128:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param port a pointer to which to save the port (or protocol for RAW)
+ 129:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param local 1 to get the local IP address, 0 to get the remote one
+ 130:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_CONN for invalid connections
+ 131:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *         ERR_OK if the information was retrieved
+ 132:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 133:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 134:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_getaddr(struct netconn *conn, struct ip_addr *addr, u16_t *port, u8_t local)
+ 135:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 136:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 137:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_getaddr: invalid conn", (conn != NULL), return ERR_ARG;);
+ 139:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_getaddr: invalid addr", (addr != NULL), return ERR_ARG;);
+ 140:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_getaddr: invalid port", (port != NULL), return ERR_ARG;);
+ 141:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 142:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_getaddr;
+ 143:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 144:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.ad.ipaddr = addr;
+ 145:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.ad.port = port;
+ 146:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.ad.local = local;
+ 147:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 148:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 149:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 150:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 151:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 152:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 153:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Bind a netconn to a specific local IP address and port.
+ 154:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Binding one netconn twice might not always be checked correctly!
+ 155:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 156:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn to bind
+ 157:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param addr the local IP address to bind the netconn to (use IP_ADDR_ANY
+ 158:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *             to bind to all addresses)
+ 159:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param port the local port to bind the netconn to (not used for RAW)
+ 160:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if bound, any other err_t on failure
+ 161:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 162:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 163:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_bind(struct netconn *conn, struct ip_addr *addr, u16_t port)
+ 164:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 165:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 166:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 167:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_bind: invalid conn", (conn != NULL), return ERR_ARG;);
+ 168:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 169:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_bind;
+ 170:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 171:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.bc.ipaddr = addr;
+ 172:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.bc.port = port;
+ 173:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 174:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 175:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 176:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 177:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 178:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Connect a netconn to a specific remote IP address and port.
+ 179:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 180:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn to connect
+ 181:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param addr the remote IP address to connect to
+ 182:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param port the remote port to connect to (no used for RAW)
+ 183:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if connected, return value of tcp_/udp_/raw_connect otherwise
+ 184:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 185:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 186:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_connect(struct netconn *conn, struct ip_addr *addr, u16_t port)
+ 187:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 188:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 189:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 190:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_connect: invalid conn", (conn != NULL), return ERR_ARG;);
+ 191:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 192:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_connect;
+ 193:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 194:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.bc.ipaddr = addr;
+ 195:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.bc.port = port;
+ 196:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   /* This is the only function which need to not block tcpip_thread */
+ 197:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   tcpip_apimsg(&msg);
+ 198:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 199:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 200:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 201:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 202:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Disconnect a netconn from its current peer (only valid for UDP netconns).
+ 203:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 204:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn to disconnect
+ 205:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return TODO: return value is not set here...
+ 206:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 207:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 208:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_disconnect(struct netconn *conn)
+ 209:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 210:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 211:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_disconnect: invalid conn", (conn != NULL), return ERR_ARG;);
+ 213:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 214:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_disconnect;
+ 215:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 216:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 217:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 218:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 219:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 220:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 221:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Set a TCP netconn into listen mode
+ 222:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 223:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the tcp netconn to set to listen mode
+ 224:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param backlog the listen backlog, only used if TCP_LISTEN_BACKLOG==1
+ 225:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if the netconn was set to listen (UDP and RAW netconns
+ 226:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *         don't return any error (yet?))
+ 227:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 228:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 229:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_listen_with_backlog(struct netconn *conn, u8_t backlog)
+ 230:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 231:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 232:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 233:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   /* This does no harm. If TCP_LISTEN_BACKLOG is off, backlog is unused. */
+ 234:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_UNUSED_ARG(backlog);
+ 235:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 236:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_listen: invalid conn", (conn != NULL), return ERR_ARG;);
+ 237:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 238:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_listen;
+ 239:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 240:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if TCP_LISTEN_BACKLOG
+ 241:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.lb.backlog = backlog;
+ 242:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* TCP_LISTEN_BACKLOG */
+ 243:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 244:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 245:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 246:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 247:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 248:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Accept a new connection on a TCP listening netconn.
+ 249:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 250:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the TCP listen netconn
+ 251:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return the newly accepted netconn or NULL on timeout
+ 252:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 253:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** struct netconn *
+ 254:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_accept(struct netconn *conn)
+ 255:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 256:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct netconn *newconn;
+ 257:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 258:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_accept: invalid conn",       (conn != NULL),                      return NULL
+ 259:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_accept: invalid acceptmbox", (conn->acceptmbox != SYS_MBOX_NULL), return NULL
+ 260:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 261:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if LWIP_SO_RCVTIMEO
+ 262:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (sys_arch_mbox_fetch(conn->acceptmbox, (void *)&newconn, conn->recv_timeout) == SYS_ARCH_TIMEO
+ 263:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     newconn = NULL;
+ 264:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   } else
+ 265:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #else
+ 266:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   sys_arch_mbox_fetch(conn->acceptmbox, (void *)&newconn, 0);
+ 267:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* LWIP_SO_RCVTIMEO*/
+ 268:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   {
+ 269:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* Register event with callback */
+ 270:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     API_EVENT(conn, NETCONN_EVT_RCVMINUS, 0);
+ 271:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 272:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if TCP_LISTEN_BACKLOG
+ 273:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (newconn != NULL) {
+ 274:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       /* Let the stack know that we have accepted the connection. */
+ 275:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       struct api_msg msg;
+ 276:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       msg.function = do_recv;
+ 277:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       msg.msg.conn = conn;
+ 278:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       TCPIP_APIMSG(&msg);
+ 279:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 280:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* TCP_LISTEN_BACKLOG */
+ 281:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 282:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 283:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return newconn;
+ 284:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 285:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 286:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 287:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Receive data (in form of a netbuf containing a packet buffer) from a netconn
+ 288:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 289:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn from which to receive data
+ 290:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return a new netbuf containing received data or NULL on memory error or timeout
+ 291:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 292:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** struct netbuf *
+ 293:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_recv(struct netconn *conn)
+ 294:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 295:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 296:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct netbuf *buf = NULL;
+ 297:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct pbuf *p;
+ 298:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   u16_t len;
+ 299:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 300:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_recv: invalid conn",  (conn != NULL), return NULL;);
+ 301:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 302:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (conn->recvmbox == SYS_MBOX_NULL) {
+ 303:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* @todo: should calling netconn_recv on a TCP listen conn be fatal (ERR_CONN)?? */
+ 304:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* TCP listen conns don't have a recvmbox! */
+ 305:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     conn->err = ERR_CONN;
+ 306:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     return NULL;
+ 307:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 308:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 309:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (ERR_IS_FATAL(conn->err)) {
+ 310:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     return NULL;
+ 311:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 312:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 313:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (conn->type == NETCONN_TCP) {
+ 314:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if LWIP_TCP
+ 315:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (conn->state == NETCONN_LISTEN) {
+ 316:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       /* @todo: should calling netconn_recv on a TCP listen conn be fatal?? */
+ 317:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       conn->err = ERR_CONN;
+ 318:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       return NULL;
+ 319:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 320:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 321:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf = memp_malloc(MEMP_NETBUF);
+ 322:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 323:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (buf == NULL) {
+ 324:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       conn->err = ERR_MEM;
+ 325:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       return NULL;
+ 326:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 327:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 328:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if LWIP_SO_RCVTIMEO
+ 329:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (sys_arch_mbox_fetch(conn->recvmbox, (void *)&p, conn->recv_timeout)==SYS_ARCH_TIMEOUT) {
+ 330:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       memp_free(MEMP_NETBUF, buf);
+ 331:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       conn->err = ERR_TIMEOUT;
+ 332:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       return NULL;
+ 333:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 334:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #else
+ 335:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     sys_arch_mbox_fetch(conn->recvmbox, (void *)&p, 0);
+ 336:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* LWIP_SO_RCVTIMEO*/
+ 337:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 338:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (p != NULL) {
+ 339:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       len = p->tot_len;
+ 340:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       SYS_ARCH_DEC(conn->recv_avail, len);
+ 341:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     } else {
+ 342:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       len = 0;
+ 343:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 344:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 345:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* Register event with callback */
+ 346:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     API_EVENT(conn, NETCONN_EVT_RCVMINUS, len);
+ 347:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 348:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* If we are closed, we indicate that we no longer wish to use the socket */
+ 349:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (p == NULL) {
+ 350:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       memp_free(MEMP_NETBUF, buf);
+ 351:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       /* Avoid to lose any previous error code */
+ 352:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       if (conn->err == ERR_OK) {
+ 353:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****         conn->err = ERR_CLSD;
+ 354:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       }
+ 355:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       return NULL;
+ 356:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 357:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 358:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->p = p;
+ 359:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->ptr = p;
+ 360:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->port = 0;
+ 361:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->addr = NULL;
+ 362:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 363:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     /* Let the stack know that we have taken the data. */
+ 364:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     msg.function = do_recv;
+ 365:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     msg.msg.conn = conn;
+ 366:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (buf != NULL) {
+ 367:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       msg.msg.msg.r.len = buf->p->tot_len;
+ 368:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     } else {
+ 369:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       msg.msg.msg.r.len = 1;
+ 370:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 371:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     TCPIP_APIMSG(&msg);
+ 372:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* LWIP_TCP */
+ 373:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   } else {
+ 374:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if (LWIP_UDP || LWIP_RAW)
+ 375:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #if LWIP_SO_RCVTIMEO
+ 376:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (sys_arch_mbox_fetch(conn->recvmbox, (void *)&buf, conn->recv_timeout)==SYS_ARCH_TIMEOUT) {
+ 377:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       buf = NULL;
+ 378:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 379:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #else
+ 380:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     sys_arch_mbox_fetch(conn->recvmbox, (void *)&buf, 0);
+ 381:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* LWIP_SO_RCVTIMEO*/
+ 382:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     if (buf!=NULL) {
+ 383:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       SYS_ARCH_DEC(conn->recv_avail, buf->p->tot_len);
+ 384:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       /* Register event with callback */
+ 385:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****       API_EVENT(conn, NETCONN_EVT_RCVMINUS, buf->p->tot_len);
+ 386:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     }
+ 387:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** #endif /* (LWIP_UDP || LWIP_RAW) */
+ 388:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 389:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 390:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_DEBUGF(API_LIB_DEBUG, ("netconn_recv: received %p (err %d)\n", (void *)buf, conn->err));
+ 391:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 392:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return buf;
+ 393:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 394:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 395:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 396:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Send data (in form of a netbuf) to a specific remote IP address and port.
+ 397:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Only to be used for UDP and RAW netconns (not TCP).
+ 398:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 399:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the netconn over which to send data
+ 400:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param buf a netbuf containing the data to send
+ 401:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param addr the remote IP address to which to send the data
+ 402:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param port the remote port to which to send the data
+ 403:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if data was sent, any other err_t on error
+ 404:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 405:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 406:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_sendto(struct netconn *conn, struct netbuf *buf, struct ip_addr *addr, u16_t port)
+ 407:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 408:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   if (buf != NULL) {
+ 409:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->addr = addr;
+ 410:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     buf->port = port;
+ 411:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****     return netconn_send(conn, buf);
+ 412:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   }
+ 413:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return ERR_VAL;
+ 414:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 415:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 416:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 417:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Send data over a UDP or RAW netconn (that is already connected).
+ 418:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 419:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the UDP or RAW netconn over which to send data
+ 420:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param buf a netbuf containing the data to send
+ 421:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if data was sent, any other err_t on error
+ 422:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 423:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 424:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_send(struct netconn *conn, struct netbuf *buf)
+ 425:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 426:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 427:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 428:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_send: invalid conn",  (conn != NULL), return ERR_ARG;);
+ 429:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 430:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_DEBUGF(API_LIB_DEBUG, ("netconn_send: sending %"U16_F" bytes\n", buf->p->tot_len));
+ 431:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_send;
+ 432:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 433:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.b = buf;
+ 434:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 435:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 436:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 437:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 438:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 439:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Send data over a TCP netconn.
+ 440:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 441:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the TCP netconn over which to send data
+ 442:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param dataptr pointer to the application buffer that contains the data to send
+ 443:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param size size of the application data to send
+ 444:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param apiflags combination of following flags :
+ 445:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * - NETCONN_COPY (0x01) data will be copied into memory belonging to the stack
+ 446:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * - NETCONN_MORE (0x02) for TCP connection, PSH flag will be set on last segment sent
+ 447:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if data was sent, any other err_t on error
+ 448:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 449:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 450:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_write(struct netconn *conn, const void *dataptr, size_t size, u8_t apiflags)
+ 451:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+ 452:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 453:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 454:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_write: invalid conn",  (conn != NULL), return ERR_ARG;);
+ 455:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_write: invalid conn->type",  (conn->type == NETCONN_TCP), return ERR_VAL;);
+ 456:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 457:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_write;
+ 458:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+ 459:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.w.dataptr = dataptr;
+ 460:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.w.apiflags = apiflags;
+ 461:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.msg.w.len = size;
+ 462:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   /* For locking the core: this _can_ be delayed on low memory/low send buffer,
+ 463:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****      but if it is, this is done inside api_msg.c:do_write(), so we can use the
+ 464:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****      non-blocking version here. */
+ 465:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   TCPIP_APIMSG(&msg);
+ 466:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+ 467:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+ 468:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 469:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** /**
+ 470:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * Close a TCP netconn (doesn't delete it).
+ 471:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  *
+ 472:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @param conn the TCP netconn to close
+ 473:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  * @return ERR_OK if the netconn was closed, any other err_t on error
+ 474:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****  */
+ 475:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** err_t
+ 476:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** netconn_close(struct netconn *conn)
+ 477:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** {
+  19              		.loc 1 477 0
+  20 0000 10B5     		push	{r4, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 85B0     		sub	sp, sp, #20
+  24              	.LCFI1:
+  25 0004 041C     		mov	r4, r0
+ 478:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   struct api_msg msg;
+ 479:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 480:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   LWIP_ERROR("netconn_close: invalid conn",  (conn != NULL), return ERR_ARG;);
+  26              		.loc 1 480 0
+  27 0006 0028     		cmp	r0, #0
+  28 0008 01D1     		bne	.L2
+  29 000a F620     		mov	r0, #246
+  30              	.LVL1:
+  31 000c 06E0     		b	.L3
+  32              	.LVL2:
+  33              	.L2:
+ 481:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.function = do_close;
+  34              		.loc 1 482 0
+  35 000e 6846     		mov	r0, sp
+  36              	.LVL3:
+  37 0010 054B     		ldr	r3, .L5
+  38 0012 0093     		str	r3, [sp]
+ 483:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   msg.msg.conn = conn;
+  39              		.loc 1 483 0
+  40 0014 0194     		str	r4, [sp, #4]
+ 484:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   tcpip_apimsg(&msg);
+  41              		.loc 1 484 0
+  42 0016 FFF7FEFF 		bl	tcpip_apimsg
+ 485:rtos/common/ethernet/lwIP_132/src/api/api_lib.c ****   return conn->err;
+  43              		.loc 1 485 0
+  44 001a 207B     		ldrb	r0, [r4, #12]
+  45              	.L3:
+  46 001c 0006     		lsl	r0, r0, #24
+  47 001e 0016     		asr	r0, r0, #24
+ 486:rtos/common/ethernet/lwIP_132/src/api/api_lib.c **** }
+  48              		.loc 1 486 0
+  49 0020 05B0     		add	sp, sp, #20
+  50              		@ sp needed for prologue
+  51              	.LVL4:
+  52 0022 10BC     		pop	{r4}
+  53 0024 02BC     		pop	{r1}
+  54 0026 0847     		bx	r1
+  55              	.L6:
+  56              		.align	2
+  57              	.L5:
+  58 0028 00000000 		.word	do_close
+  59              	.LFE302:
+  61              		.align	2
+  62              		.global	netconn_write
+  63              		.code	16
+  64              		.thumb_func
+  66              	netconn_write:
+  67              	.LFB301:
+  68              		.loc 1 451 0
+  69 002c 30B5     		push	{r4, r5, lr}
+  70              	.LCFI2:
+  71              	.LVL5:
+  72 002e 85B0     		sub	sp, sp, #20
+  73              	.LCFI3:
+  74 0030 041C     		mov	r4, r0
+  75 0032 151C     		mov	r5, r2
+  76 0034 1B06     		lsl	r3, r3, #24
+  77              	.LVL6:
+  78 0036 1A0E     		lsr	r2, r3, #24
+  79              	.LVL7:
+  80              		.loc 1 454 0
+  81 0038 0028     		cmp	r0, #0
+  82 003a 01D1     		bne	.L8
+  83 003c F620     		mov	r0, #246
+  84              	.LVL8:
+  85 003e 0EE0     		b	.L9
+  86              	.LVL9:
+  87              	.L8:
+  88              		.loc 1 455 0
+  89 0040 0368     		ldr	r3, [r0]
+  90 0042 102B     		cmp	r3, #16
+  91 0044 01D0     		beq	.L10
+  92 0046 F720     		mov	r0, #247
+  93              	.LVL10:
+  94 0048 09E0     		b	.L9
+  95              	.LVL11:
+  96              	.L10:
+  97              		.loc 1 457 0
+  98 004a 6846     		mov	r0, sp
+  99              	.LVL12:
+ 100 004c 074B     		ldr	r3, .L12
+ 101 004e 0093     		str	r3, [sp]
+ 102              		.loc 1 458 0
+ 103 0050 0194     		str	r4, [sp, #4]
+ 104              		.loc 1 459 0
+ 105 0052 0291     		str	r1, [sp, #8]
+ 106              		.loc 1 460 0
+ 107 0054 0274     		strb	r2, [r0, #16]
+ 108              		.loc 1 461 0
+ 109 0056 0395     		str	r5, [sp, #12]
+ 110              		.loc 1 465 0
+ 111 0058 FFF7FEFF 		bl	tcpip_apimsg
+ 112              	.LVL13:
+ 113              		.loc 1 466 0
+ 114 005c 207B     		ldrb	r0, [r4, #12]
+ 115              	.LVL14:
+ 116              	.L9:
+ 117 005e 0006     		lsl	r0, r0, #24
+ 118 0060 0016     		asr	r0, r0, #24
+ 119              		.loc 1 467 0
+ 120 0062 05B0     		add	sp, sp, #20
+ 121              		@ sp needed for prologue
+ 122              	.LVL15:
+ 123              	.LVL16:
+ 124 0064 30BC     		pop	{r4, r5}
+ 125 0066 02BC     		pop	{r1}
+ 126 0068 0847     		bx	r1
+ 127              	.L13:
+ 128 006a C046     		.align	2
+ 129              	.L12:
+ 130 006c 00000000 		.word	do_write
+ 131              	.LFE301:
+ 133              		.align	2
+ 134              		.global	netconn_send
+ 135              		.code	16
+ 136              		.thumb_func
+ 138              	netconn_send:
+ 139              	.LFB300:
+ 140              		.loc 1 425 0
+ 141 0070 10B5     		push	{r4, lr}
+ 142              	.LCFI4:
+ 143              	.LVL17:
+ 144 0072 85B0     		sub	sp, sp, #20
+ 145              	.LCFI5:
+ 146 0074 041C     		mov	r4, r0
+ 147              		.loc 1 428 0
+ 148 0076 0028     		cmp	r0, #0
+ 149 0078 01D1     		bne	.L15
+ 150 007a F620     		mov	r0, #246
+ 151              	.LVL18:
+ 152 007c 07E0     		b	.L16
+ 153              	.LVL19:
+ 154              	.L15:
+ 155              		.loc 1 431 0
+ 156 007e 6846     		mov	r0, sp
+ 157              	.LVL20:
+ 158 0080 064B     		ldr	r3, .L18
+ 159 0082 0093     		str	r3, [sp]
+ 160              		.loc 1 432 0
+ 161 0084 0194     		str	r4, [sp, #4]
+ 162              		.loc 1 433 0
+ 163 0086 0291     		str	r1, [sp, #8]
+ 164              		.loc 1 434 0
+ 165 0088 FFF7FEFF 		bl	tcpip_apimsg
+ 166              	.LVL21:
+ 167              		.loc 1 435 0
+ 168 008c 207B     		ldrb	r0, [r4, #12]
+ 169              	.LVL22:
+ 170              	.L16:
+ 171 008e 0006     		lsl	r0, r0, #24
+ 172 0090 0016     		asr	r0, r0, #24
+ 173              		.loc 1 436 0
+ 174 0092 05B0     		add	sp, sp, #20
+ 175              		@ sp needed for prologue
+ 176              	.LVL23:
+ 177 0094 10BC     		pop	{r4}
+ 178 0096 02BC     		pop	{r1}
+ 179 0098 0847     		bx	r1
+ 180              	.L19:
+ 181 009a C046     		.align	2
+ 182              	.L18:
+ 183 009c 00000000 		.word	do_send
+ 184              	.LFE300:
+ 186              		.align	2
+ 187              		.global	netconn_sendto
+ 188              		.code	16
+ 189              		.thumb_func
+ 191              	netconn_sendto:
+ 192              	.LFB299:
+ 193              		.loc 1 407 0
+ 194 00a0 00B5     		push	{lr}
+ 195              	.LCFI6:
+ 196              	.LVL24:
+ 197 00a2 1B04     		lsl	r3, r3, #16
+ 198              	.LVL25:
+ 199 00a4 1B0C     		lsr	r3, r3, #16
+ 200              	.LVL26:
+ 201              		.loc 1 408 0
+ 202 00a6 0029     		cmp	r1, #0
+ 203 00a8 01D1     		bne	.L21
+ 204 00aa F720     		mov	r0, #247
+ 205              	.LVL27:
+ 206 00ac 05E0     		b	.L22
+ 207              	.LVL28:
+ 208              	.L21:
+ 209              		.loc 1 409 0
+ 210 00ae 8A60     		str	r2, [r1, #8]
+ 211              		.loc 1 410 0
+ 212 00b0 8B81     		strh	r3, [r1, #12]
+ 213              		.loc 1 411 0
+ 214 00b2 FFF7FEFF 		bl	netconn_send
+ 215              	.LVL29:
+ 216 00b6 0006     		lsl	r0, r0, #24
+ 217 00b8 000E     		lsr	r0, r0, #24
+ 218              	.LVL30:
+ 219              	.L22:
+ 220 00ba 0006     		lsl	r0, r0, #24
+ 221 00bc 0016     		asr	r0, r0, #24
+ 222              		.loc 1 414 0
+ 223              		@ sp needed for prologue
+ 224 00be 02BC     		pop	{r1}
+ 225 00c0 0847     		bx	r1
+ 226              	.LFE299:
+ 228 00c2 C046     		.align	2
+ 229              		.global	netconn_listen_with_backlog
+ 230              		.code	16
+ 231              		.thumb_func
+ 233              	netconn_listen_with_backlog:
+ 234              	.LFB296:
+ 235              		.loc 1 230 0
+ 236 00c4 10B5     		push	{r4, lr}
+ 237              	.LCFI7:
+ 238              	.LVL31:
+ 239 00c6 85B0     		sub	sp, sp, #20
+ 240              	.LCFI8:
+ 241 00c8 041C     		mov	r4, r0
+ 242              		.loc 1 236 0
+ 243 00ca 0028     		cmp	r0, #0
+ 244 00cc 01D1     		bne	.L25
+ 245 00ce F620     		mov	r0, #246
+ 246              	.LVL32:
+ 247 00d0 06E0     		b	.L26
+ 248              	.LVL33:
+ 249              	.L25:
+ 250              		.loc 1 238 0
+ 251 00d2 6846     		mov	r0, sp
+ 252              	.LVL34:
+ 253 00d4 054B     		ldr	r3, .L28
+ 254 00d6 0093     		str	r3, [sp]
+ 255              		.loc 1 239 0
+ 256 00d8 0194     		str	r4, [sp, #4]
+ 257              		.loc 1 243 0
+ 258 00da FFF7FEFF 		bl	tcpip_apimsg
+ 259              	.LVL35:
+ 260              		.loc 1 244 0
+ 261 00de 207B     		ldrb	r0, [r4, #12]
+ 262              	.LVL36:
+ 263              	.L26:
+ 264 00e0 0006     		lsl	r0, r0, #24
+ 265 00e2 0016     		asr	r0, r0, #24
+ 266              		.loc 1 245 0
+ 267 00e4 05B0     		add	sp, sp, #20
+ 268              		@ sp needed for prologue
+ 269              	.LVL37:
+ 270 00e6 10BC     		pop	{r4}
+ 271 00e8 02BC     		pop	{r1}
+ 272 00ea 0847     		bx	r1
+ 273              	.L29:
+ 274              		.align	2
+ 275              	.L28:
+ 276 00ec 00000000 		.word	do_listen
+ 277              	.LFE296:
+ 279              		.align	2
+ 280              		.global	netconn_disconnect
+ 281              		.code	16
+ 282              		.thumb_func
+ 284              	netconn_disconnect:
+ 285              	.LFB295:
+ 286              		.loc 1 209 0
+ 287 00f0 10B5     		push	{r4, lr}
+ 288              	.LCFI9:
+ 289              	.LVL38:
+ 290 00f2 85B0     		sub	sp, sp, #20
+ 291              	.LCFI10:
+ 292 00f4 041C     		mov	r4, r0
+ 293              		.loc 1 212 0
+ 294 00f6 0028     		cmp	r0, #0
+ 295 00f8 01D1     		bne	.L31
+ 296 00fa F620     		mov	r0, #246
+ 297              	.LVL39:
+ 298 00fc 06E0     		b	.L32
+ 299              	.LVL40:
+ 300              	.L31:
+ 301              		.loc 1 214 0
+ 302 00fe 6846     		mov	r0, sp
+ 303              	.LVL41:
+ 304 0100 054B     		ldr	r3, .L34
+ 305 0102 0093     		str	r3, [sp]
+ 306              		.loc 1 215 0
+ 307 0104 0194     		str	r4, [sp, #4]
+ 308              		.loc 1 216 0
+ 309 0106 FFF7FEFF 		bl	tcpip_apimsg
+ 310              		.loc 1 217 0
+ 311 010a 207B     		ldrb	r0, [r4, #12]
+ 312              	.L32:
+ 313 010c 0006     		lsl	r0, r0, #24
+ 314 010e 0016     		asr	r0, r0, #24
+ 315              		.loc 1 218 0
+ 316 0110 05B0     		add	sp, sp, #20
+ 317              		@ sp needed for prologue
+ 318              	.LVL42:
+ 319 0112 10BC     		pop	{r4}
+ 320 0114 02BC     		pop	{r1}
+ 321 0116 0847     		bx	r1
+ 322              	.L35:
+ 323              		.align	2
+ 324              	.L34:
+ 325 0118 00000000 		.word	do_disconnect
+ 326              	.LFE295:
+ 328              		.align	2
+ 329              		.global	netconn_connect
+ 330              		.code	16
+ 331              		.thumb_func
+ 333              	netconn_connect:
+ 334              	.LFB294:
+ 335              		.loc 1 187 0
+ 336 011c 10B5     		push	{r4, lr}
+ 337              	.LCFI11:
+ 338              	.LVL43:
+ 339 011e 85B0     		sub	sp, sp, #20
+ 340              	.LCFI12:
+ 341 0120 041C     		mov	r4, r0
+ 342 0122 1204     		lsl	r2, r2, #16
+ 343              	.LVL44:
+ 344 0124 120C     		lsr	r2, r2, #16
+ 345              	.LVL45:
+ 346              		.loc 1 190 0
+ 347 0126 0028     		cmp	r0, #0
+ 348 0128 01D1     		bne	.L37
+ 349 012a F620     		mov	r0, #246
+ 350              	.LVL46:
+ 351 012c 08E0     		b	.L38
+ 352              	.LVL47:
+ 353              	.L37:
+ 354              		.loc 1 192 0
+ 355 012e 6846     		mov	r0, sp
+ 356              	.LVL48:
+ 357 0130 064B     		ldr	r3, .L40
+ 358 0132 0093     		str	r3, [sp]
+ 359              		.loc 1 193 0
+ 360 0134 0194     		str	r4, [sp, #4]
+ 361              		.loc 1 194 0
+ 362 0136 0291     		str	r1, [sp, #8]
+ 363              		.loc 1 195 0
+ 364 0138 8281     		strh	r2, [r0, #12]
+ 365              		.loc 1 197 0
+ 366 013a FFF7FEFF 		bl	tcpip_apimsg
+ 367              	.LVL49:
+ 368              		.loc 1 198 0
+ 369 013e 207B     		ldrb	r0, [r4, #12]
+ 370              	.LVL50:
+ 371              	.L38:
+ 372 0140 0006     		lsl	r0, r0, #24
+ 373 0142 0016     		asr	r0, r0, #24
+ 374              		.loc 1 199 0
+ 375 0144 05B0     		add	sp, sp, #20
+ 376              		@ sp needed for prologue
+ 377              	.LVL51:
+ 378 0146 10BC     		pop	{r4}
+ 379 0148 02BC     		pop	{r1}
+ 380 014a 0847     		bx	r1
+ 381              	.L41:
+ 382              		.align	2
+ 383              	.L40:
+ 384 014c 00000000 		.word	do_connect
+ 385              	.LFE294:
+ 387              		.align	2
+ 388              		.global	netconn_bind
+ 389              		.code	16
+ 390              		.thumb_func
+ 392              	netconn_bind:
+ 393              	.LFB293:
+ 394              		.loc 1 164 0
+ 395 0150 10B5     		push	{r4, lr}
+ 396              	.LCFI13:
+ 397              	.LVL52:
+ 398 0152 85B0     		sub	sp, sp, #20
+ 399              	.LCFI14:
+ 400 0154 041C     		mov	r4, r0
+ 401 0156 1204     		lsl	r2, r2, #16
+ 402              	.LVL53:
+ 403 0158 120C     		lsr	r2, r2, #16
+ 404              	.LVL54:
+ 405              		.loc 1 167 0
+ 406 015a 0028     		cmp	r0, #0
+ 407 015c 01D1     		bne	.L43
+ 408 015e F620     		mov	r0, #246
+ 409              	.LVL55:
+ 410 0160 08E0     		b	.L44
+ 411              	.LVL56:
+ 412              	.L43:
+ 413              		.loc 1 169 0
+ 414 0162 6846     		mov	r0, sp
+ 415              	.LVL57:
+ 416 0164 064B     		ldr	r3, .L46
+ 417 0166 0093     		str	r3, [sp]
+ 418              		.loc 1 170 0
+ 419 0168 0194     		str	r4, [sp, #4]
+ 420              		.loc 1 171 0
+ 421 016a 0291     		str	r1, [sp, #8]
+ 422              		.loc 1 172 0
+ 423 016c 8281     		strh	r2, [r0, #12]
+ 424              		.loc 1 173 0
+ 425 016e FFF7FEFF 		bl	tcpip_apimsg
+ 426              	.LVL58:
+ 427              		.loc 1 174 0
+ 428 0172 207B     		ldrb	r0, [r4, #12]
+ 429              	.LVL59:
+ 430              	.L44:
+ 431 0174 0006     		lsl	r0, r0, #24
+ 432 0176 0016     		asr	r0, r0, #24
+ 433              		.loc 1 175 0
+ 434 0178 05B0     		add	sp, sp, #20
+ 435              		@ sp needed for prologue
+ 436              	.LVL60:
+ 437 017a 10BC     		pop	{r4}
+ 438 017c 02BC     		pop	{r1}
+ 439 017e 0847     		bx	r1
+ 440              	.L47:
+ 441              		.align	2
+ 442              	.L46:
+ 443 0180 00000000 		.word	do_bind
+ 444              	.LFE293:
+ 446              		.align	2
+ 447              		.global	netconn_getaddr
+ 448              		.code	16
+ 449              		.thumb_func
+ 451              	netconn_getaddr:
+ 452              	.LFB292:
+ 453              		.loc 1 135 0
+ 454 0184 30B5     		push	{r4, r5, lr}
+ 455              	.LCFI15:
+ 456              	.LVL61:
+ 457 0186 85B0     		sub	sp, sp, #20
+ 458              	.LCFI16:
+ 459 0188 041C     		mov	r4, r0
+ 460 018a 151C     		mov	r5, r2
+ 461 018c 1B06     		lsl	r3, r3, #24
+ 462              	.LVL62:
+ 463 018e 1A0E     		lsr	r2, r3, #24
+ 464              	.LVL63:
+ 465              		.loc 1 138 0
+ 466 0190 0028     		cmp	r0, #0
+ 467 0192 0ED0     		beq	.L49
+ 468              		.loc 1 139 0
+ 469 0194 0029     		cmp	r1, #0
+ 470 0196 0CD0     		beq	.L49
+ 471              		.loc 1 140 0
+ 472 0198 002D     		cmp	r5, #0
+ 473 019a 0AD0     		beq	.L49
+ 474              		.loc 1 142 0
+ 475 019c 6846     		mov	r0, sp
+ 476              	.LVL64:
+ 477 019e 084B     		ldr	r3, .L52
+ 478 01a0 0093     		str	r3, [sp]
+ 479              		.loc 1 143 0
+ 480 01a2 0194     		str	r4, [sp, #4]
+ 481              		.loc 1 144 0
+ 482 01a4 0291     		str	r1, [sp, #8]
+ 483              		.loc 1 145 0
+ 484 01a6 0395     		str	r5, [sp, #12]
+ 485              		.loc 1 146 0
+ 486 01a8 0274     		strb	r2, [r0, #16]
+ 487              		.loc 1 147 0
+ 488 01aa FFF7FEFF 		bl	tcpip_apimsg
+ 489              	.LVL65:
+ 490              		.loc 1 149 0
+ 491 01ae 207B     		ldrb	r0, [r4, #12]
+ 492 01b0 00E0     		b	.L50
+ 493              	.LVL66:
+ 494              	.L49:
+ 495 01b2 F620     		mov	r0, #246
+ 496              	.LVL67:
+ 497              	.L50:
+ 498 01b4 0006     		lsl	r0, r0, #24
+ 499 01b6 0016     		asr	r0, r0, #24
+ 500              		.loc 1 150 0
+ 501 01b8 05B0     		add	sp, sp, #20
+ 502              		@ sp needed for prologue
+ 503              	.LVL68:
+ 504              	.LVL69:
+ 505 01ba 30BC     		pop	{r4, r5}
+ 506 01bc 02BC     		pop	{r1}
+ 507 01be 0847     		bx	r1
+ 508              	.L53:
+ 509              		.align	2
+ 510              	.L52:
+ 511 01c0 00000000 		.word	do_getaddr
+ 512              	.LFE292:
+ 514              		.align	2
+ 515              		.global	netconn_accept
+ 516              		.code	16
+ 517              		.thumb_func
+ 519              	netconn_accept:
+ 520              	.LFB297:
+ 521              		.loc 1 255 0
+ 522 01c4 10B5     		push	{r4, lr}
+ 523              	.LCFI17:
+ 524              	.LVL70:
+ 525 01c6 81B0     		sub	sp, sp, #4
+ 526              	.LCFI18:
+ 527 01c8 041C     		mov	r4, r0
+ 528              		.loc 1 258 0
+ 529 01ca 0028     		cmp	r0, #0
+ 530 01cc 15D0     		beq	.L55
+ 531              		.loc 1 259 0
+ 532 01ce 8069     		ldr	r0, [r0, #24]
+ 533              	.LVL71:
+ 534 01d0 0028     		cmp	r0, #0
+ 535 01d2 12D0     		beq	.L55
+ 536              		.loc 1 262 0
+ 537 01d4 226A     		ldr	r2, [r4, #32]
+ 538 01d6 6946     		mov	r1, sp
+ 539 01d8 FFF7FEFF 		bl	sys_arch_mbox_fetch
+ 540 01dc 0130     		add	r0, r0, #1
+ 541 01de 02D1     		bne	.L56
+ 542              		.loc 1 263 0
+ 543 01e0 0023     		mov	r3, #0
+ 544 01e2 0093     		str	r3, [sp]
+ 545              	.LVL72:
+ 546 01e4 07E0     		b	.L57
+ 547              	.LVL73:
+ 548              	.L56:
+ 549              		.loc 1 270 0
+ 550 01e6 236B     		ldr	r3, [r4, #48]
+ 551 01e8 002B     		cmp	r3, #0
+ 552 01ea 04D0     		beq	.L57
+ 553 01ec 201C     		mov	r0, r4
+ 554 01ee 0121     		mov	r1, #1
+ 555 01f0 0022     		mov	r2, #0
+ 556 01f2 00F0EBF8 		bl	.L60
+ 557              	.LVL74:
+ 558              	.L57:
+ 559              		.loc 1 283 0
+ 560 01f6 0098     		ldr	r0, [sp]
+ 561 01f8 00E0     		b	.L58
+ 562              	.LVL75:
+ 563              	.L55:
+ 564 01fa 0020     		mov	r0, #0
+ 565              	.LVL76:
+ 566              	.L58:
+ 567              		.loc 1 284 0
+ 568 01fc 01B0     		add	sp, sp, #4
+ 569              		@ sp needed for prologue
+ 570              	.LVL77:
+ 571 01fe 10BC     		pop	{r4}
+ 572 0200 02BC     		pop	{r1}
+ 573 0202 0847     		bx	r1
+ 574              	.LFE297:
+ 576              		.align	2
+ 577              		.global	netconn_recv
+ 578              		.code	16
+ 579              		.thumb_func
+ 581              	netconn_recv:
+ 582              	.LFB298:
+ 583              		.loc 1 294 0
+ 584 0204 30B5     		push	{r4, r5, lr}
+ 585              	.LCFI19:
+ 586              	.LVL78:
+ 587 0206 87B0     		sub	sp, sp, #28
+ 588              	.LCFI20:
+ 589 0208 041C     		mov	r4, r0
+ 590              		.loc 1 296 0
+ 591 020a 0023     		mov	r3, #0
+ 592 020c 0193     		str	r3, [sp, #4]
+ 593              	.LVL79:
+ 594              		.loc 1 300 0
+ 595 020e 0028     		cmp	r0, #0
+ 596 0210 00D1     		bne	.LCB530
+ 597 0212 94E0     		b	.L62	@long jump
+ 598              	.LCB530:
+ 599              		.loc 1 302 0
+ 600 0214 4069     		ldr	r0, [r0, #20]
+ 601              	.LVL80:
+ 602 0216 0028     		cmp	r0, #0
+ 603 0218 03D1     		bne	.L63
+ 604              		.loc 1 305 0
+ 605 021a 0823     		mov	r3, #8
+ 606 021c 5B42     		neg	r3, r3
+ 607 021e 2373     		strb	r3, [r4, #12]
+ 608 0220 8EE0     		b	.L64
+ 609              	.L63:
+ 610              		.loc 1 309 0
+ 611 0222 0C23     		mov	r3, #12
+ 612 0224 E356     		ldrsb	r3, [r4, r3]
+ 613 0226 0433     		add	r3, r3, #4
+ 614 0228 00DA     		bge	.LCB544
+ 615 022a 88E0     		b	.L62	@long jump
+ 616              	.LCB544:
+ 617              		.loc 1 313 0
+ 618 022c 2368     		ldr	r3, [r4]
+ 619 022e 102B     		cmp	r3, #16
+ 620 0230 63D1     		bne	.L65
+ 621              		.loc 1 315 0
+ 622 0232 6368     		ldr	r3, [r4, #4]
+ 623 0234 022B     		cmp	r3, #2
+ 624 0236 04D1     		bne	.L66
+ 625              		.loc 1 317 0
+ 626 0238 0823     		mov	r3, #8
+ 627 023a 5B42     		neg	r3, r3
+ 628 023c 2373     		strb	r3, [r4, #12]
+ 629 023e 0020     		mov	r0, #0
+ 630 0240 7EE0     		b	.L64
+ 631              	.L66:
+ 632              		.loc 1 321 0
+ 633 0242 0620     		mov	r0, #6
+ 634 0244 FFF7FEFF 		bl	memp_malloc
+ 635 0248 0190     		str	r0, [sp, #4]
+ 636              	.LVL81:
+ 637              		.loc 1 323 0
+ 638 024a 0028     		cmp	r0, #0
+ 639 024c 03D1     		bne	.L67
+ 640              		.loc 1 324 0
+ 641 024e 0123     		mov	r3, #1
+ 642 0250 5B42     		neg	r3, r3
+ 643 0252 2373     		strb	r3, [r4, #12]
+ 644 0254 74E0     		b	.L64
+ 645              	.L67:
+ 646              		.loc 1 329 0
+ 647 0256 6069     		ldr	r0, [r4, #20]
+ 648 0258 226A     		ldr	r2, [r4, #32]
+ 649 025a 6946     		mov	r1, sp
+ 650 025c FFF7FEFF 		bl	sys_arch_mbox_fetch
+ 651 0260 0130     		add	r0, r0, #1
+ 652 0262 08D1     		bne	.L68
+ 653              		.loc 1 330 0
+ 654 0264 0199     		ldr	r1, [sp, #4]
+ 655 0266 0620     		mov	r0, #6
+ 656 0268 FFF7FEFF 		bl	memp_free
+ 657              		.loc 1 331 0
+ 658 026c 0323     		mov	r3, #3
+ 659 026e 5B42     		neg	r3, r3
+ 660 0270 2373     		strb	r3, [r4, #12]
+ 661 0272 0020     		mov	r0, #0
+ 662 0274 64E0     		b	.L64
+ 663              	.LVL82:
+ 664              	.L68:
+ 665              		.loc 1 338 0
+ 666 0276 009A     		ldr	r2, [sp]
+ 667              	.LVL83:
+ 668 0278 002A     		cmp	r2, #0
+ 669 027a 01D1     		bne	.L69
+ 670 027c 0025     		mov	r5, #0
+ 671              	.LVL84:
+ 672 027e 07E0     		b	.L70
+ 673              	.LVL85:
+ 674              	.L69:
+ 675              		.loc 1 339 0
+ 676 0280 1589     		ldrh	r5, [r2, #8]
+ 677              	.LVL86:
+ 678              	.LBB2:
+ 679              		.loc 1 340 0
+ 680 0282 FFF7FEFF 		bl	sys_arch_protect
+ 681 0286 A38C     		ldrh	r3, [r4, #36]
+ 682 0288 5B1B     		sub	r3, r3, r5
+ 683 028a A384     		strh	r3, [r4, #36]
+ 684 028c FFF7FEFF 		bl	sys_arch_unprotect
+ 685              	.L70:
+ 686              	.LBE2:
+ 687              		.loc 1 346 0
+ 688 0290 236B     		ldr	r3, [r4, #48]
+ 689 0292 002B     		cmp	r3, #0
+ 690 0294 04D0     		beq	.L71
+ 691 0296 201C     		mov	r0, r4
+ 692 0298 0121     		mov	r1, #1
+ 693 029a 2A1C     		mov	r2, r5
+ 694 029c 00F096F8 		bl	.L60
+ 695              	.L71:
+ 696              		.loc 1 349 0
+ 697 02a0 009A     		ldr	r2, [sp]
+ 698 02a2 002A     		cmp	r2, #0
+ 699 02a4 0CD1     		bne	.L72
+ 700              		.loc 1 350 0
+ 701 02a6 0199     		ldr	r1, [sp, #4]
+ 702 02a8 0620     		mov	r0, #6
+ 703 02aa FFF7FEFF 		bl	memp_free
+ 704              		.loc 1 352 0
+ 705 02ae 0C23     		mov	r3, #12
+ 706 02b0 E356     		ldrsb	r3, [r4, r3]
+ 707 02b2 002B     		cmp	r3, #0
+ 708 02b4 43D1     		bne	.L62
+ 709              	.LVL87:
+ 710              		.loc 1 353 0
+ 711 02b6 0723     		mov	r3, #7
+ 712 02b8 5B42     		neg	r3, r3
+ 713 02ba 2373     		strb	r3, [r4, #12]
+ 714 02bc 0020     		mov	r0, #0
+ 715 02be 3FE0     		b	.L64
+ 716              	.LVL88:
+ 717              	.L72:
+ 718              		.loc 1 358 0
+ 719 02c0 019B     		ldr	r3, [sp, #4]
+ 720 02c2 1A60     		str	r2, [r3]
+ 721              		.loc 1 359 0
+ 722 02c4 019A     		ldr	r2, [sp, #4]
+ 723 02c6 009B     		ldr	r3, [sp]
+ 724 02c8 5360     		str	r3, [r2, #4]
+ 725              		.loc 1 360 0
+ 726 02ca 019B     		ldr	r3, [sp, #4]
+ 727 02cc 0022     		mov	r2, #0
+ 728 02ce 9A81     		strh	r2, [r3, #12]
+ 729              		.loc 1 361 0
+ 730 02d0 019B     		ldr	r3, [sp, #4]
+ 731 02d2 9A60     		str	r2, [r3, #8]
+ 732              		.loc 1 364 0
+ 733 02d4 02AA     		add	r2, sp, #8
+ 734 02d6 1C4B     		ldr	r3, .L78
+ 735 02d8 1360     		str	r3, [r2]
+ 736              		.loc 1 365 0
+ 737 02da 5460     		str	r4, [r2, #4]
+ 738              		.loc 1 366 0
+ 739 02dc 019B     		ldr	r3, [sp, #4]
+ 740 02de 002B     		cmp	r3, #0
+ 741 02e0 04D0     		beq	.L73
+ 742              	.LVL89:
+ 743              		.loc 1 367 0
+ 744 02e2 1B68     		ldr	r3, [r3]
+ 745 02e4 1A89     		ldrh	r2, [r3, #8]
+ 746 02e6 02AB     		add	r3, sp, #8
+ 747 02e8 1A81     		strh	r2, [r3, #8]
+ 748 02ea 02E0     		b	.L74
+ 749              	.L73:
+ 750              		.loc 1 369 0
+ 751 02ec 0122     		mov	r2, #1
+ 752 02ee 02AB     		add	r3, sp, #8
+ 753 02f0 1A81     		strh	r2, [r3, #8]
+ 754              	.L74:
+ 755              		.loc 1 371 0
+ 756 02f2 02A8     		add	r0, sp, #8
+ 757 02f4 FFF7FEFF 		bl	tcpip_apimsg
+ 758 02f8 1FE0     		b	.L75
+ 759              	.LVL90:
+ 760              	.L65:
+ 761              		.loc 1 376 0
+ 762 02fa 226A     		ldr	r2, [r4, #32]
+ 763 02fc 01A9     		add	r1, sp, #4
+ 764 02fe FFF7FEFF 		bl	sys_arch_mbox_fetch
+ 765 0302 0130     		add	r0, r0, #1
+ 766 0304 02D1     		bne	.L76
+ 767              		.loc 1 377 0
+ 768 0306 0023     		mov	r3, #0
+ 769 0308 0193     		str	r3, [sp, #4]
+ 770              	.LVL91:
+ 771 030a 16E0     		b	.L75
+ 772              	.L76:
+ 773              		.loc 1 382 0
+ 774 030c 019B     		ldr	r3, [sp, #4]
+ 775 030e 002B     		cmp	r3, #0
+ 776 0310 13D0     		beq	.L75
+ 777              	.LVL92:
+ 778              	.LBB3:
+ 779              		.loc 1 383 0
+ 780 0312 FFF7FEFF 		bl	sys_arch_protect
+ 781              	.LVL93:
+ 782 0316 019B     		ldr	r3, [sp, #4]
+ 783 0318 1A68     		ldr	r2, [r3]
+ 784 031a A38C     		ldrh	r3, [r4, #36]
+ 785 031c 1289     		ldrh	r2, [r2, #8]
+ 786 031e 9B1A     		sub	r3, r3, r2
+ 787 0320 A384     		strh	r3, [r4, #36]
+ 788 0322 FFF7FEFF 		bl	sys_arch_unprotect
+ 789              	.LBE3:
+ 790              		.loc 1 385 0
+ 791 0326 256B     		ldr	r5, [r4, #48]
+ 792 0328 002D     		cmp	r5, #0
+ 793 032a 06D0     		beq	.L75
+ 794 032c 019B     		ldr	r3, [sp, #4]
+ 795 032e 1B68     		ldr	r3, [r3]
+ 796 0330 1A89     		ldrh	r2, [r3, #8]
+ 797 0332 201C     		mov	r0, r4
+ 798 0334 0121     		mov	r1, #1
+ 799 0336 00F04AF8 		bl	.L80
+ 800              	.LVL94:
+ 801              	.L75:
+ 802              		.loc 1 392 0
+ 803 033a 0198     		ldr	r0, [sp, #4]
+ 804 033c 00E0     		b	.L64
+ 805              	.LVL95:
+ 806              	.L62:
+ 807 033e 0020     		mov	r0, #0
+ 808              	.LVL96:
+ 809              	.L64:
+ 810              		.loc 1 393 0
+ 811 0340 07B0     		add	sp, sp, #28
+ 812              		@ sp needed for prologue
+ 813              	.LVL97:
+ 814              	.LVL98:
+ 815 0342 30BC     		pop	{r4, r5}
+ 816 0344 02BC     		pop	{r1}
+ 817 0346 0847     		bx	r1
+ 818              	.L79:
+ 819              		.align	2
+ 820              	.L78:
+ 821 0348 00000000 		.word	do_recv
+ 822              	.LFE298:
+ 824              		.align	2
+ 825              		.global	netconn_delete
+ 826              		.code	16
+ 827              		.thumb_func
+ 829              	netconn_delete:
+ 830              	.LFB291:
+ 831              		.loc 1 104 0
+ 832 034c 10B5     		push	{r4, lr}
+ 833              	.LCFI21:
+ 834              	.LVL99:
+ 835 034e 85B0     		sub	sp, sp, #20
+ 836              	.LCFI22:
+ 837 0350 041C     		mov	r4, r0
+ 838              		.loc 1 108 0
+ 839 0352 0028     		cmp	r0, #0
+ 840 0354 0AD0     		beq	.L82
+ 841              		.loc 1 112 0
+ 842 0356 6846     		mov	r0, sp
+ 843              	.LVL100:
+ 844 0358 074B     		ldr	r3, .L84
+ 845 035a 0093     		str	r3, [sp]
+ 846              		.loc 1 113 0
+ 847 035c 0194     		str	r4, [sp, #4]
+ 848              		.loc 1 114 0
+ 849 035e FFF7FEFF 		bl	tcpip_apimsg
+ 850              		.loc 1 116 0
+ 851 0362 0023     		mov	r3, #0
+ 852 0364 A360     		str	r3, [r4, #8]
+ 853              		.loc 1 117 0
+ 854 0366 201C     		mov	r0, r4
+ 855 0368 FFF7FEFF 		bl	netconn_free
+ 856              	.LVL101:
+ 857              	.L82:
+ 858              		.loc 1 120 0
+ 859 036c 0020     		mov	r0, #0
+ 860 036e 05B0     		add	sp, sp, #20
+ 861              		@ sp needed for prologue
+ 862              	.LVL102:
+ 863 0370 10BC     		pop	{r4}
+ 864 0372 02BC     		pop	{r1}
+ 865 0374 0847     		bx	r1
+ 866              	.L85:
+ 867 0376 C046     		.align	2
+ 868              	.L84:
+ 869 0378 00000000 		.word	do_delconn
+ 870              	.LFE291:
+ 872              		.align	2
+ 873              		.global	netconn_new_with_proto_and_callback
+ 874              		.code	16
+ 875              		.thumb_func
+ 877              	netconn_new_with_proto_and_callback:
+ 878              	.LFB290:
+ 879              		.loc 1 69 0
+ 880 037c 30B5     		push	{r4, r5, lr}
+ 881              	.LCFI23:
+ 882              	.LVL103:
+ 883 037e 85B0     		sub	sp, sp, #20
+ 884              	.LCFI24:
+ 885 0380 0906     		lsl	r1, r1, #24
+ 886              	.LVL104:
+ 887 0382 0D0E     		lsr	r5, r1, #24
+ 888              	.LVL105:
+ 889              		.loc 1 73 0
+ 890 0384 111C     		mov	r1, r2
+ 891 0386 FFF7FEFF 		bl	netconn_alloc
+ 892              	.LVL106:
+ 893 038a 041C     		mov	r4, r0
+ 894              	.LVL107:
+ 895              		.loc 1 74 0
+ 896 038c 0028     		cmp	r0, #0
+ 897 038e 15D0     		beq	.L87
+ 898              	.LVL108:
+ 899              		.loc 1 75 0
+ 900 0390 6846     		mov	r0, sp
+ 901              	.LVL109:
+ 902 0392 0D4B     		ldr	r3, .L89
+ 903 0394 0093     		str	r3, [sp]
+ 904              		.loc 1 76 0
+ 905 0396 0572     		strb	r5, [r0, #8]
+ 906              		.loc 1 77 0
+ 907 0398 0194     		str	r4, [sp, #4]
+ 908              		.loc 1 78 0
+ 909 039a FFF7FEFF 		bl	tcpip_apimsg
+ 910              		.loc 1 80 0
+ 911 039e 0C23     		mov	r3, #12
+ 912 03a0 E356     		ldrsb	r3, [r4, r3]
+ 913 03a2 002B     		cmp	r3, #0
+ 914 03a4 0AD0     		beq	.L87
+ 915              		.loc 1 85 0
+ 916 03a6 2069     		ldr	r0, [r4, #16]
+ 917 03a8 FFF7FEFF 		bl	sys_sem_free
+ 918              		.loc 1 86 0
+ 919 03ac 6069     		ldr	r0, [r4, #20]
+ 920 03ae FFF7FEFF 		bl	sys_mbox_free
+ 921              		.loc 1 87 0
+ 922 03b2 0720     		mov	r0, #7
+ 923 03b4 211C     		mov	r1, r4
+ 924 03b6 FFF7FEFF 		bl	memp_free
+ 925 03ba 0024     		mov	r4, #0
+ 926              	.LVL110:
+ 927              	.L87:
+ 928              		.loc 1 92 0
+ 929 03bc 201C     		mov	r0, r4
+ 930 03be 05B0     		add	sp, sp, #20
+ 931              		@ sp needed for prologue
+ 932              	.LVL111:
+ 933              	.LVL112:
+ 934 03c0 30BC     		pop	{r4, r5}
+ 935 03c2 02BC     		pop	{r1}
+ 936 03c4 0847     		bx	r1
+ 937              	.L90:
+ 938 03c6 C046     		.align	2
+ 939              	.L89:
+ 940 03c8 00000000 		.word	do_newconn
+ 941              	.LFE290:
+ 1221              	.Letext0:
+ 5041              		.code 16
+ 5042              		.align	1
+ 5043              	.L60:
+ 5044 03cc 1847     		bx	r3
+ 5045              	.L80:
+ 5046 03ce 2847     		bx	r5
+DEFINED SYMBOLS
+                            *ABS*:00000000 api_lib.c
+     /tmp/ccNVVAoW.s:1      .text:00000000 $t
+     /tmp/ccNVVAoW.s:16     .text:00000000 netconn_close
+     /tmp/ccNVVAoW.s:58     .text:00000028 $d
+     /tmp/ccNVVAoW.s:66     .text:0000002c netconn_write
+     /tmp/ccNVVAoW.s:63     .text:0000002c $t
+     /tmp/ccNVVAoW.s:130    .text:0000006c $d
+     /tmp/ccNVVAoW.s:138    .text:00000070 netconn_send
+     /tmp/ccNVVAoW.s:135    .text:00000070 $t
+     /tmp/ccNVVAoW.s:183    .text:0000009c $d
+     /tmp/ccNVVAoW.s:191    .text:000000a0 netconn_sendto
+     /tmp/ccNVVAoW.s:188    .text:000000a0 $t
+     /tmp/ccNVVAoW.s:233    .text:000000c4 netconn_listen_with_backlog
+     /tmp/ccNVVAoW.s:276    .text:000000ec $d
+     /tmp/ccNVVAoW.s:284    .text:000000f0 netconn_disconnect
+     /tmp/ccNVVAoW.s:281    .text:000000f0 $t
+     /tmp/ccNVVAoW.s:325    .text:00000118 $d
+     /tmp/ccNVVAoW.s:333    .text:0000011c netconn_connect
+     /tmp/ccNVVAoW.s:330    .text:0000011c $t
+     /tmp/ccNVVAoW.s:384    .text:0000014c $d
+     /tmp/ccNVVAoW.s:392    .text:00000150 netconn_bind
+     /tmp/ccNVVAoW.s:389    .text:00000150 $t
+     /tmp/ccNVVAoW.s:443    .text:00000180 $d
+     /tmp/ccNVVAoW.s:451    .text:00000184 netconn_getaddr
+     /tmp/ccNVVAoW.s:448    .text:00000184 $t
+     /tmp/ccNVVAoW.s:511    .text:000001c0 $d
+     /tmp/ccNVVAoW.s:519    .text:000001c4 netconn_accept
+     /tmp/ccNVVAoW.s:516    .text:000001c4 $t
+     /tmp/ccNVVAoW.s:581    .text:00000204 netconn_recv
+     /tmp/ccNVVAoW.s:821    .text:00000348 $d
+     /tmp/ccNVVAoW.s:829    .text:0000034c netconn_delete
+     /tmp/ccNVVAoW.s:826    .text:0000034c $t
+     /tmp/ccNVVAoW.s:869    .text:00000378 $d
+     /tmp/ccNVVAoW.s:877    .text:0000037c netconn_new_with_proto_and_callback
+     /tmp/ccNVVAoW.s:874    .text:0000037c $t
+     /tmp/ccNVVAoW.s:940    .text:000003c8 $d
+     /tmp/ccNVVAoW.s:5041   .text:000003cc $t
+
+UNDEFINED SYMBOLS
+tcpip_apimsg
+do_close
+do_write
+do_send
+do_listen
+do_disconnect
+do_connect
+do_bind
+do_getaddr
+sys_arch_mbox_fetch
+memp_malloc
+memp_free
+sys_arch_protect
+sys_arch_unprotect
+do_recv
+netconn_free
+do_delconn
+netconn_alloc
+sys_sem_free
+sys_mbox_free
+do_newconn

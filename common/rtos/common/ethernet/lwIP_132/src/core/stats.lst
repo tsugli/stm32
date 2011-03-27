@@ -1,0 +1,16 @@
+   1              		.code	16
+   2              		.file	"stats.c"
+  10              	.Ltext0:
+  11              		.comm	lwip_stats,364,4
+  12              	.Letext0:
+  13              		.file 1 "./rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/SAM7/arch/cc.h"
+  14              		.file 2 "./rtos/common/ethernet/lwIP_132/src/include/lwip/mem.h"
+  15              		.file 3 "./rtos/common/ethernet/lwIP_132/src/include/lwip/stats.h"
+  16              		.file 4 "rtos/common/ethernet/lwIP_132/src/core/stats.c"
+DEFINED SYMBOLS
+                            *ABS*:00000000 stats.c
+     /tmp/ccGG6DNg.s:1      .text:00000000 $t
+                            *COM*:0000016c lwip_stats
+     /tmp/ccGG6DNg.s:18     .debug_info:00000000 $d
+
+NO UNDEFINED SYMBOLS

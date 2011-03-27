@@ -1,0 +1,884 @@
+   1              		.code	16
+   2              		.file	"inet.c"
+  10              	.Ltext0:
+  11              		.global	__udivsi3
+  12              		.global	__umodsi3
+  13              		.align	2
+  14              		.global	inet_ntoa
+  15              		.code	16
+  16              		.thumb_func
+  18              	inet_ntoa:
+  19              	.LFB4:
+  20              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Functions common to all TCP/IPv4 modules, such as the byte order functions.
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #include "lwip/inet.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /* Here for now until needed in other places in lwIP */
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #ifndef isprint
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define in_range(c, lo, up)  ((u8_t)c >= lo && (u8_t)c <= up)
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define isprint(c)           in_range(c, 0x20, 0x7f)
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define isdigit(c)           in_range(c, '0', '9')
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define isxdigit(c)          (isdigit(c) || in_range(c, 'a', 'f') || in_range(c, 'A', 'F'))
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define islower(c)           in_range(c, 'a', 'z')
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #define isspace(c)           (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == 
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #endif    
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Ascii internet address interpretation routine.
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * The value returned is in network order.
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param cp IP address in ascii represenation (e.g. "127.0.0.1")
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return ip address in network order
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** u32_t
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** inet_addr(const char *cp)
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   struct in_addr val;
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   if (inet_aton(cp, &val)) {
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     return (val.s_addr);
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   }
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return (INADDR_NONE);
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Check whether "cp" is a valid ascii representation
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * of an Internet address and convert to a binary address.
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Returns 1 if the address is valid, 0 if not.
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * This replaces inet_addr, the return value from which
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * cannot distinguish between failure and a local broadcast address.
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param cp IP address in ascii represenation (e.g. "127.0.0.1")
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param addr pointer to which to save the ip address in network order
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return 1 if cp could be converted to addr, 0 on failure
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** int
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** inet_aton(const char *cp, struct in_addr *addr)
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+  85:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u32_t val;
+  86:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u8_t base;
+  87:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   char c;
+  88:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u32_t parts[4];
+  89:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u32_t *pp = parts;
+  90:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+  91:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   c = *cp;
+  92:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   for (;;) {
+  93:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     /*
+  94:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****      * Collect number up to ``.''.
+  95:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****      * Values are specified as for C:
+  96:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****      * 0x=hex, 0=octal, 1-9=decimal.
+  97:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****      */
+  98:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (!isdigit(c))
+  99:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       return (0);
+ 100:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     val = 0;
+ 101:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     base = 10;
+ 102:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (c == '0') {
+ 103:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       c = *++cp;
+ 104:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       if (c == 'x' || c == 'X') {
+ 105:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         base = 16;
+ 106:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         c = *++cp;
+ 107:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       } else
+ 108:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         base = 8;
+ 109:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     }
+ 110:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     for (;;) {
+ 111:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       if (isdigit(c)) {
+ 112:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         val = (val * base) + (int)(c - '0');
+ 113:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         c = *++cp;
+ 114:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       } else if (base == 16 && isxdigit(c)) {
+ 115:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         val = (val << 4) | (int)(c + 10 - (islower(c) ? 'a' : 'A'));
+ 116:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         c = *++cp;
+ 117:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       } else
+ 118:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         break;
+ 119:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     }
+ 120:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (c == '.') {
+ 121:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       /*
+ 122:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****        * Internet format:
+ 123:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****        *  a.b.c.d
+ 124:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****        *  a.b.c   (with c treated as 16 bits)
+ 125:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****        *  a.b (with b treated as 24 bits)
+ 126:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****        */
+ 127:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       if (pp >= parts + 3)
+ 128:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****         return (0);
+ 129:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       *pp++ = val;
+ 130:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       c = *++cp;
+ 131:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     } else
+ 132:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       break;
+ 133:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   }
+ 134:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   /*
+ 135:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****    * Check for trailing characters.
+ 136:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****    */
+ 137:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   if (c != '\0' && !isspace(c))
+ 138:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     return (0);
+ 139:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   /*
+ 140:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****    * Concoct the address according to
+ 141:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****    * the number of parts specified.
+ 142:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****    */
+ 143:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   switch (pp - parts + 1) {
+ 144:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 145:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   case 0:
+ 146:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     return (0);       /* initial nondigit */
+ 147:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 148:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   case 1:             /* a -- 32 bits */
+ 149:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     break;
+ 150:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 151:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   case 2:             /* a.b -- 8.24 bits */
+ 152:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (val > 0xffffffUL)
+ 153:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       return (0);
+ 154:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     val |= parts[0] << 24;
+ 155:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     break;
+ 156:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 157:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   case 3:             /* a.b.c -- 8.8.16 bits */
+ 158:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (val > 0xffff)
+ 159:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       return (0);
+ 160:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     val |= (parts[0] << 24) | (parts[1] << 16);
+ 161:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     break;
+ 162:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 163:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   case 4:             /* a.b.c.d -- 8.8.8.8 bits */
+ 164:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     if (val > 0xff)
+ 165:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       return (0);
+ 166:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
+ 167:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     break;
+ 168:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   }
+ 169:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   if (addr)
+ 170:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     addr->s_addr = htonl(val);
+ 171:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return (1);
+ 172:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 173:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 174:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 175:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Convert numeric IP address into decimal dotted ASCII representation.
+ 176:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * returns ptr to static buffer; not reentrant!
+ 177:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 178:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param addr ip address in network order to convert
+ 179:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return pointer to a global static (!) buffer that holds the ASCII
+ 180:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *         represenation of addr
+ 181:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 182:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** char *
+ 183:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** inet_ntoa(struct in_addr addr)
+ 184:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+  21              		.loc 1 184 0
+  22 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  23              	.LCFI0:
+  24 0002 5F46     		mov	r7, fp
+  25 0004 5646     		mov	r6, sl
+  26 0006 4D46     		mov	r5, r9
+  27 0008 4446     		mov	r4, r8
+  28 000a F0B4     		push	{r4, r5, r6, r7}
+  29              	.LCFI1:
+  30              	.LVL0:
+  31 000c 82B0     		sub	sp, sp, #8
+  32              	.LCFI2:
+ 185:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   static char str[16];
+ 186:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u32_t s_addr = addr.s_addr;
+  33              		.loc 1 186 0
+  34 000e 0190     		str	r0, [sp, #4]
+  35              	.LVL1:
+ 187:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   char inv[3];
+ 188:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   char *rp;
+ 189:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u8_t *ap;
+ 190:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u8_t rem;
+ 191:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u8_t n;
+ 192:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   u8_t i;
+ 193:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 194:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   rp = str;
+ 195:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   ap = (u8_t *)&s_addr;
+  36              		.loc 1 195 0
+  37 0010 01AF     		add	r7, sp, #4
+  38              	.LVL2:
+  39 0012 0026     		mov	r6, #0
+  40              	.LVL3:
+  41 0014 274A     		ldr	r2, .L10
+  42 0016 9046     		mov	r8, r2
+  43              	.LVL4:
+  44 0018 B146     		mov	r9, r6
+  45              	.LVL5:
+ 196:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   for(n = 0; n < 4; n++) {
+ 197:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     i = 0;
+ 198:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     do {
+ 199:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       rem = *ap % (u8_t)10;
+ 200:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       *ap /= (u8_t)10;
+ 201:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       inv[i++] = '0' + rem;
+  46              		.loc 1 201 0
+  47 001a 0123     		mov	r3, #1
+  48 001c 6B44     		add	r3, r3, sp
+  49 001e 9A46     		mov	sl, r3
+ 202:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     } while(*ap);
+ 203:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     while(i--)
+ 204:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****       *rp++ = inv[i];
+ 205:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     *rp++ = '.';
+  50              		.loc 1 205 0
+  51 0020 2E24     		mov	r4, #46
+  52 0022 A346     		mov	fp, r4
+  53 0024 00E0     		b	.L9
+  54              	.LVL6:
+  55              	.L3:
+  56              		.loc 1 195 0
+  57 0026 1E1C     		mov	r6, r3
+  58              	.LVL7:
+  59              	.L9:
+  60              		.loc 1 199 0
+  61 0028 3D78     		ldrb	r5, [r7]
+  62              		.loc 1 200 0
+  63 002a 281C     		mov	r0, r5
+  64              	.LVL8:
+  65 002c 0A21     		mov	r1, #10
+  66 002e FFF7FEFF 		bl	__udivsi3
+  67 0032 0406     		lsl	r4, r0, #24
+  68 0034 240E     		lsr	r4, r4, #24
+  69 0036 3C70     		strb	r4, [r7]
+  70              		.loc 1 201 0
+  71 0038 281C     		mov	r0, r5
+  72 003a 0A21     		mov	r1, #10
+  73 003c FFF7FEFF 		bl	__umodsi3
+  74 0040 3030     		add	r0, r0, #48
+  75 0042 5246     		mov	r2, sl
+  76 0044 9055     		strb	r0, [r2, r6]
+  77 0046 731C     		add	r3, r6, #1
+  78 0048 1B06     		lsl	r3, r3, #24
+  79 004a 1B0E     		lsr	r3, r3, #24
+  80              	.LVL9:
+  81              		.loc 1 202 0
+  82 004c 002C     		cmp	r4, #0
+  83 004e EAD1     		bne	.L3
+  84              		.loc 1 203 0
+  85 0050 002B     		cmp	r3, #0
+  86 0052 12D0     		beq	.L4
+  87 0054 013B     		sub	r3, r3, #1
+  88              	.LVL10:
+  89 0056 1B06     		lsl	r3, r3, #24
+  90 0058 190E     		lsr	r1, r3, #24
+  91              	.LVL11:
+  92 005a 4246     		mov	r2, r8
+  93              		.loc 1 184 0
+  94 005c B446     		mov	ip, r6
+  95              		.loc 1 203 0
+  96 005e 731C     		add	r3, r6, #1
+  97 0060 D018     		add	r0, r2, r3
+  98              	.LVL12:
+  99              	.L5:
+ 100              		.loc 1 204 0
+ 101 0062 5446     		mov	r4, sl
+ 102 0064 635C     		ldrb	r3, [r4, r1]
+ 103 0066 1370     		strb	r3, [r2]
+ 104 0068 0132     		add	r2, r2, #1
+ 105              		.loc 1 203 0
+ 106 006a 4B1E     		sub	r3, r1, #1
+ 107 006c 1B06     		lsl	r3, r3, #24
+ 108 006e 190E     		lsr	r1, r3, #24
+ 109              	.LVL13:
+ 110              		.loc 1 184 0
+ 111 0070 6346     		mov	r3, ip
+ 112              		.loc 1 203 0
+ 113 0072 8242     		cmp	r2, r0
+ 114 0074 F5D1     		bne	.L5
+ 115 0076 0133     		add	r3, r3, #1
+ 116 0078 9844     		add	r8, r8, r3
+ 117              	.LVL14:
+ 118              	.L4:
+ 119              		.loc 1 205 0
+ 120 007a 5B46     		mov	r3, fp
+ 121 007c 4246     		mov	r2, r8
+ 122 007e 1370     		strb	r3, [r2]
+ 123 0080 0124     		mov	r4, #1
+ 124 0082 A044     		add	r8, r8, r4
+ 125              		.loc 1 196 0
+ 126 0084 4B46     		mov	r3, r9
+ 127 0086 0133     		add	r3, r3, #1
+ 128 0088 1B06     		lsl	r3, r3, #24
+ 129 008a 1B0E     		lsr	r3, r3, #24
+ 130 008c 9946     		mov	r9, r3
+ 131              	.LVL15:
+ 132 008e 032B     		cmp	r3, #3
+ 133 0090 02D8     		bhi	.L6
+ 206:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     ap++;
+ 134              		.loc 1 206 0
+ 135 0092 0137     		add	r7, r7, #1
+ 136 0094 0026     		mov	r6, #0
+ 137              	.LVL16:
+ 138 0096 C7E7     		b	.L9
+ 139              	.LVL17:
+ 140              	.L6:
+ 207:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   }
+ 208:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   *--rp = 0;
+ 141              		.loc 1 208 0
+ 142 0098 4346     		mov	r3, r8
+ 143 009a 013B     		sub	r3, r3, #1
+ 144 009c 0022     		mov	r2, #0
+ 145 009e 1A70     		strb	r2, [r3]
+ 146 00a0 0448     		ldr	r0, .L10
+ 209:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return str;
+ 210:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 147              		.loc 1 210 0
+ 148 00a2 02B0     		add	sp, sp, #8
+ 149              		@ sp needed for prologue
+ 150              	.LVL18:
+ 151              	.LVL19:
+ 152              	.LVL20:
+ 153 00a4 3CBC     		pop	{r2, r3, r4, r5}
+ 154 00a6 9046     		mov	r8, r2
+ 155 00a8 9946     		mov	r9, r3
+ 156 00aa A246     		mov	sl, r4
+ 157 00ac AB46     		mov	fp, r5
+ 158 00ae F0BC     		pop	{r4, r5, r6, r7}
+ 159 00b0 02BC     		pop	{r1}
+ 160 00b2 0847     		bx	r1
+ 161              	.L11:
+ 162              		.align	2
+ 163              	.L10:
+ 164 00b4 00000000 		.word	str.2481
+ 165              	.LFE4:
+ 167              		.align	2
+ 168              		.global	htons
+ 169              		.code	16
+ 170              		.thumb_func
+ 172              	htons:
+ 173              	.LFB5:
+ 211:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 213:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * These are reference implementations of the byte swapping functions.
+ 214:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Again with the aim of being simple, correct and fully portable.
+ 215:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Byte swapping is the second thing you would want to optimize. You will
+ 216:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * need to port it to your architecture and in your cc.h:
+ 217:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * 
+ 218:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * #define LWIP_PLATFORM_BYTESWAP 1
+ 219:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * #define LWIP_PLATFORM_HTONS(x) <your_htons>
+ 220:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * #define LWIP_PLATFORM_HTONL(x) <your_htonl>
+ 221:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 222:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Note ntohs() and ntohl() are merely references to the htonx counterparts.
+ 223:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 224:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 225:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** #if (LWIP_PLATFORM_BYTESWAP == 0) && (BYTE_ORDER == LITTLE_ENDIAN)
+ 226:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 227:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 228:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Convert an u16_t from host- to network byte order.
+ 229:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 230:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param n u16_t in host byte order
+ 231:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return n in network byte order
+ 232:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 233:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** u16_t
+ 234:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** htons(u16_t n)
+ 235:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+ 174              		.loc 1 235 0
+ 175              	.LVL21:
+ 176 00b8 0304     		lsl	r3, r0, #16
+ 177              		.loc 1 235 0
+ 178 00ba 180A     		lsr	r0, r3, #8
+ 179              	.LVL22:
+ 180 00bc 1B0E     		lsr	r3, r3, #24
+ 181 00be 1843     		orr	r0, r0, r3
+ 182 00c0 0004     		lsl	r0, r0, #16
+ 183 00c2 000C     		lsr	r0, r0, #16
+ 236:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return ((n & 0xff) << 8) | ((n & 0xff00) >> 8);
+ 237:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 184              		.loc 1 237 0
+ 185              		@ sp needed for prologue
+ 186 00c4 7047     		bx	lr
+ 187              	.LFE5:
+ 189 00c6 C046     		.align	2
+ 190              		.global	ntohs
+ 191              		.code	16
+ 192              		.thumb_func
+ 194              	ntohs:
+ 195              	.LFB6:
+ 238:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 239:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 240:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Convert an u16_t from network- to host byte order.
+ 241:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 242:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param n u16_t in network byte order
+ 243:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return n in host byte order
+ 244:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 245:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** u16_t
+ 246:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** ntohs(u16_t n)
+ 247:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+ 196              		.loc 1 247 0
+ 197 00c8 00B5     		push	{lr}
+ 198              	.LCFI3:
+ 199              	.LVL23:
+ 200 00ca 0004     		lsl	r0, r0, #16
+ 201              	.LVL24:
+ 202 00cc 000C     		lsr	r0, r0, #16
+ 203              	.LVL25:
+ 248:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return htons(n);
+ 204              		.loc 1 248 0
+ 205 00ce FFF7FEFF 		bl	htons
+ 206              	.LVL26:
+ 249:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 207              		.loc 1 249 0
+ 208              		@ sp needed for prologue
+ 209 00d2 02BC     		pop	{r1}
+ 210 00d4 0847     		bx	r1
+ 211              	.LFE6:
+ 213 00d6 C046     		.align	2
+ 214              		.global	htonl
+ 215              		.code	16
+ 216              		.thumb_func
+ 218              	htonl:
+ 219              	.LFB7:
+ 250:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 251:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 252:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Convert an u32_t from host- to network byte order.
+ 253:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 254:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param n u32_t in host byte order
+ 255:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return n in network byte order
+ 256:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 257:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** u32_t
+ 258:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** htonl(u32_t n)
+ 259:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+ 220              		.loc 1 259 0
+ 221              	.LVL27:
+ 222              		.loc 1 259 0
+ 223 00d8 020E     		lsr	r2, r0, #24
+ 224 00da 0306     		lsl	r3, r0, #24
+ 225 00dc 1A43     		orr	r2, r2, r3
+ 226 00de FF23     		mov	r3, #255
+ 227 00e0 1B02     		lsl	r3, r3, #8
+ 228 00e2 0340     		and	r3, r3, r0
+ 229 00e4 1B02     		lsl	r3, r3, #8
+ 230 00e6 1A43     		orr	r2, r2, r3
+ 231 00e8 FF23     		mov	r3, #255
+ 232 00ea 1B04     		lsl	r3, r3, #16
+ 233 00ec 1840     		and	r0, r0, r3
+ 234              	.LVL28:
+ 235 00ee 000A     		lsr	r0, r0, #8
+ 236 00f0 0243     		orr	r2, r2, r0
+ 260:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return ((n & 0xff) << 24) |
+ 261:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     ((n & 0xff00) << 8) |
+ 262:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     ((n & 0xff0000UL) >> 8) |
+ 263:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****     ((n & 0xff000000UL) >> 24);
+ 264:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 237              		.loc 1 264 0
+ 238 00f2 101C     		mov	r0, r2
+ 239              		@ sp needed for prologue
+ 240 00f4 7047     		bx	lr
+ 241              	.LFE7:
+ 243 00f6 C046     		.align	2
+ 244              		.global	inet_aton
+ 245              		.code	16
+ 246              		.thumb_func
+ 248              	inet_aton:
+ 249              	.LFB3:
+ 250              		.loc 1 84 0
+ 251 00f8 F0B5     		push	{r4, r5, r6, r7, lr}
+ 252              	.LCFI4:
+ 253 00fa 5F46     		mov	r7, fp
+ 254 00fc 5646     		mov	r6, sl
+ 255 00fe 4D46     		mov	r5, r9
+ 256 0100 4446     		mov	r4, r8
+ 257 0102 F0B4     		push	{r4, r5, r6, r7}
+ 258              	.LCFI5:
+ 259              	.LVL29:
+ 260 0104 85B0     		sub	sp, sp, #20
+ 261              	.LCFI6:
+ 262 0106 0091     		str	r1, [sp]
+ 263              		.loc 1 91 0
+ 264 0108 0178     		ldrb	r1, [r0]
+ 265              	.LVL30:
+ 266              		.loc 1 98 0
+ 267 010a 0B1C     		mov	r3, r1
+ 268 010c 303B     		sub	r3, r3, #48
+ 269 010e 1B06     		lsl	r3, r3, #24
+ 270 0110 1B0E     		lsr	r3, r3, #24
+ 271 0112 092B     		cmp	r3, #9
+ 272 0114 00D9     		bls	.LCB225
+ 273 0116 A2E0     		b	.L19	@long jump
+ 274              	.LCB225:
+ 275 0118 01AF     		add	r7, sp, #4
+ 276              	.LVL31:
+ 277              		.loc 1 102 0
+ 278 011a 0A23     		mov	r3, #10
+ 279 011c 9B46     		mov	fp, r3
+ 280              	.LVL32:
+ 281              		.loc 1 106 0
+ 282 011e 0023     		mov	r3, #0
+ 283 0120 9A46     		mov	sl, r3
+ 284              	.LVL33:
+ 285              		.loc 1 115 0
+ 286 0122 6123     		mov	r3, #97
+ 287 0124 9C46     		mov	ip, r3
+ 288 0126 4123     		mov	r3, #65
+ 289 0128 9846     		mov	r8, r3
+ 290              		.loc 1 127 0
+ 291 012a 1023     		mov	r3, #16
+ 292 012c 6B44     		add	r3, r3, sp
+ 293 012e 9946     		mov	r9, r3
+ 294              	.LVL34:
+ 295              	.L31:
+ 296              		.loc 1 102 0
+ 297 0130 3029     		cmp	r1, #48
+ 298 0132 01D0     		beq	.L20
+ 299 0134 5E46     		mov	r6, fp
+ 300 0136 0AE0     		b	.L21
+ 301              	.L20:
+ 302              		.loc 1 103 0
+ 303 0138 0130     		add	r0, r0, #1
+ 304              	.LVL35:
+ 305 013a 0178     		ldrb	r1, [r0]
+ 306              	.LVL36:
+ 307              		.loc 1 104 0
+ 308 013c 7829     		cmp	r1, #120
+ 309 013e 03D0     		beq	.L22
+ 310 0140 5829     		cmp	r1, #88
+ 311 0142 01D0     		beq	.L22
+ 312 0144 0826     		mov	r6, #8
+ 313              	.LVL37:
+ 314 0146 02E0     		b	.L21
+ 315              	.LVL38:
+ 316              	.L22:
+ 317              		.loc 1 106 0
+ 318 0148 0130     		add	r0, r0, #1
+ 319 014a 0178     		ldrb	r1, [r0]
+ 320              	.LVL39:
+ 321 014c 1026     		mov	r6, #16
+ 322              	.LVL40:
+ 323              	.L21:
+ 324 014e 0130     		add	r0, r0, #1
+ 325              	.LVL41:
+ 326 0150 5546     		mov	r5, sl
+ 327 0152 00E0     		b	.L23
+ 328              	.LVL42:
+ 329              	.L25:
+ 330 0154 0130     		add	r0, r0, #1
+ 331              	.LVL43:
+ 332              	.L23:
+ 333 0156 441E     		sub	r4, r0, #1
+ 334              		.loc 1 111 0
+ 335 0158 0B1C     		mov	r3, r1
+ 336 015a 303B     		sub	r3, r3, #48
+ 337 015c 1B06     		lsl	r3, r3, #24
+ 338 015e 1B0E     		lsr	r3, r3, #24
+ 339 0160 092B     		cmp	r3, #9
+ 340 0162 06D8     		bhi	.L24
+ 341              		.loc 1 112 0
+ 342 0164 331C     		mov	r3, r6
+ 343 0166 6B43     		mul	r3, r5
+ 344 0168 5B18     		add	r3, r3, r1
+ 345 016a 1D1C     		mov	r5, r3
+ 346 016c 303D     		sub	r5, r5, #48
+ 347              		.loc 1 113 0
+ 348 016e 0178     		ldrb	r1, [r0]
+ 349              	.LVL44:
+ 350 0170 F0E7     		b	.L25
+ 351              	.LVL45:
+ 352              	.L24:
+ 353              		.loc 1 114 0
+ 354 0172 102E     		cmp	r6, #16
+ 355 0174 18D1     		bne	.L26
+ 356 0176 0B1C     		mov	r3, r1
+ 357 0178 613B     		sub	r3, r3, #97
+ 358 017a 1B06     		lsl	r3, r3, #24
+ 359 017c 1A0E     		lsr	r2, r3, #24
+ 360 017e 052A     		cmp	r2, #5
+ 361 0180 05D9     		bls	.L27
+ 362 0182 0B1C     		mov	r3, r1
+ 363 0184 413B     		sub	r3, r3, #65
+ 364 0186 1B06     		lsl	r3, r3, #24
+ 365 0188 1B0E     		lsr	r3, r3, #24
+ 366 018a 052B     		cmp	r3, #5
+ 367 018c 0CD8     		bhi	.L26
+ 368              	.L27:
+ 369              		.loc 1 115 0
+ 370 018e 192A     		cmp	r2, #25
+ 371 0190 01D9     		bls	.L28
+ 372 0192 4446     		mov	r4, r8
+ 373              	.LVL46:
+ 374 0194 00E0     		b	.L29
+ 375              	.LVL47:
+ 376              	.L28:
+ 377 0196 6446     		mov	r4, ip
+ 378              	.LVL48:
+ 379              	.L29:
+ 380 0198 2A01     		lsl	r2, r5, #4
+ 381 019a 0B1C     		mov	r3, r1
+ 382 019c 0A33     		add	r3, r3, #10
+ 383 019e 1B1B     		sub	r3, r3, r4
+ 384 01a0 1D1C     		mov	r5, r3
+ 385 01a2 1543     		orr	r5, r5, r2
+ 386              		.loc 1 116 0
+ 387 01a4 0178     		ldrb	r1, [r0]
+ 388              	.LVL49:
+ 389 01a6 D5E7     		b	.L25
+ 390              	.LVL50:
+ 391              	.L26:
+ 392              		.loc 1 120 0
+ 393 01a8 2E29     		cmp	r1, #46
+ 394 01aa 0CD1     		bne	.L30
+ 395              		.loc 1 127 0
+ 396 01ac 4F45     		cmp	r7, r9
+ 397 01ae 56D2     		bcs	.L19
+ 398              		.loc 1 129 0
+ 399 01b0 3D60     		str	r5, [r7]
+ 400              		.loc 1 130 0
+ 401 01b2 601C     		add	r0, r4, #1
+ 402              	.LVL51:
+ 403 01b4 0178     		ldrb	r1, [r0]
+ 404              	.LVL52:
+ 405              		.loc 1 98 0
+ 406 01b6 0B1C     		mov	r3, r1
+ 407 01b8 303B     		sub	r3, r3, #48
+ 408 01ba 1B06     		lsl	r3, r3, #24
+ 409 01bc 1B0E     		lsr	r3, r3, #24
+ 410 01be 092B     		cmp	r3, #9
+ 411 01c0 4DD8     		bhi	.L19
+ 412              		.loc 1 129 0
+ 413 01c2 0437     		add	r7, r7, #4
+ 414 01c4 B4E7     		b	.L31
+ 415              	.LVL53:
+ 416              	.L30:
+ 417 01c6 281C     		mov	r0, r5
+ 418              		.loc 1 137 0
+ 419 01c8 0029     		cmp	r1, #0
+ 420 01ca 0BD0     		beq	.L32
+ 421              	.LVL54:
+ 422 01cc 2029     		cmp	r1, #32
+ 423 01ce 09D0     		beq	.L32
+ 424 01d0 0C29     		cmp	r1, #12
+ 425 01d2 07D0     		beq	.L32
+ 426 01d4 0A29     		cmp	r1, #10
+ 427 01d6 05D0     		beq	.L32
+ 428 01d8 0D29     		cmp	r1, #13
+ 429 01da 03D0     		beq	.L32
+ 430 01dc 0929     		cmp	r1, #9
+ 431 01de 01D0     		beq	.L32
+ 432 01e0 0B29     		cmp	r1, #11
+ 433 01e2 3CD1     		bne	.L19
+ 434              	.L32:
+ 435              		.loc 1 143 0
+ 436 01e4 01AB     		add	r3, sp, #4
+ 437 01e6 FB1A     		sub	r3, r7, r3
+ 438 01e8 9B10     		asr	r3, r3, #2
+ 439 01ea 0133     		add	r3, r3, #1
+ 440 01ec 022B     		cmp	r3, #2
+ 441 01ee 09D0     		beq	.L35
+ 442 01f0 022B     		cmp	r3, #2
+ 443 01f2 02DC     		bgt	.L38
+ 444 01f4 002B     		cmp	r3, #0
+ 445 01f6 32D0     		beq	.L19
+ 446 01f8 25E0     		b	.L34
+ 447              	.L38:
+ 448 01fa 032B     		cmp	r3, #3
+ 449 01fc 0AD0     		beq	.L36
+ 450 01fe 042B     		cmp	r3, #4
+ 451 0200 21D1     		bne	.L34
+ 452 0202 13E0     		b	.L42
+ 453              	.L35:
+ 454              		.loc 1 152 0
+ 455 0204 1B4B     		ldr	r3, .L43
+ 456 0206 9842     		cmp	r0, r3
+ 457 0208 29D8     		bhi	.L19
+ 458              		.loc 1 154 0
+ 459 020a 019B     		ldr	r3, [sp, #4]
+ 460 020c 1B06     		lsl	r3, r3, #24
+ 461 020e 051C     		mov	r5, r0
+ 462 0210 1D43     		orr	r5, r5, r3
+ 463              	.LVL55:
+ 464 0212 18E0     		b	.L34
+ 465              	.LVL56:
+ 466              	.L36:
+ 467              		.loc 1 158 0
+ 468 0214 184B     		ldr	r3, .L43+4
+ 469 0216 9842     		cmp	r0, r3
+ 470 0218 21D8     		bhi	.L19
+ 471              		.loc 1 160 0
+ 472 021a 01AB     		add	r3, sp, #4
+ 473 021c 5A68     		ldr	r2, [r3, #4]
+ 474 021e 1204     		lsl	r2, r2, #16
+ 475 0220 1B68     		ldr	r3, [r3]
+ 476 0222 1B06     		lsl	r3, r3, #24
+ 477 0224 1A43     		orr	r2, r2, r3
+ 478 0226 151C     		mov	r5, r2
+ 479              	.LVL57:
+ 480 0228 0543     		orr	r5, r5, r0
+ 481 022a 0CE0     		b	.L34
+ 482              	.LVL58:
+ 483              	.L42:
+ 484              		.loc 1 164 0
+ 485 022c FF28     		cmp	r0, #255
+ 486 022e 16D8     		bhi	.L19
+ 487              		.loc 1 166 0
+ 488 0230 01A9     		add	r1, sp, #4
+ 489              	.LVL59:
+ 490 0232 4A68     		ldr	r2, [r1, #4]
+ 491 0234 1204     		lsl	r2, r2, #16
+ 492 0236 0B68     		ldr	r3, [r1]
+ 493 0238 1B06     		lsl	r3, r3, #24
+ 494 023a 1A43     		orr	r2, r2, r3
+ 495 023c 8B68     		ldr	r3, [r1, #8]
+ 496 023e 1B02     		lsl	r3, r3, #8
+ 497 0240 1A43     		orr	r2, r2, r3
+ 498 0242 151C     		mov	r5, r2
+ 499              	.LVL60:
+ 500 0244 0543     		orr	r5, r5, r0
+ 501              	.LVL61:
+ 502              	.L34:
+ 503              		.loc 1 169 0
+ 504 0246 009B     		ldr	r3, [sp]
+ 505 0248 002B     		cmp	r3, #0
+ 506 024a 01D1     		bne	.L39
+ 507              	.LVL62:
+ 508 024c 0120     		mov	r0, #1
+ 509 024e 07E0     		b	.L40
+ 510              	.LVL63:
+ 511              	.L39:
+ 512              		.loc 1 170 0
+ 513 0250 281C     		mov	r0, r5
+ 514 0252 FFF7FEFF 		bl	htonl
+ 515              	.LVL64:
+ 516 0256 009B     		ldr	r3, [sp]
+ 517 0258 1860     		str	r0, [r3]
+ 518 025a 0120     		mov	r0, #1
+ 519 025c 00E0     		b	.L40
+ 520              	.LVL65:
+ 521              	.L19:
+ 522 025e 0020     		mov	r0, #0
+ 523              	.LVL66:
+ 524              	.L40:
+ 525              		.loc 1 172 0
+ 526 0260 05B0     		add	sp, sp, #20
+ 527              		@ sp needed for prologue
+ 528              	.LVL67:
+ 529              	.LVL68:
+ 530              	.LVL69:
+ 531              	.LVL70:
+ 532              	.LVL71:
+ 533              	.LVL72:
+ 534 0262 3CBC     		pop	{r2, r3, r4, r5}
+ 535 0264 9046     		mov	r8, r2
+ 536 0266 9946     		mov	r9, r3
+ 537 0268 A246     		mov	sl, r4
+ 538 026a AB46     		mov	fp, r5
+ 539 026c F0BC     		pop	{r4, r5, r6, r7}
+ 540 026e 02BC     		pop	{r1}
+ 541 0270 0847     		bx	r1
+ 542              	.L44:
+ 543 0272 C046     		.align	2
+ 544              	.L43:
+ 545 0274 FFFFFF00 		.word	16777215
+ 546 0278 FFFF0000 		.word	65535
+ 547              	.LFE3:
+ 549              		.align	2
+ 550              		.global	inet_addr
+ 551              		.code	16
+ 552              		.thumb_func
+ 554              	inet_addr:
+ 555              	.LFB2:
+ 556              		.loc 1 62 0
+ 557 027c 00B5     		push	{lr}
+ 558              	.LCFI7:
+ 559              	.LVL73:
+ 560 027e 81B0     		sub	sp, sp, #4
+ 561              	.LCFI8:
+ 562              		.loc 1 65 0
+ 563 0280 6946     		mov	r1, sp
+ 564 0282 FFF7FEFF 		bl	inet_aton
+ 565              	.LVL74:
+ 566 0286 0028     		cmp	r0, #0
+ 567 0288 02D1     		bne	.L46
+ 568 028a 0120     		mov	r0, #1
+ 569 028c 4042     		neg	r0, r0
+ 570 028e 00E0     		b	.L47
+ 571              	.L46:
+ 572              		.loc 1 66 0
+ 573 0290 0098     		ldr	r0, [sp]
+ 574              	.L47:
+ 575              		.loc 1 69 0
+ 576 0292 01B0     		add	sp, sp, #4
+ 577              		@ sp needed for prologue
+ 578 0294 02BC     		pop	{r1}
+ 579 0296 0847     		bx	r1
+ 580              	.LFE2:
+ 582              		.align	2
+ 583              		.global	ntohl
+ 584              		.code	16
+ 585              		.thumb_func
+ 587              	ntohl:
+ 588              	.LFB8:
+ 265:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** 
+ 266:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** /**
+ 267:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * Convert an u32_t from network- to host byte order.
+ 268:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  *
+ 269:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @param n u32_t in network byte order
+ 270:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  * @return n in host byte order
+ 271:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****  */
+ 272:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** u32_t
+ 273:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** ntohl(u32_t n)
+ 274:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** {
+ 589              		.loc 1 274 0
+ 590 0298 00B5     		push	{lr}
+ 591              	.LCFI9:
+ 592              	.LVL75:
+ 275:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c ****   return htonl(n);
+ 593              		.loc 1 275 0
+ 594 029a FFF7FEFF 		bl	htonl
+ 595              	.LVL76:
+ 276:rtos/common/ethernet/lwIP_132/src/core/ipv4/inet.c **** }
+ 596              		.loc 1 276 0
+ 597              		@ sp needed for prologue
+ 598 029e 02BC     		pop	{r1}
+ 599 02a0 0847     		bx	r1
+ 600              	.LFE8:
+ 602              		.bss
+ 603              	str.2481:
+ 604 0000 00000000 		.space	16
+ 604      00000000 
+ 604      00000000 
+ 604      00000000 
+ 759              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 inet.c
+     /tmp/cc9slGTj.s:1      .text:00000000 $t
+     /tmp/cc9slGTj.s:18     .text:00000000 inet_ntoa
+     /tmp/cc9slGTj.s:164    .text:000000b4 $d
+     /tmp/cc9slGTj.s:603    .bss:00000000 str.2481
+     /tmp/cc9slGTj.s:172    .text:000000b8 htons
+     /tmp/cc9slGTj.s:169    .text:000000b8 $t
+     /tmp/cc9slGTj.s:194    .text:000000c8 ntohs
+     /tmp/cc9slGTj.s:218    .text:000000d8 htonl
+     /tmp/cc9slGTj.s:248    .text:000000f8 inet_aton
+     /tmp/cc9slGTj.s:545    .text:00000274 $d
+     /tmp/cc9slGTj.s:554    .text:0000027c inet_addr
+     /tmp/cc9slGTj.s:551    .text:0000027c $t
+     /tmp/cc9slGTj.s:587    .text:00000298 ntohl
+                             .bss:00000000 $d
+     /tmp/cc9slGTj.s:763    .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+__udivsi3
+__umodsi3

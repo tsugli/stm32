@@ -1,0 +1,313 @@
+   1              		.code	16
+   2              		.file	"init.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	lwip_init
+  13              		.code	16
+  14              		.thumb_func
+  16              	lwip_init:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/init.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/init.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * Modules initialization
+   4:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/init.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/init.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * All rights reserved. 
+  10:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * 
+  11:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  12:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *    derived from this software without specific prior written permission. 
+  21:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  23:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  24:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  25:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  26:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  27:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  28:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  29:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  30:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  31:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * 
+  35:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/init.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/init.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/init.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/stats.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/sys.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/mem.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/memp.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/pbuf.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/netif.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/sockets.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/ip.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/raw.h"
+  51:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/udp.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/tcp.h"
+  53:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/snmp_msg.h"
+  54:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/autoip.h"
+  55:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/igmp.h"
+  56:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "lwip/dns.h"
+  57:rtos/common/ethernet/lwIP_132/src/core/init.c **** #include "netif/etharp.h"
+  58:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+  59:rtos/common/ethernet/lwIP_132/src/core/init.c **** /* Compile-time sanity checks for configuration errors.
+  60:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * These can be done independently of LWIP_DEBUG, without penalty.
+  61:rtos/common/ethernet/lwIP_132/src/core/init.c ****  */
+  62:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifndef BYTE_ORDER
+  63:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "BYTE_ORDER is not defined, you have to define it in your cc.h"
+  64:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  65:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!IP_SOF_BROADCAST && IP_SOF_BROADCAST_RECV)
+  66:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use broadcast filter per pcb on recv operations, you have to define IP_SOF
+  67:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  68:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_ARP && ARP_QUEUEING)
+  69:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use ARP Queueing, you have to define LWIP_ARP=1 in your lwipopts.h"
+  70:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  71:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_UDP && LWIP_UDPLITE)
+  72:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use UDP Lite, you have to define LWIP_UDP=1 in your lwipopts.h"
+  73:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  74:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_UDP && LWIP_SNMP)
+  75:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use SNMP, you have to define LWIP_UDP=1 in your lwipopts.h"
+  76:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  77:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_UDP && LWIP_DHCP)
+  78:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use DHCP, you have to define LWIP_UDP=1 in your lwipopts.h"
+  79:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  80:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_UDP && LWIP_IGMP)
+  81:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use IGMP, you have to define LWIP_UDP=1 in your lwipopts.h"
+  82:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  83:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_UDP && LWIP_DNS)
+  84:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use DNS, you have to define LWIP_UDP=1 in your lwipopts.h"
+  85:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  86:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_ARP && (ARP_TABLE_SIZE > 0x7f))
+  87:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use ARP, ARP_TABLE_SIZE must fit in an s8_t, so, you have to reduce it in 
+  88:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  89:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_ARP && ARP_QUEUEING && (MEMP_NUM_ARP_QUEUE<=0))
+  90:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use ARP Queueing, you have to define MEMP_NUM_ARP_QUEUE>=1 in your lwipopt
+  91:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  92:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_RAW && (MEMP_NUM_RAW_PCB<=0))
+  93:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use RAW, you have to define MEMP_NUM_RAW_PCB>=1 in your lwipopts.h"
+  94:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  95:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_UDP && (MEMP_NUM_UDP_PCB<=0))
+  96:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use UDP, you have to define MEMP_NUM_UDP_PCB>=1 in your lwipopts.h"
+  97:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+  98:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && (MEMP_NUM_TCP_PCB<=0))
+  99:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use TCP, you have to define MEMP_NUM_TCP_PCB>=1 in your lwipopts.h"
+ 100:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 101:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && (TCP_WND > 0xffff))
+ 102:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use TCP, TCP_WND must fit in an u16_t, so, you have to reduce it in your l
+ 103:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 104:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && (TCP_SND_QUEUELEN > 0xffff))
+ 105:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use TCP, TCP_SND_QUEUELEN must fit in an u16_t, so, you have to reduce it 
+ 106:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 107:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && ((TCP_MAXRTX > 12) || (TCP_SYNMAXRTX > 12)))
+ 108:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use TCP, TCP_MAXRTX and TCP_SYNMAXRTX must less or equal to 12 (due to tcp
+ 109:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 110:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && TCP_LISTEN_BACKLOG && (TCP_DEFAULT_LISTEN_BACKLOG < 0) || (TCP_DEFAULT_LISTEN_BACK
+ 111:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use TCP backlog, TCP_DEFAULT_LISTEN_BACKLOG must fit into an u8_t"
+ 112:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 113:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_IGMP && (MEMP_NUM_IGMP_GROUP<=1))
+ 114:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use IGMP, you have to define MEMP_NUM_IGMP_GROUP>1 in your lwipopts.h"
+ 115:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 116:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (PPP_SUPPORT && (NO_SYS==1))
+ 117:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use PPP, you have to define NO_SYS=0 in your lwipopts.h"
+ 118:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif 
+ 119:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_NETIF_API && (NO_SYS==1))
+ 120:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use NETIF API, you have to define NO_SYS=0 in your lwipopts.h"
+ 121:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 122:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if ((LWIP_SOCKET || LWIP_NETCONN) && (NO_SYS==1))
+ 123:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use Sequential API, you have to define NO_SYS=0 in your lwipopts.h"
+ 124:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 125:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if ((LWIP_NETCONN || LWIP_SOCKET) && (MEMP_NUM_TCPIP_MSG_API<=0))
+ 126:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use Sequential API, you have to define MEMP_NUM_TCPIP_MSG_API>=1 in your l
+ 127:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 128:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_NETCONN && LWIP_SOCKET)
+ 129:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use Socket API, you have to define LWIP_NETCONN=1 in your lwipopts.h"
+ 130:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 131:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (((!LWIP_DHCP) || (!LWIP_AUTOIP)) && LWIP_DHCP_AUTOIP_COOP)
+ 132:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use DHCP/AUTOIP cooperation mode, you have to define LWIP_DHCP=1 and LWIP_
+ 133:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 134:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (((!LWIP_DHCP) || (!LWIP_ARP)) && DHCP_DOES_ARP_CHECK)
+ 135:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use DHCP ARP checking, you have to define LWIP_DHCP=1 and LWIP_ARP=1 in yo
+ 136:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 137:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (!LWIP_ARP && LWIP_AUTOIP)
+ 138:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use AUTOIP, you have to define LWIP_ARP=1 in your lwipopts.h"
+ 139:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 140:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_SNMP && (SNMP_CONCURRENT_REQUESTS<=0))
+ 141:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use SNMP, you have to define SNMP_CONCURRENT_REQUESTS>=1 in your lwipopts.
+ 142:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 143:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_SNMP && (SNMP_TRAP_DESTINATIONS<=0))
+ 144:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "If you want to use SNMP, you have to define SNMP_TRAP_DESTINATIONS>=1 in your lwipopts.h"
+ 145:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 146:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (LWIP_TCP && ((LWIP_EVENT_API && LWIP_CALLBACK_API) || (!LWIP_EVENT_API && !LWIP_CALLBACK_API))
+ 147:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "One and exactly one of LWIP_EVENT_API and LWIP_CALLBACK_API has to be enabled in your lwi
+ 148:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 149:rtos/common/ethernet/lwIP_132/src/core/init.c **** /* There must be sufficient timeouts, taking into account requirements of the subsystems. */
+ 150:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if ((NO_SYS==0) && (MEMP_NUM_SYS_TIMEOUT < (LWIP_TCP + IP_REASSEMBLY + LWIP_ARP + (2*LWIP_DHCP) + 
+ 151:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEMP_NUM_SYS_TIMEOUT is too low to accomodate all required timeouts"
+ 152:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 153:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (IP_REASSEMBLY && (MEMP_NUM_REASSDATA > IP_REASS_MAX_PBUFS))
+ 154:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEMP_NUM_REASSDATA > IP_REASS_MAX_PBUFS doesn't make sense since each struct ip_reassdata
+ 155:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 156:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (MEM_LIBC_MALLOC && MEM_USE_POOLS)
+ 157:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEM_LIBC_MALLOC and MEM_USE_POOLS may not both be simultaneously enabled in your lwipopts
+ 158:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 159:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (MEM_USE_POOLS && !MEMP_USE_CUSTOM_POOLS)
+ 160:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEM_USE_POOLS requires custom pools (MEMP_USE_CUSTOM_POOLS) to be enabled in your lwipopt
+ 161:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 162:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (PBUF_POOL_BUFSIZE <= MEM_ALIGNMENT)
+ 163:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "PBUF_POOL_BUFSIZE must be greater than MEM_ALIGNMENT or the offset may take the full firs
+ 164:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 165:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (TCP_QUEUE_OOSEQ && !LWIP_TCP)
+ 166:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "TCP_QUEUE_OOSEQ requires LWIP_TCP"
+ 167:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 168:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if (DNS_LOCAL_HOSTLIST && !DNS_LOCAL_HOSTLIST_IS_DYNAMIC && !(defined(DNS_LOCAL_HOSTLIST_INIT)))
+ 169:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "you have to define define DNS_LOCAL_HOSTLIST_INIT {{'host1', 0x123}, {'host2', 0x234}} to
+ 170:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 171:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if PPP_SUPPORT && !PPPOS_SUPPORT & !PPPOE_SUPPORT
+ 172:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "PPP_SUPPORT needs either PPPOS_SUPPORT or PPPOE_SUPPORT turned on"
+ 173:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 174:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+ 175:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+ 176:rtos/common/ethernet/lwIP_132/src/core/init.c **** /* Compile-time checks for deprecated options.
+ 177:rtos/common/ethernet/lwIP_132/src/core/init.c ****  */
+ 178:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef MEMP_NUM_TCPIP_MSG
+ 179:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEMP_NUM_TCPIP_MSG option is deprecated. Remove it from your lwipopts.h."
+ 180:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 181:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef MEMP_NUM_API_MSG
+ 182:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "MEMP_NUM_API_MSG option is deprecated. Remove it from your lwipopts.h."
+ 183:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 184:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef TCP_REXMIT_DEBUG
+ 185:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "TCP_REXMIT_DEBUG option is deprecated. Remove it from your lwipopts.h."
+ 186:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 187:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef RAW_STATS
+ 188:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "RAW_STATS option is deprecated. Remove it from your lwipopts.h."
+ 189:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 190:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef ETHARP_QUEUE_FIRST
+ 191:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "ETHARP_QUEUE_FIRST option is deprecated. Remove it from your lwipopts.h."
+ 192:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 193:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef ETHARP_ALWAYS_INSERT
+ 194:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "ETHARP_ALWAYS_INSERT option is deprecated. Remove it from your lwipopts.h."
+ 195:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 196:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if SO_REUSE
+ 197:rtos/common/ethernet/lwIP_132/src/core/init.c **** /* I removed the lot since this was an ugly hack. It broke the raw-API.
+ 198:rtos/common/ethernet/lwIP_132/src/core/init.c ****    It also came with many ugly goto's, Christiaan Simons. */
+ 199:rtos/common/ethernet/lwIP_132/src/core/init.c ****   #error "SO_REUSE currently unavailable, this was a hack"
+ 200:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif
+ 201:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+ 202:rtos/common/ethernet/lwIP_132/src/core/init.c **** #ifdef LWIP_DEBUG
+ 203:rtos/common/ethernet/lwIP_132/src/core/init.c **** static void
+ 204:rtos/common/ethernet/lwIP_132/src/core/init.c **** lwip_sanity_check(void)
+ 205:rtos/common/ethernet/lwIP_132/src/core/init.c **** {
+ 206:rtos/common/ethernet/lwIP_132/src/core/init.c ****   /* Warnings */
+ 207:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_NETCONN
+ 208:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (MEMP_NUM_NETCONN > (MEMP_NUM_TCP_PCB+MEMP_NUM_TCP_PCB_LISTEN+MEMP_NUM_UDP_PCB+MEMP_NUM_RAW_PC
+ 209:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: MEMP_NUM_NETCONN should be less than the sum o
+ 210:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_NETCONN */
+ 211:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_TCP
+ 212:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (MEMP_NUM_TCP_SEG < TCP_SND_QUEUELEN)
+ 213:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: MEMP_NUM_TCP_SEG should be at least as big as 
+ 214:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (TCP_SND_BUF < 2 * TCP_MSS)
+ 215:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: TCP_SND_BUF must be at least as much as (2 * T
+ 216:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (TCP_SND_QUEUELEN < (2 * (TCP_SND_BUF/TCP_MSS)))
+ 217:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: TCP_SND_QUEUELEN must be at least as much as (
+ 218:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (TCP_SNDLOWAT > TCP_SND_BUF)
+ 219:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: TCP_SNDLOWAT must be less than or equal to TCP
+ 220:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (TCP_WND > (PBUF_POOL_SIZE*PBUF_POOL_BUFSIZE))
+ 221:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: TCP_WND is larger than space provided by PBUF_
+ 222:rtos/common/ethernet/lwIP_132/src/core/init.c ****   if (TCP_WND < TCP_MSS)
+ 223:rtos/common/ethernet/lwIP_132/src/core/init.c ****     LWIP_PLATFORM_DIAG(("lwip_sanity_check: WARNING: TCP_WND is smaller than MSS\n"));
+ 224:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_TCP */
+ 225:rtos/common/ethernet/lwIP_132/src/core/init.c **** }
+ 226:rtos/common/ethernet/lwIP_132/src/core/init.c **** #else  /* LWIP_DEBUG */
+ 227:rtos/common/ethernet/lwIP_132/src/core/init.c **** #define lwip_sanity_check()
+ 228:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_DEBUG */
+ 229:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+ 230:rtos/common/ethernet/lwIP_132/src/core/init.c **** /**
+ 231:rtos/common/ethernet/lwIP_132/src/core/init.c ****  * Perform Sanity check of user-configurable values, and initialize all modules.
+ 232:rtos/common/ethernet/lwIP_132/src/core/init.c ****  */
+ 233:rtos/common/ethernet/lwIP_132/src/core/init.c **** void
+ 234:rtos/common/ethernet/lwIP_132/src/core/init.c **** lwip_init(void)
+ 235:rtos/common/ethernet/lwIP_132/src/core/init.c **** {
+  19              		.loc 1 235 0
+  20 0000 00B5     		push	{lr}
+  21              	.LCFI0:
+ 236:rtos/common/ethernet/lwIP_132/src/core/init.c ****   /* Sanity check user-configurable values */
+ 237:rtos/common/ethernet/lwIP_132/src/core/init.c ****   lwip_sanity_check();
+ 238:rtos/common/ethernet/lwIP_132/src/core/init.c **** 
+ 239:rtos/common/ethernet/lwIP_132/src/core/init.c ****   /* Modules initialization */
+ 240:rtos/common/ethernet/lwIP_132/src/core/init.c ****   stats_init();
+ 241:rtos/common/ethernet/lwIP_132/src/core/init.c ****   sys_init();
+  22              		.loc 1 241 0
+  23 0002 FFF7FEFF 		bl	sys_init
+ 242:rtos/common/ethernet/lwIP_132/src/core/init.c ****   mem_init();
+  24              		.loc 1 242 0
+  25 0006 FFF7FEFF 		bl	mem_init
+ 243:rtos/common/ethernet/lwIP_132/src/core/init.c ****   memp_init();
+  26              		.loc 1 243 0
+  27 000a FFF7FEFF 		bl	memp_init
+ 244:rtos/common/ethernet/lwIP_132/src/core/init.c ****   pbuf_init();
+ 245:rtos/common/ethernet/lwIP_132/src/core/init.c ****   netif_init();
+ 246:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_SOCKET
+ 247:rtos/common/ethernet/lwIP_132/src/core/init.c ****   lwip_socket_init();
+  28              		.loc 1 247 0
+  29 000e FFF7FEFF 		bl	lwip_socket_init
+ 248:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_SOCKET */
+ 249:rtos/common/ethernet/lwIP_132/src/core/init.c ****   ip_init();
+ 250:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_ARP
+ 251:rtos/common/ethernet/lwIP_132/src/core/init.c ****   etharp_init();
+ 252:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_ARP */
+ 253:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_RAW
+ 254:rtos/common/ethernet/lwIP_132/src/core/init.c ****   raw_init();
+ 255:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_RAW */
+ 256:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_UDP
+ 257:rtos/common/ethernet/lwIP_132/src/core/init.c ****   udp_init();
+ 258:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_UDP */
+ 259:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_TCP
+ 260:rtos/common/ethernet/lwIP_132/src/core/init.c ****   tcp_init();
+ 261:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_TCP */
+ 262:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_SNMP
+ 263:rtos/common/ethernet/lwIP_132/src/core/init.c ****   snmp_init();
+ 264:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_SNMP */
+ 265:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_AUTOIP
+ 266:rtos/common/ethernet/lwIP_132/src/core/init.c ****   autoip_init();
+ 267:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_AUTOIP */
+ 268:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_IGMP
+ 269:rtos/common/ethernet/lwIP_132/src/core/init.c ****   igmp_init();
+ 270:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_IGMP */
+ 271:rtos/common/ethernet/lwIP_132/src/core/init.c **** #if LWIP_DNS
+ 272:rtos/common/ethernet/lwIP_132/src/core/init.c ****   dns_init();
+ 273:rtos/common/ethernet/lwIP_132/src/core/init.c **** #endif /* LWIP_DNS */
+ 274:rtos/common/ethernet/lwIP_132/src/core/init.c **** }
+  30              		.loc 1 274 0
+  31              		@ sp needed for prologue
+  32 0012 01BC     		pop	{r0}
+  33 0014 0047     		bx	r0
+  34              	.LFE290:
+  66              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 init.c
+     /tmp/cchSkmZg.s:1      .text:00000000 $t
+     /tmp/cchSkmZg.s:16     .text:00000000 lwip_init
+     /tmp/cchSkmZg.s:38     .debug_frame:00000000 $d
+     /tmp/cchSkmZg.s:70     .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+sys_init
+mem_init
+memp_init
+lwip_socket_init

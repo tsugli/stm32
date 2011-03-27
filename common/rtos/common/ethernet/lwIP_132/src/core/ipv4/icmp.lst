@@ -1,0 +1,850 @@
+   1              		.code	16
+   2              		.file	"icmp.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.code	16
+  13              		.thumb_func
+  15              	icmp_send_response:
+  16              	.LFB5:
+  17              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * ICMP - Internet Control Message Protocol
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /* Some ICMP messages should be passed to the transport protocols. This
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****    is not implemented. */
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/opt.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if LWIP_ICMP /* don't build if not configured for use in lwipopts.h */
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/icmp.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/inet.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/inet_chksum.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/ip.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/def.h"
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/stats.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include "lwip/snmp.h"
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #include <string.h>
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /** Small optimization: set to 0 if incoming PBUF_POOL pbuf always can be
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * used to modify and send a response packet (and to 1 if this is not the case,
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * e.g. when link header is stripped of when receiving) */
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #ifndef LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #define LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN 1
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN */
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /* The amount of data from the original packet to return in a dest-unreachable */
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #define ICMP_DEST_UNREACH_DATASIZE 8
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** static void icmp_send_response(struct pbuf *p, u8_t type, u8_t code);
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /**
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Processes ICMP input packets, called from ip_input().
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Currently only processes icmp echo requests and sends
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * out the echo response.
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param p the icmp echo request packet, p->payload pointing to the ip header
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param inp the netif on which this packet was received
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** void
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** icmp_input(struct pbuf *p, struct netif *inp)
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** {
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   u8_t type;
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #ifdef LWIP_DEBUG
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   u8_t code;
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_DEBUG */
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct icmp_echo_hdr *iecho;
+  85:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct ip_hdr *iphdr;
+  86:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct ip_addr tmpaddr;
+  87:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   s16_t hlen;
+  88:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  89:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ICMP_STATS_INC(icmp.recv);
+  90:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   snmp_inc_icmpinmsgs();
+  91:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  92:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+  93:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   iphdr = p->payload;
+  94:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   hlen = IPH_HL(iphdr) * 4;
+  95:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   if (pbuf_header(p, -hlen) || (p->tot_len < sizeof(u16_t)*2)) {
+  96:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: short ICMP (%"U16_F" bytes) received\n", p->tot_len));
+  97:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     goto lenerr;
+  98:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   }
+  99:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 100:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   type = *((u8_t *)p->payload);
+ 101:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #ifdef LWIP_DEBUG
+ 102:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   code = *(((u8_t *)p->payload)+1);
+ 103:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_DEBUG */
+ 104:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   switch (type) {
+ 105:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   case ICMP_ECHO:
+ 106:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if !LWIP_MULTICAST_PING || !LWIP_BROADCAST_PING
+ 107:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     {
+ 108:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       int accepted = 1;
+ 109:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if !LWIP_MULTICAST_PING
+ 110:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* multicast destination address? */
+ 111:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (ip_addr_ismulticast(&iphdr->dest)) {
+ 112:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         accepted = 0;
+ 113:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 114:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_MULTICAST_PING */
+ 115:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if !LWIP_BROADCAST_PING
+ 116:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* broadcast destination address? */
+ 117:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (ip_addr_isbroadcast(&iphdr->dest, inp)) {
+ 118:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         accepted = 0;
+ 119:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 120:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_BROADCAST_PING */
+ 121:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* broadcast or multicast destination address not acceptd? */
+ 122:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (!accepted) {
+ 123:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: Not echoing to multicast or broadcast pings\n"));
+ 124:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         ICMP_STATS_INC(icmp.err);
+ 125:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         pbuf_free(p);
+ 126:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         return;
+ 127:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 128:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 129:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* !LWIP_MULTICAST_PING || !LWIP_BROADCAST_PING */
+ 130:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: ping\n"));
+ 131:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     if (p->tot_len < sizeof(struct icmp_echo_hdr)) {
+ 132:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: bad ICMP echo received\n"));
+ 133:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       goto lenerr;
+ 134:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 135:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     if (inet_chksum_pbuf(p) != 0) {
+ 136:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: checksum failed for received ICMP echo\n"));
+ 137:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       pbuf_free(p);
+ 138:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       ICMP_STATS_INC(icmp.chkerr);
+ 139:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       snmp_inc_icmpinerrors();
+ 140:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       return;
+ 141:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 142:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN
+ 143:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     if (pbuf_header(p, (PBUF_IP_HLEN + PBUF_LINK_HLEN))) {
+ 144:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* p is not big enough to contain link headers
+ 145:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****        * allocate a new one and copy p into it
+ 146:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****        */
+ 147:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       struct pbuf *r;
+ 148:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* switch p->payload to ip header */
+ 149:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (pbuf_header(p, hlen)) {
+ 150:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_ASSERT("icmp_input: moving p->payload to ip header failed\n", 0);
+ 151:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         goto memerr;
+ 152:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 153:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* allocate new packet buffer with space for link headers */
+ 154:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       r = pbuf_alloc(PBUF_LINK, p->tot_len, PBUF_RAM);
+ 155:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (r == NULL) {
+ 156:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: allocating new pbuf failed\n"));
+ 157:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         goto memerr;
+ 158:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 159:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       LWIP_ASSERT("check that first pbuf can hold struct the ICMP header",
+ 160:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****                   (r->len >= hlen + sizeof(struct icmp_echo_hdr)));
+ 161:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* copy the whole packet including ip header */
+ 162:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (pbuf_copy(r, p) != ERR_OK) {
+ 163:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_ASSERT("icmp_input: copying to new pbuf failed\n", 0);
+ 164:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         goto memerr;
+ 165:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 166:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       iphdr = r->payload;
+ 167:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* switch r->payload back to icmp header */
+ 168:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (pbuf_header(r, -hlen)) {
+ 169:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_ASSERT("icmp_input: restoring original p->payload failed\n", 0);
+ 170:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         goto memerr;
+ 171:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 172:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* free the original p */
+ 173:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       pbuf_free(p);
+ 174:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* we now have an identical copy of p that has room for link headers */
+ 175:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       p = r;
+ 176:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     } else {
+ 177:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       /* restore p->payload to point to icmp header */
+ 178:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (pbuf_header(p, -(s16_t)(PBUF_IP_HLEN + PBUF_LINK_HLEN))) {
+ 179:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_ASSERT("icmp_input: restoring original p->payload failed\n", 0);
+ 180:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         goto memerr;
+ 181:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 182:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 183:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN */
+ 184:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* At this point, all checks are OK. */
+ 185:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* We generate an answer by switching the dest and src ip addresses,
+ 186:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****      * setting the icmp type to ECHO_RESPONSE and updating the checksum. */
+ 187:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     iecho = p->payload;
+ 188:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     tmpaddr.addr = iphdr->src.addr;
+ 189:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     iphdr->src.addr = iphdr->dest.addr;
+ 190:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     iphdr->dest.addr = tmpaddr.addr;
+ 191:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     ICMPH_TYPE_SET(iecho, ICMP_ER);
+ 192:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* adjust the checksum */
+ 193:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     if (iecho->chksum >= htons(0xffff - (ICMP_ECHO << 8))) {
+ 194:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       iecho->chksum += htons(ICMP_ECHO << 8) + 1;
+ 195:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     } else {
+ 196:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       iecho->chksum += htons(ICMP_ECHO << 8);
+ 197:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 198:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 199:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* Set the correct TTL and recalculate the header checksum. */
+ 200:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     IPH_TTL_SET(iphdr, ICMP_TTL);
+ 201:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     IPH_CHKSUM_SET(iphdr, 0);
+ 202:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if CHECKSUM_GEN_IP
+ 203:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     IPH_CHKSUM_SET(iphdr, inet_chksum(iphdr, IP_HLEN));
+ 204:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* CHECKSUM_GEN_IP */
+ 205:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 206:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     ICMP_STATS_INC(icmp.xmit);
+ 207:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* increase number of messages attempted to send */
+ 208:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     snmp_inc_icmpoutmsgs();
+ 209:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     /* increase number of echo replies attempted to send */
+ 210:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     snmp_inc_icmpoutechoreps();
+ 211:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 212:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     if(pbuf_header(p, hlen)) {
+ 213:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       LWIP_ASSERT("Can't move over header in packet", 0);
+ 214:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     } else {
+ 215:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       err_t ret;
+ 216:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       ret = ip_output_if(p, &(iphdr->src), IP_HDRINCL,
+ 217:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****                    ICMP_TTL, 0, IP_PROTO_ICMP, inp);
+ 218:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       if (ret != ERR_OK) {
+ 219:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****         LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: ip_output_if returned an error: %c.\n", ret));
+ 220:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****       }
+ 221:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     }
+ 222:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     break;
+ 223:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   default:
+ 224:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     LWIP_DEBUGF(ICMP_DEBUG, ("icmp_input: ICMP type %"S16_F" code %"S16_F" not supported.\n", 
+ 225:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****                 (s16_t)type, (s16_t)code));
+ 226:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     ICMP_STATS_INC(icmp.proterr);
+ 227:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     ICMP_STATS_INC(icmp.drop);
+ 228:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   }
+ 229:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   pbuf_free(p);
+ 230:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   return;
+ 231:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** lenerr:
+ 232:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   pbuf_free(p);
+ 233:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ICMP_STATS_INC(icmp.lenerr);
+ 234:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   snmp_inc_icmpinerrors();
+ 235:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   return;
+ 236:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN
+ 237:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** memerr:
+ 238:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   pbuf_free(p);
+ 239:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ICMP_STATS_INC(icmp.err);
+ 240:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   snmp_inc_icmpinerrors();
+ 241:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   return;
+ 242:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* LWIP_ICMP_ECHO_CHECK_INPUT_PBUF_LEN */
+ 243:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** }
+ 244:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 245:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /**
+ 246:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Send an icmp 'destination unreachable' packet, called from ip_input() if
+ 247:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * the transport layer protocol is unknown and from udp_input() if the local
+ 248:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * port is not bound.
+ 249:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+ 250:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param p the input packet for which the 'unreachable' should be sent,
+ 251:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *          p->payload pointing to the IP header
+ 252:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param t type of the 'unreachable' packet
+ 253:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+ 254:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** void
+ 255:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** icmp_dest_unreach(struct pbuf *p, enum icmp_dur_type t)
+ 256:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** {
+ 257:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmp_send_response(p, ICMP_DUR, t);
+ 258:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** }
+ 259:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 260:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #if IP_FORWARD || IP_REASSEMBLY
+ 261:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /**
+ 262:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Send a 'time exceeded' packet, called from ip_forward() if TTL is 0.
+ 263:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+ 264:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param p the input packet for which the 'time exceeded' should be sent,
+ 265:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *          p->payload pointing to the IP header
+ 266:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param t type of the 'time exceeded' packet
+ 267:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+ 268:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** void
+ 269:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** icmp_time_exceeded(struct pbuf *p, enum icmp_te_type t)
+ 270:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** {
+ 271:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmp_send_response(p, ICMP_TE, t);
+ 272:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** }
+ 273:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 274:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** #endif /* IP_FORWARD || IP_REASSEMBLY */
+ 275:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 276:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** /**
+ 277:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * Send an icmp packet in response to an incoming packet.
+ 278:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *
+ 279:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param p the input packet for which the 'unreachable' should be sent,
+ 280:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  *          p->payload pointing to the IP header
+ 281:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param type Type of the ICMP header
+ 282:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  * @param code Code of the ICMP header
+ 283:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****  */
+ 284:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** static void
+ 285:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** icmp_send_response(struct pbuf *p, u8_t type, u8_t code)
+ 286:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** {
+  18              		.loc 1 286 0
+  19 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  20              	.LCFI0:
+  21 0002 5746     		mov	r7, sl
+  22 0004 4646     		mov	r6, r8
+  23 0006 C0B4     		push	{r6, r7}
+  24              	.LCFI1:
+  25              	.LVL0:
+  26 0008 82B0     		sub	sp, sp, #8
+  27              	.LCFI2:
+  28 000a 8246     		mov	sl, r0
+  29 000c 0906     		lsl	r1, r1, #24
+  30              	.LVL1:
+  31 000e 090E     		lsr	r1, r1, #24
+  32 0010 8846     		mov	r8, r1
+  33              	.LVL2:
+  34 0012 1206     		lsl	r2, r2, #24
+  35              	.LVL3:
+  36 0014 150E     		lsr	r5, r2, #24
+  37              	.LVL4:
+ 287:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct pbuf *q;
+ 288:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct ip_hdr *iphdr;
+ 289:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* we can use the echo header here */
+ 290:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   struct icmp_echo_hdr *icmphdr;
+ 291:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 292:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* ICMP header + IP header + 8 bytes of data */
+ 293:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   q = pbuf_alloc(PBUF_IP, sizeof(struct icmp_echo_hdr) + IP_HLEN + ICMP_DEST_UNREACH_DATASIZE,
+  38              		.loc 1 293 0
+  39 0016 0120     		mov	r0, #1
+  40              	.LVL5:
+  41 0018 2421     		mov	r1, #36
+  42 001a 0022     		mov	r2, #0
+  43 001c FFF7FEFF 		bl	pbuf_alloc
+  44 0020 071C     		mov	r7, r0
+  45              	.LVL6:
+ 294:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****                  PBUF_RAM);
+ 295:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   if (q == NULL) {
+  46              		.loc 1 295 0
+  47 0022 0028     		cmp	r0, #0
+  48 0024 27D0     		beq	.L3
+  49              	.LVL7:
+ 296:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     LWIP_DEBUGF(ICMP_DEBUG, ("icmp_time_exceeded: failed to allocate pbuf for ICMP packet.\n"));
+ 297:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****     return;
+ 298:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   }
+ 299:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   LWIP_ASSERT("check that first pbuf can hold icmp message",
+ 300:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****              (q->len >= (sizeof(struct icmp_echo_hdr) + IP_HLEN + ICMP_DEST_UNREACH_DATASIZE)));
+ 301:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 302:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   iphdr = p->payload;
+  50              		.loc 1 302 0
+  51 0026 5346     		mov	r3, sl
+  52 0028 5E68     		ldr	r6, [r3, #4]
+  53              	.LVL8:
+ 303:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   LWIP_DEBUGF(ICMP_DEBUG, ("icmp_time_exceeded from "));
+ 304:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ip_addr_debug_print(ICMP_DEBUG, &(iphdr->src));
+ 305:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   LWIP_DEBUGF(ICMP_DEBUG, (" to "));
+ 306:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ip_addr_debug_print(ICMP_DEBUG, &(iphdr->dest));
+ 307:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   LWIP_DEBUGF(ICMP_DEBUG, ("\n"));
+ 308:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 309:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr = q->payload;
+  54              		.loc 1 309 0
+  55 002a 4468     		ldr	r4, [r0, #4]
+  56              	.LVL9:
+ 310:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->type = type;
+  57              		.loc 1 310 0
+  58 002c 4346     		mov	r3, r8
+  59              	.LVL10:
+  60 002e 2370     		strb	r3, [r4]
+ 311:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->code = code;
+  61              		.loc 1 311 0
+  62 0030 6570     		strb	r5, [r4, #1]
+ 312:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->id = 0;
+  63              		.loc 1 312 0
+  64 0032 0025     		mov	r5, #0
+  65              	.LVL11:
+  66 0034 A580     		strh	r5, [r4, #4]
+ 313:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->seqno = 0;
+  67              		.loc 1 313 0
+  68 0036 E580     		strh	r5, [r4, #6]
+ 314:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 315:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* copy fields from original packet */
+ 316:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   SMEMCPY((u8_t *)q->payload + sizeof(struct icmp_echo_hdr), (u8_t *)p->payload,
+  69              		.loc 1 316 0
+  70 0038 4068     		ldr	r0, [r0, #4]
+  71              	.LVL12:
+  72 003a 0830     		add	r0, r0, #8
+  73 003c 5346     		mov	r3, sl
+  74 003e 5968     		ldr	r1, [r3, #4]
+  75 0040 1C22     		mov	r2, #28
+  76 0042 FFF7FEFF 		bl	memcpy
+ 317:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****           IP_HLEN + ICMP_DEST_UNREACH_DATASIZE);
+ 318:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** 
+ 319:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* calculate checksum */
+ 320:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->chksum = 0;
+  77              		.loc 1 320 0
+  78 0046 6580     		strh	r5, [r4, #2]
+ 321:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   icmphdr->chksum = inet_chksum(icmphdr, q->len);
+  79              		.loc 1 321 0
+  80 0048 7989     		ldrh	r1, [r7, #10]
+  81 004a 201C     		mov	r0, r4
+  82 004c FFF7FEFF 		bl	inet_chksum
+  83 0050 6080     		strh	r0, [r4, #2]
+ 322:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ICMP_STATS_INC(icmp.xmit);
+  84              		.loc 1 322 0
+  85 0052 0C49     		ldr	r1, .L4
+  86 0054 6022     		mov	r2, #96
+  87 0056 8B5A     		ldrh	r3, [r1, r2]
+  88 0058 0133     		add	r3, r3, #1
+  89 005a 8B52     		strh	r3, [r1, r2]
+ 323:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* increase number of messages attempted to send */
+ 324:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   snmp_inc_icmpoutmsgs();
+ 325:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   /* increase number of destination unreachable messages attempted to send */
+ 326:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   snmp_inc_icmpouttimeexcds();
+ 327:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   ip_output(q, NULL, &(iphdr->src), ICMP_TTL, 0, IP_PROTO_ICMP);
+  90              		.loc 1 327 0
+  91 005c 0C36     		add	r6, r6, #12
+  92              	.LVL13:
+  93 005e 0095     		str	r5, [sp]
+  94 0060 0123     		mov	r3, #1
+  95 0062 0193     		str	r3, [sp, #4]
+  96 0064 381C     		mov	r0, r7
+  97 0066 0021     		mov	r1, #0
+  98 0068 321C     		mov	r2, r6
+  99 006a FF23     		mov	r3, #255
+ 100 006c FFF7FEFF 		bl	ip_output
+ 328:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c ****   pbuf_free(q);
+ 101              		.loc 1 328 0
+ 102 0070 381C     		mov	r0, r7
+ 103 0072 FFF7FEFF 		bl	pbuf_free
+ 104              	.LVL14:
+ 105              	.L3:
+ 329:rtos/common/ethernet/lwIP_132/src/core/ipv4/icmp.c **** }
+ 106              		.loc 1 329 0
+ 107 0076 02B0     		add	sp, sp, #8
+ 108              		@ sp needed for prologue
+ 109              	.LVL15:
+ 110              	.LVL16:
+ 111              	.LVL17:
+ 112              	.LVL18:
+ 113              	.LVL19:
+ 114 0078 0CBC     		pop	{r2, r3}
+ 115 007a 9046     		mov	r8, r2
+ 116 007c 9A46     		mov	sl, r3
+ 117 007e F0BC     		pop	{r4, r5, r6, r7}
+ 118 0080 01BC     		pop	{r0}
+ 119 0082 0047     		bx	r0
+ 120              	.L5:
+ 121              		.align	2
+ 122              	.L4:
+ 123 0084 00000000 		.word	lwip_stats
+ 124              	.LFE5:
+ 126              		.align	2
+ 127              		.global	icmp_time_exceeded
+ 128              		.code	16
+ 129              		.thumb_func
+ 131              	icmp_time_exceeded:
+ 132              	.LFB4:
+ 133              		.loc 1 270 0
+ 134 0088 00B5     		push	{lr}
+ 135              	.LCFI3:
+ 136              	.LVL20:
+ 137              		.loc 1 271 0
+ 138 008a 0A06     		lsl	r2, r1, #24
+ 139 008c 120E     		lsr	r2, r2, #24
+ 140 008e 0B21     		mov	r1, #11
+ 141              	.LVL21:
+ 142 0090 FFF7B6FF 		bl	icmp_send_response
+ 143              	.LVL22:
+ 144              		.loc 1 272 0
+ 145              		@ sp needed for prologue
+ 146 0094 01BC     		pop	{r0}
+ 147 0096 0047     		bx	r0
+ 148              	.LFE4:
+ 150              		.align	2
+ 151              		.global	icmp_dest_unreach
+ 152              		.code	16
+ 153              		.thumb_func
+ 155              	icmp_dest_unreach:
+ 156              	.LFB3:
+ 157              		.loc 1 256 0
+ 158 0098 00B5     		push	{lr}
+ 159              	.LCFI4:
+ 160              	.LVL23:
+ 161              		.loc 1 257 0
+ 162 009a 0A06     		lsl	r2, r1, #24
+ 163 009c 120E     		lsr	r2, r2, #24
+ 164 009e 0321     		mov	r1, #3
+ 165              	.LVL24:
+ 166 00a0 FFF7AEFF 		bl	icmp_send_response
+ 167              	.LVL25:
+ 168              		.loc 1 258 0
+ 169              		@ sp needed for prologue
+ 170 00a4 01BC     		pop	{r0}
+ 171 00a6 0047     		bx	r0
+ 172              	.LFE3:
+ 174              		.align	2
+ 175              		.global	icmp_input
+ 176              		.code	16
+ 177              		.thumb_func
+ 179              	icmp_input:
+ 180              	.LFB2:
+ 181              		.loc 1 79 0
+ 182 00a8 F0B5     		push	{r4, r5, r6, r7, lr}
+ 183              	.LCFI5:
+ 184 00aa 5F46     		mov	r7, fp
+ 185 00ac 5646     		mov	r6, sl
+ 186 00ae 4D46     		mov	r5, r9
+ 187 00b0 4446     		mov	r4, r8
+ 188 00b2 F0B4     		push	{r4, r5, r6, r7}
+ 189              	.LCFI6:
+ 190              	.LVL26:
+ 191 00b4 83B0     		sub	sp, sp, #12
+ 192              	.LCFI7:
+ 193 00b6 051C     		mov	r5, r0
+ 194 00b8 8B46     		mov	fp, r1
+ 195              		.loc 1 89 0
+ 196 00ba 7A49     		ldr	r1, .L26
+ 197              	.LVL27:
+ 198 00bc 6222     		mov	r2, #98
+ 199 00be 8B5A     		ldrh	r3, [r1, r2]
+ 200 00c0 0133     		add	r3, r3, #1
+ 201 00c2 8B52     		strh	r3, [r1, r2]
+ 202              		.loc 1 93 0
+ 203 00c4 4668     		ldr	r6, [r0, #4]
+ 204              	.LVL28:
+ 205              		.loc 1 94 0
+ 206 00c6 3088     		ldrh	r0, [r6]
+ 207              	.LVL29:
+ 208 00c8 FFF7FEFF 		bl	ntohs
+ 209 00cc 0005     		lsl	r0, r0, #20
+ 210 00ce 000F     		lsr	r0, r0, #28
+ 211 00d0 8700     		lsl	r7, r0, #2
+ 212              	.LVL30:
+ 213              		.loc 1 95 0
+ 214 00d2 7C42     		neg	r4, r7
+ 215 00d4 281C     		mov	r0, r5
+ 216 00d6 211C     		mov	r1, r4
+ 217 00d8 FFF7FEFF 		bl	pbuf_header
+ 218 00dc 0028     		cmp	r0, #0
+ 219 00de 00D0     		beq	.LCB174
+ 220 00e0 C5E0     		b	.L11	@long jump
+ 221              	.LCB174:
+ 222 00e2 2B89     		ldrh	r3, [r5, #8]
+ 223 00e4 032B     		cmp	r3, #3
+ 224 00e6 00D8     		bhi	.LCB177
+ 225 00e8 C1E0     		b	.L11	@long jump
+ 226              	.LCB177:
+ 227              		.loc 1 104 0
+ 228 00ea 6B68     		ldr	r3, [r5, #4]
+ 229 00ec 1B78     		ldrb	r3, [r3]
+ 230 00ee 082B     		cmp	r3, #8
+ 231 00f0 00D0     		beq	.LCB184
+ 232 00f2 AFE0     		b	.L25	@long jump
+ 233              	.LCB184:
+ 234              	.LBB2:
+ 235              		.loc 1 111 0
+ 236 00f4 3269     		ldr	r2, [r6, #16]
+ 237 00f6 9146     		mov	r9, r2
+ 238 00f8 F020     		mov	r0, #240
+ 239 00fa 0006     		lsl	r0, r0, #24
+ 240 00fc FFF7FEFF 		bl	ntohl
+ 241 0100 8246     		mov	sl, r0
+ 242 0102 E020     		mov	r0, #224
+ 243 0104 0006     		lsl	r0, r0, #24
+ 244 0106 FFF7FEFF 		bl	ntohl
+ 245 010a 8046     		mov	r8, r0
+ 246              		.loc 1 117 0
+ 247 010c 301C     		mov	r0, r6
+ 248 010e 1030     		add	r0, r0, #16
+ 249 0110 5946     		mov	r1, fp
+ 250 0112 FFF7FEFF 		bl	ip_addr_isbroadcast
+ 251 0116 0028     		cmp	r0, #0
+ 252 0118 04D1     		bne	.L14
+ 253              		.loc 1 122 0
+ 254 011a 5346     		mov	r3, sl
+ 255 011c 4A46     		mov	r2, r9
+ 256 011e 1340     		and	r3, r3, r2
+ 257 0120 4345     		cmp	r3, r8
+ 258 0122 08D1     		bne	.L15
+ 259              	.L14:
+ 260              		.loc 1 124 0
+ 261 0124 5F49     		ldr	r1, .L26
+ 262 0126 7422     		mov	r2, #116
+ 263 0128 8B5A     		ldrh	r3, [r1, r2]
+ 264 012a 0133     		add	r3, r3, #1
+ 265 012c 8B52     		strh	r3, [r1, r2]
+ 266              		.loc 1 125 0
+ 267 012e 281C     		mov	r0, r5
+ 268 0130 FFF7FEFF 		bl	pbuf_free
+ 269 0134 ACE0     		b	.L24
+ 270              	.L15:
+ 271              	.LBE2:
+ 272              		.loc 1 131 0
+ 273 0136 2B89     		ldrh	r3, [r5, #8]
+ 274 0138 072B     		cmp	r3, #7
+ 275 013a 00D8     		bhi	.LCB223
+ 276 013c 97E0     		b	.L11	@long jump
+ 277              	.LCB223:
+ 278              		.loc 1 135 0
+ 279 013e 281C     		mov	r0, r5
+ 280 0140 FFF7FEFF 		bl	inet_chksum_pbuf
+ 281 0144 0028     		cmp	r0, #0
+ 282 0146 08D0     		beq	.L17
+ 283              		.loc 1 137 0
+ 284 0148 281C     		mov	r0, r5
+ 285 014a FFF7FEFF 		bl	pbuf_free
+ 286              		.loc 1 138 0
+ 287 014e 5549     		ldr	r1, .L26
+ 288 0150 6822     		mov	r2, #104
+ 289 0152 8B5A     		ldrh	r3, [r1, r2]
+ 290 0154 0133     		add	r3, r3, #1
+ 291 0156 8B52     		strh	r3, [r1, r2]
+ 292 0158 9AE0     		b	.L24
+ 293              	.L17:
+ 294              		.loc 1 143 0
+ 295 015a 281C     		mov	r0, r5
+ 296 015c 2421     		mov	r1, #36
+ 297 015e FFF7FEFF 		bl	pbuf_header
+ 298 0162 0028     		cmp	r0, #0
+ 299 0164 22D0     		beq	.L18
+ 300              	.LBB3:
+ 301              		.loc 1 149 0
+ 302 0166 391C     		mov	r1, r7
+ 303 0168 281C     		mov	r0, r5
+ 304 016a FFF7FEFF 		bl	pbuf_header
+ 305 016e 0028     		cmp	r0, #0
+ 306 0170 00D0     		beq	.LCB251
+ 307 0172 85E0     		b	.L19	@long jump
+ 308              	.LCB251:
+ 309              		.loc 1 154 0
+ 310 0174 2989     		ldrh	r1, [r5, #8]
+ 311 0176 0220     		mov	r0, #2
+ 312 0178 0022     		mov	r2, #0
+ 313 017a FFF7FEFF 		bl	pbuf_alloc
+ 314 017e 8046     		mov	r8, r0
+ 315              	.LVL31:
+ 316              		.loc 1 155 0
+ 317 0180 0028     		cmp	r0, #0
+ 318 0182 00D1     		bne	.LCB259
+ 319 0184 7CE0     		b	.L19	@long jump
+ 320              	.LCB259:
+ 321              		.loc 1 162 0
+ 322 0186 291C     		mov	r1, r5
+ 323 0188 FFF7FEFF 		bl	pbuf_copy
+ 324 018c 0006     		lsl	r0, r0, #24
+ 325 018e 0028     		cmp	r0, #0
+ 326 0190 76D1     		bne	.L19
+ 327              		.loc 1 166 0
+ 328 0192 4346     		mov	r3, r8
+ 329 0194 5E68     		ldr	r6, [r3, #4]
+ 330              	.LVL32:
+ 331              		.loc 1 168 0
+ 332 0196 4046     		mov	r0, r8
+ 333 0198 211C     		mov	r1, r4
+ 334 019a FFF7FEFF 		bl	pbuf_header
+ 335 019e 0028     		cmp	r0, #0
+ 336 01a0 6ED1     		bne	.L19
+ 337              		.loc 1 173 0
+ 338 01a2 281C     		mov	r0, r5
+ 339 01a4 FFF7FEFF 		bl	pbuf_free
+ 340 01a8 4546     		mov	r5, r8
+ 341 01aa 06E0     		b	.L20
+ 342              	.LVL33:
+ 343              	.L18:
+ 344              	.LBE3:
+ 345              		.loc 1 178 0
+ 346 01ac 2421     		mov	r1, #36
+ 347 01ae 4942     		neg	r1, r1
+ 348 01b0 281C     		mov	r0, r5
+ 349 01b2 FFF7FEFF 		bl	pbuf_header
+ 350 01b6 0028     		cmp	r0, #0
+ 351 01b8 62D1     		bne	.L19
+ 352              	.LVL34:
+ 353              	.L20:
+ 354              		.loc 1 187 0
+ 355 01ba 6A68     		ldr	r2, [r5, #4]
+ 356 01bc 9046     		mov	r8, r2
+ 357              	.LVL35:
+ 358              		.loc 1 188 0
+ 359 01be F268     		ldr	r2, [r6, #12]
+ 360              		.loc 1 189 0
+ 361 01c0 3369     		ldr	r3, [r6, #16]
+ 362 01c2 F360     		str	r3, [r6, #12]
+ 363              		.loc 1 190 0
+ 364 01c4 3261     		str	r2, [r6, #16]
+ 365              		.loc 1 191 0
+ 366 01c6 0023     		mov	r3, #0
+ 367 01c8 4246     		mov	r2, r8
+ 368 01ca 1370     		strb	r3, [r2]
+ 369              		.loc 1 193 0
+ 370 01cc 5488     		ldrh	r4, [r2, #2]
+ 371 01ce 3648     		ldr	r0, .L26+4
+ 372 01d0 FFF7FEFF 		bl	htons
+ 373 01d4 8442     		cmp	r4, r0
+ 374 01d6 0AD3     		bcc	.L21
+ 375              		.loc 1 194 0
+ 376 01d8 4346     		mov	r3, r8
+ 377 01da 5C88     		ldrh	r4, [r3, #2]
+ 378 01dc 8020     		mov	r0, #128
+ 379 01de 0001     		lsl	r0, r0, #4
+ 380 01e0 FFF7FEFF 		bl	htons
+ 381 01e4 0134     		add	r4, r4, #1
+ 382 01e6 0019     		add	r0, r0, r4
+ 383 01e8 4246     		mov	r2, r8
+ 384 01ea 5080     		strh	r0, [r2, #2]
+ 385 01ec 08E0     		b	.L22
+ 386              	.L21:
+ 387              		.loc 1 196 0
+ 388 01ee 4346     		mov	r3, r8
+ 389 01f0 5C88     		ldrh	r4, [r3, #2]
+ 390 01f2 8020     		mov	r0, #128
+ 391 01f4 0001     		lsl	r0, r0, #4
+ 392 01f6 FFF7FEFF 		bl	htons
+ 393 01fa 0019     		add	r0, r0, r4
+ 394 01fc 4246     		mov	r2, r8
+ 395 01fe 5080     		strh	r0, [r2, #2]
+ 396              	.L22:
+ 397              		.loc 1 200 0
+ 398 0200 3089     		ldrh	r0, [r6, #8]
+ 399 0202 FFF7FEFF 		bl	ntohs
+ 400 0206 294B     		ldr	r3, .L26+8
+ 401 0208 1843     		orr	r0, r0, r3
+ 402 020a 0004     		lsl	r0, r0, #16
+ 403 020c 000C     		lsr	r0, r0, #16
+ 404 020e FFF7FEFF 		bl	htons
+ 405 0212 3081     		strh	r0, [r6, #8]
+ 406              		.loc 1 201 0
+ 407 0214 0023     		mov	r3, #0
+ 408 0216 7381     		strh	r3, [r6, #10]
+ 409              		.loc 1 203 0
+ 410 0218 301C     		mov	r0, r6
+ 411 021a 1421     		mov	r1, #20
+ 412 021c FFF7FEFF 		bl	inet_chksum
+ 413 0220 7081     		strh	r0, [r6, #10]
+ 414              		.loc 1 206 0
+ 415 0222 2049     		ldr	r1, .L26
+ 416 0224 6022     		mov	r2, #96
+ 417 0226 8B5A     		ldrh	r3, [r1, r2]
+ 418 0228 0133     		add	r3, r3, #1
+ 419 022a 8B52     		strh	r3, [r1, r2]
+ 420              		.loc 1 212 0
+ 421 022c 391C     		mov	r1, r7
+ 422 022e 281C     		mov	r0, r5
+ 423 0230 FFF7FEFF 		bl	pbuf_header
+ 424 0234 0028     		cmp	r0, #0
+ 425 0236 16D1     		bne	.L23
+ 426              	.LBB4:
+ 427              		.loc 1 216 0
+ 428 0238 311C     		mov	r1, r6
+ 429 023a 0C31     		add	r1, r1, #12
+ 430 023c 0023     		mov	r3, #0
+ 431 023e 0093     		str	r3, [sp]
+ 432 0240 0123     		mov	r3, #1
+ 433 0242 0193     		str	r3, [sp, #4]
+ 434 0244 5B46     		mov	r3, fp
+ 435 0246 0293     		str	r3, [sp, #8]
+ 436 0248 281C     		mov	r0, r5
+ 437 024a 0022     		mov	r2, #0
+ 438 024c FF23     		mov	r3, #255
+ 439 024e FFF7FEFF 		bl	ip_output_if
+ 440 0252 08E0     		b	.L23
+ 441              	.LVL36:
+ 442              	.L25:
+ 443              	.LBE4:
+ 444              		.loc 1 226 0
+ 445 0254 134A     		ldr	r2, .L26
+ 446 0256 7021     		mov	r1, #112
+ 447 0258 535A     		ldrh	r3, [r2, r1]
+ 448 025a 0133     		add	r3, r3, #1
+ 449 025c 5352     		strh	r3, [r2, r1]
+ 450              		.loc 1 227 0
+ 451 025e 6621     		mov	r1, #102
+ 452 0260 535A     		ldrh	r3, [r2, r1]
+ 453 0262 0133     		add	r3, r3, #1
+ 454 0264 5352     		strh	r3, [r2, r1]
+ 455              	.LVL37:
+ 456              	.L23:
+ 457              		.loc 1 229 0
+ 458 0266 281C     		mov	r0, r5
+ 459 0268 FFF7FEFF 		bl	pbuf_free
+ 460 026c 10E0     		b	.L24
+ 461              	.LVL38:
+ 462              	.L11:
+ 463              		.loc 1 232 0
+ 464 026e 281C     		mov	r0, r5
+ 465 0270 FFF7FEFF 		bl	pbuf_free
+ 466              		.loc 1 233 0
+ 467 0274 0B49     		ldr	r1, .L26
+ 468 0276 6A22     		mov	r2, #106
+ 469 0278 8B5A     		ldrh	r3, [r1, r2]
+ 470 027a 0133     		add	r3, r3, #1
+ 471 027c 8B52     		strh	r3, [r1, r2]
+ 472 027e 07E0     		b	.L24
+ 473              	.LVL39:
+ 474              	.L19:
+ 475              		.loc 1 238 0
+ 476 0280 281C     		mov	r0, r5
+ 477 0282 FFF7FEFF 		bl	pbuf_free
+ 478              		.loc 1 239 0
+ 479 0286 0749     		ldr	r1, .L26
+ 480 0288 7422     		mov	r2, #116
+ 481 028a 8B5A     		ldrh	r3, [r1, r2]
+ 482 028c 0133     		add	r3, r3, #1
+ 483 028e 8B52     		strh	r3, [r1, r2]
+ 484              	.LVL40:
+ 485              	.L24:
+ 486              		.loc 1 243 0
+ 487 0290 03B0     		add	sp, sp, #12
+ 488              		@ sp needed for prologue
+ 489              	.LVL41:
+ 490              	.LVL42:
+ 491              	.LVL43:
+ 492              	.LVL44:
+ 493              	.LVL45:
+ 494 0292 3CBC     		pop	{r2, r3, r4, r5}
+ 495 0294 9046     		mov	r8, r2
+ 496 0296 9946     		mov	r9, r3
+ 497 0298 A246     		mov	sl, r4
+ 498 029a AB46     		mov	fp, r5
+ 499 029c F0BC     		pop	{r4, r5, r6, r7}
+ 500 029e 01BC     		pop	{r0}
+ 501 02a0 0047     		bx	r0
+ 502              	.L27:
+ 503 02a2 C046     		.align	2
+ 504              	.L26:
+ 505 02a4 00000000 		.word	lwip_stats
+ 506 02a8 FFF70000 		.word	63487
+ 507 02ac 00FFFFFF 		.word	-256
+ 508              	.LFE2:
+ 626              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 icmp.c
+     /tmp/ccs5CxYy.s:1      .text:00000000 $t
+     /tmp/ccs5CxYy.s:15     .text:00000000 icmp_send_response
+     /tmp/ccs5CxYy.s:123    .text:00000084 $d
+     /tmp/ccs5CxYy.s:131    .text:00000088 icmp_time_exceeded
+     /tmp/ccs5CxYy.s:128    .text:00000088 $t
+     /tmp/ccs5CxYy.s:155    .text:00000098 icmp_dest_unreach
+     /tmp/ccs5CxYy.s:179    .text:000000a8 icmp_input
+     /tmp/ccs5CxYy.s:505    .text:000002a4 $d
+
+UNDEFINED SYMBOLS
+pbuf_alloc
+memcpy
+inet_chksum
+ip_output
+pbuf_free
+lwip_stats
+ntohs
+pbuf_header
+ntohl
+ip_addr_isbroadcast
+inet_chksum_pbuf
+pbuf_copy
+htons
+ip_output_if

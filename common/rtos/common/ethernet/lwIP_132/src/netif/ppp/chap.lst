@@ -1,0 +1,2916 @@
+   1              		.code	16
+   2              		.file	"chap.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	ChapAuthWithPeer
+  13              		.code	16
+  14              		.thumb_func
+  16              	ChapAuthWithPeer:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** WARNING - THIS HAS NEVER BEEN FINISHED ***/
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*****************************************************************************
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * chap.c - Network Challenge Handshake Authentication Protocol program file.
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * Copyright (c) 2003 by Marc Boucher, Services Informatiques (MBSI) inc.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * portions Copyright (c) 1997 by Global Election Systems Inc.
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * The authors hereby grant permission to use, copy, modify, distribute,
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * and license this software and its documentation for any purpose, provided
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * that existing copyright notices are retained in all copies and that this
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * notice and the following disclaimer are included verbatim in any 
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * distributions. No written agreement, license, or royalty fee is required
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * for any of the authorized uses.
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * THIS SOFTWARE IS PROVIDED BY THE CONTRIBUTORS *AS IS* AND ANY EXPRESS OR
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ******************************************************************************
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * REVISION HISTORY
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * 03-01-01 Marc Boucher <marc@mbsi.ca>
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *   Ported to lwIP.
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** * 97-12-04 Guy Lancaster <lancasterg@acm.org>, Global Election Systems Inc.
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *   Original based on BSD chap.c.
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** *****************************************************************************/
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * chap.c - Challenge Handshake Authentication Protocol.
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Copyright (c) 1993 The Australian National University.
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * All rights reserved.
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Redistribution and use in source and binary forms are permitted
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * provided that the above copyright notice and this paragraph are
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * duplicated in all such forms and that any documentation,
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * advertising materials, and other materials related to such
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * distribution and use acknowledge that the software was developed
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * by the Australian National University.  The name of the University
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * may not be used to endorse or promote products derived from this
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * software without specific prior written permission.
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Copyright (c) 1991 Gregory M. Christy.
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * All rights reserved.
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Redistribution and use in source and binary forms are permitted
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * provided that the above copyright notice and this paragraph are
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * duplicated in all such forms and that any documentation,
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * advertising materials, and other materials related to such
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * distribution and use acknowledge that the software was developed
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * by Gregory M. Christy.  The name of the author may not be used to
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * endorse or promote products derived from this software without
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * specific prior written permission.
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "lwip/opt.h"
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #if PPP_SUPPORT  /* don't build if not configured for use in lwipopts.h */
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #if CHAP_SUPPORT /* don't build if not configured for use in lwipopts.h */
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "ppp.h"
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "pppdebug.h"
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "magic.h"
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "randm.h"
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "auth.h"
+  81:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "md5.h"
+  82:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "chap.h"
+  83:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include "chpms.h"
+  84:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  85:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #include <string.h>
+  86:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  87:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*************************/
+  88:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** LOCAL DEFINITIONS ***/
+  89:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*************************/
+  90:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  91:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  92:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /************************/
+  93:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** LOCAL DATA TYPES ***/
+  94:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /************************/
+  95:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  96:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+  97:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /***********************************/
+  98:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** LOCAL FUNCTION DECLARATIONS ***/
+  99:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /***********************************/
+ 100:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 101:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Protocol entry points.
+ 102:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 103:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapInit (int);
+ 104:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapLowerUp (int);
+ 105:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapLowerDown (int);
+ 106:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapInput (int, u_char *, int);
+ 107:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapProtocolReject (int);
+ 108:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #if 0
+ 109:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static int  ChapPrintPkt (u_char *, int, void (*) (void *, char *, ...), void *);
+ 110:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #endif
+ 111:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 112:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapChallengeTimeout (void *);
+ 113:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapResponseTimeout (void *);
+ 114:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapReceiveChallenge (chap_state *, u_char *, int, int);
+ 115:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapRechallenge (void *);
+ 116:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapReceiveResponse (chap_state *, u_char *, int, int);
+ 117:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapReceiveSuccess(chap_state *cstate, u_char *inp, u_char id, int len);
+ 118:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapReceiveFailure(chap_state *cstate, u_char *inp, u_char id, int len);
+ 119:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapSendStatus (chap_state *, int);
+ 120:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapSendChallenge (chap_state *);
+ 121:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapSendResponse (chap_state *);
+ 122:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void ChapGenChallenge (chap_state *);
+ 123:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 124:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 125:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /******************************/
+ 126:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** PUBLIC DATA STRUCTURES ***/
+ 127:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /******************************/
+ 128:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** chap_state chap[NUM_PPP]; /* CHAP state; one for each unit */
+ 129:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 130:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** struct protent chap_protent = {
+ 131:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PPP_CHAP,
+ 132:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapInit,
+ 133:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapInput,
+ 134:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapProtocolReject,
+ 135:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapLowerUp,
+ 136:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapLowerDown,
+ 137:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL,
+ 138:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL,
+ 139:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #if 0
+ 140:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapPrintPkt,
+ 141:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL,
+ 142:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #endif
+ 143:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   1,
+ 144:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   "CHAP",
+ 145:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #if 0
+ 146:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL,
+ 147:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL,
+ 148:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   NULL
+ 149:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #endif
+ 150:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** };
+ 151:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 152:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 153:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /***********************************/
+ 154:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** PUBLIC FUNCTION DEFINITIONS ***/
+ 155:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /***********************************/
+ 156:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 157:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapAuthWithPeer - Authenticate us with our peer (start client).
+ 158:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+ 159:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 160:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** void
+ 161:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapAuthWithPeer(int unit, char *our_name, int digest)
+ 162:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+  19              		.loc 1 162 0
+  20              	.LVL0:
+ 163:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+  21              		.loc 1 163 0
+  22 0000 B023     		mov	r3, #176
+  23 0002 5843     		mul	r0, r3
+  24              	.LVL1:
+  25 0004 084B     		ldr	r3, .L7
+  26 0006 1818     		add	r0, r3, r0
+  27              	.LVL2:
+ 164:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 165:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->resp_name = our_name;
+  28              		.loc 1 165 0
+  29 0008 AC23     		mov	r3, #172
+  30 000a C150     		str	r1, [r0, r3]
+ 166:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->resp_type = digest;
+  31              		.loc 1 166 0
+  32 000c AA23     		mov	r3, #170
+  33 000e C254     		strb	r2, [r0, r3]
+ 167:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 168:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_INITIAL ||
+  34              		.loc 1 168 0
+  35 0010 4368     		ldr	r3, [r0, #4]
+  36 0012 002B     		cmp	r3, #0
+  37 0014 01D0     		beq	.L6
+  38 0016 022B     		cmp	r3, #2
+  39 0018 02D1     		bne	.L2
+  40              	.L6:
+ 169:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->clientstate == CHAPCS_PENDING) {
+ 170:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* lower layer isn't up - wait until later */
+ 171:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->clientstate = CHAPCS_PENDING;
+  41              		.loc 1 171 0
+  42 001a 0223     		mov	r3, #2
+  43 001c 4360     		str	r3, [r0, #4]
+  44 001e 01E0     		b	.L5
+  45              	.L2:
+ 172:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 173:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 174:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 175:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 176:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * We get here as a result of LCP coming up.
+ 177:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * So even if CHAP was open before, we will 
+ 178:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * have to re-authenticate ourselves.
+ 179:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    */
+ 180:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->clientstate = CHAPCS_LISTEN;
+  46              		.loc 1 180 0
+  47 0020 0323     		mov	r3, #3
+  48 0022 4360     		str	r3, [r0, #4]
+  49              	.L5:
+ 181:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+  50              		.loc 1 181 0
+  51              		@ sp needed for prologue
+  52 0024 7047     		bx	lr
+  53              	.L8:
+  54 0026 C046     		.align	2
+  55              	.L7:
+  56 0028 00000000 		.word	chap
+  57              	.LFE290:
+  59              		.align	2
+  60              		.code	16
+  61              		.thumb_func
+  63              	ChapLowerDown:
+  64              	.LFB297:
+ 182:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 183:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 184:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 185:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapAuthPeer - Authenticate our peer (start server).
+ 186:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 187:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** void
+ 188:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapAuthPeer(int unit, char *our_name, int digest)
+ 189:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 190:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+ 191:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 192:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->chal_name = our_name;
+ 193:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->chal_type = digest;
+ 194:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 195:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_INITIAL ||
+ 196:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->serverstate == CHAPSS_PENDING) {
+ 197:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* lower layer isn't up - wait until later */
+ 198:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_PENDING;
+ 199:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 200:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 201:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 202:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapGenChallenge(cstate);
+ 203:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendChallenge(cstate);    /* crank it up dude! */
+ 204:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->serverstate = CHAPSS_INITIAL_CHAL;
+ 205:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 206:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 207:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 208:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /**********************************/
+ 209:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*** LOCAL FUNCTION DEFINITIONS ***/
+ 210:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /**********************************/
+ 211:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 212:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapInit - Initialize a CHAP unit.
+ 213:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 214:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 215:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapInit(int unit)
+ 216:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 217:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+ 218:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 219:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BZERO(cstate, sizeof(*cstate));
+ 220:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->unit = unit;
+ 221:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->clientstate = CHAPCS_INITIAL;
+ 222:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->serverstate = CHAPSS_INITIAL;
+ 223:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->timeouttime = CHAP_DEFTIMEOUT;
+ 224:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->max_transmits = CHAP_DEFTRANSMITS;
+ 225:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* random number generator is initialized in magic_init */
+ 226:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 227:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 228:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 229:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 230:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapChallengeTimeout - Timeout expired on sending challenge.
+ 231:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 232:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 233:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapChallengeTimeout(void *arg)
+ 234:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 235:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = (chap_state *) arg;
+ 236:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 237:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* if we aren't sending challenges, don't worry.  then again we */
+ 238:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* probably shouldn't be here either */
+ 239:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate != CHAPSS_INITIAL_CHAL &&
+ 240:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->serverstate != CHAPSS_RECHALLENGE) {
+ 241:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 242:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 243:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 244:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->chal_transmits >= cstate->max_transmits) {
+ 245:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* give up on peer */
+ 246:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_ERR, "Peer failed to respond to CHAP challenge\n"));
+ 247:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_BADAUTH;
+ 248:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     auth_peer_fail(cstate->unit, PPP_CHAP);
+ 249:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 250:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 251:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 252:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendChallenge(cstate); /* Re-send challenge */
+ 253:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 254:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 255:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 256:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 257:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapResponseTimeout - Timeout expired on sending response.
+ 258:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 259:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 260:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapResponseTimeout(void *arg)
+ 261:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 262:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = (chap_state *) arg;
+ 263:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 264:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* if we aren't sending a response, don't worry. */
+ 265:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate != CHAPCS_RESPONSE) {
+ 266:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 267:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 268:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 269:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendResponse(cstate);    /* re-send response */
+ 270:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 271:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 272:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 273:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 274:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapRechallenge - Time to challenge the peer again.
+ 275:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 276:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 277:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapRechallenge(void *arg)
+ 278:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 279:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = (chap_state *) arg;
+ 280:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 281:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* if we aren't sending a response, don't worry. */
+ 282:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate != CHAPSS_OPEN) {
+ 283:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 284:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 285:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 286:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapGenChallenge(cstate);
+ 287:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendChallenge(cstate);
+ 288:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->serverstate = CHAPSS_RECHALLENGE;
+ 289:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 290:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 291:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 292:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 293:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapLowerUp - The lower layer is up.
+ 294:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+ 295:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Start up if we have pending requests.
+ 296:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 297:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 298:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapLowerUp(int unit)
+ 299:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 300:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+ 301:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 302:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_INITIAL) {
+ 303:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->clientstate = CHAPCS_CLOSED;
+ 304:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else if (cstate->clientstate == CHAPCS_PENDING) {
+ 305:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->clientstate = CHAPCS_LISTEN;
+ 306:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 307:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 308:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_INITIAL) {
+ 309:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_CLOSED;
+ 310:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else if (cstate->serverstate == CHAPSS_PENDING) {
+ 311:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     ChapGenChallenge(cstate);
+ 312:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     ChapSendChallenge(cstate);
+ 313:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_INITIAL_CHAL;
+ 314:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 315:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 316:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 317:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 318:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 319:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapLowerDown - The lower layer is down.
+ 320:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  *
+ 321:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * Cancel all timeouts.
+ 322:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 323:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 324:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapLowerDown(int unit)
+ 325:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+  65              		.loc 1 325 0
+  66 002c 10B5     		push	{r4, lr}
+  67              	.LCFI0:
+  68              	.LVL3:
+ 326:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+  69              		.loc 1 326 0
+  70 002e B023     		mov	r3, #176
+  71 0030 1A1C     		mov	r2, r3
+  72 0032 4243     		mul	r2, r0
+  73 0034 104B     		ldr	r3, .L16
+  74 0036 9C18     		add	r4, r3, r2
+  75              	.LVL4:
+ 327:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 328:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* Timeout(s) pending?  Cancel if so. */
+ 329:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_INITIAL_CHAL ||
+  76              		.loc 1 329 0
+  77 0038 A368     		ldr	r3, [r4, #8]
+  78 003a 032B     		cmp	r3, #3
+  79 003c 01D0     		beq	.L15
+  80 003e 052B     		cmp	r3, #5
+  81 0040 04D1     		bne	.L10
+  82              	.L15:
+ 330:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->serverstate == CHAPSS_RECHALLENGE) {
+ 331:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     UNTIMEOUT(ChapChallengeTimeout, cstate);
+  83              		.loc 1 331 0
+  84 0042 0E48     		ldr	r0, .L16+4
+  85              	.LVL5:
+  86 0044 211C     		mov	r1, r4
+  87 0046 FFF7FEFF 		bl	sys_untimeout
+  88 004a 08E0     		b	.L12
+  89              	.LVL6:
+  90              	.L10:
+ 332:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else if (cstate->serverstate == CHAPSS_OPEN
+  91              		.loc 1 332 0
+  92 004c 042B     		cmp	r3, #4
+  93 004e 06D1     		bne	.L12
+  94 0050 636D     		ldr	r3, [r4, #84]
+  95 0052 002B     		cmp	r3, #0
+  96 0054 03D0     		beq	.L12
+ 333:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       && cstate->chal_interval != 0) {
+ 334:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     UNTIMEOUT(ChapRechallenge, cstate);
+  97              		.loc 1 334 0
+  98 0056 0A48     		ldr	r0, .L16+8
+  99              	.LVL7:
+ 100 0058 211C     		mov	r1, r4
+ 101 005a FFF7FEFF 		bl	sys_untimeout
+ 102              	.LVL8:
+ 103              	.L12:
+ 335:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 336:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_RESPONSE) {
+ 104              		.loc 1 336 0
+ 105 005e 6368     		ldr	r3, [r4, #4]
+ 106 0060 042B     		cmp	r3, #4
+ 107 0062 03D1     		bne	.L13
+ 337:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     UNTIMEOUT(ChapResponseTimeout, cstate);
+ 108              		.loc 1 337 0
+ 109 0064 0748     		ldr	r0, .L16+12
+ 110              	.LVL9:
+ 111 0066 211C     		mov	r1, r4
+ 112 0068 FFF7FEFF 		bl	sys_untimeout
+ 113              	.LVL10:
+ 114              	.L13:
+ 338:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 339:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->clientstate = CHAPCS_INITIAL;
+ 115              		.loc 1 339 0
+ 116 006c 0023     		mov	r3, #0
+ 117 006e 6360     		str	r3, [r4, #4]
+ 340:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->serverstate = CHAPSS_INITIAL;
+ 118              		.loc 1 340 0
+ 119 0070 A360     		str	r3, [r4, #8]
+ 341:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 120              		.loc 1 341 0
+ 121              		@ sp needed for prologue
+ 122              	.LVL11:
+ 123 0072 10BC     		pop	{r4}
+ 124 0074 01BC     		pop	{r0}
+ 125 0076 0047     		bx	r0
+ 126              	.L17:
+ 127              		.align	2
+ 128              	.L16:
+ 129 0078 00000000 		.word	chap
+ 130 007c 00000000 		.word	ChapChallengeTimeout
+ 131 0080 00000000 		.word	ChapRechallenge
+ 132 0084 00000000 		.word	ChapResponseTimeout
+ 133              	.LFE297:
+ 135              		.align	2
+ 136              		.code	16
+ 137              		.thumb_func
+ 139              	ChapSendResponse:
+ 140              	.LFB307:
+ 342:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 343:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 344:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 345:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapProtocolReject - Peer doesn't grok CHAP.
+ 346:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 347:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 348:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapProtocolReject(int unit)
+ 349:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 350:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+ 351:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 352:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate != CHAPSS_INITIAL &&
+ 353:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->serverstate != CHAPSS_CLOSED) {
+ 354:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     auth_peer_fail(unit, PPP_CHAP);
+ 355:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 356:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate != CHAPCS_INITIAL &&
+ 357:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->clientstate != CHAPCS_CLOSED) {
+ 358:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     auth_withpeer_fail(unit, PPP_CHAP);
+ 359:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 360:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapLowerDown(unit); /* shutdown chap */
+ 361:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 362:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 363:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 364:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 365:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapInput - Input CHAP packet.
+ 366:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 367:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 368:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapInput(int unit, u_char *inpacket, int packet_len)
+ 369:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 370:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chap_state *cstate = &chap[unit];
+ 371:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *inp;
+ 372:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char code, id;
+ 373:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int len;
+ 374:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 375:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 376:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * Parse header (code, id and length).
+ 377:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * If packet too short, drop it.
+ 378:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    */
+ 379:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   inp = inpacket;
+ 380:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (packet_len < CHAP_HEADERLEN) {
+ 381:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapInput: rcvd short header.\n"));
+ 382:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 383:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 384:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   GETCHAR(code, inp);
+ 385:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   GETCHAR(id, inp);
+ 386:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   GETSHORT(len, inp);
+ 387:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len < CHAP_HEADERLEN) {
+ 388:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapInput: rcvd illegal length.\n"));
+ 389:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 390:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 391:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len > packet_len) {
+ 392:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapInput: rcvd short packet.\n"));
+ 393:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 394:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 395:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   len -= CHAP_HEADERLEN;
+ 396:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 397:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 398:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * Action depends on code (as in fact it usually does :-).
+ 399:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    */
+ 400:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   switch (code) {
+ 401:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     case CHAP_CHALLENGE:
+ 402:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       ChapReceiveChallenge(cstate, inp, id, len);
+ 403:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       break;
+ 404:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     
+ 405:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     case CHAP_RESPONSE:
+ 406:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       ChapReceiveResponse(cstate, inp, id, len);
+ 407:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       break;
+ 408:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     
+ 409:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     case CHAP_FAILURE:
+ 410:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       ChapReceiveFailure(cstate, inp, id, len);
+ 411:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       break;
+ 412:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     
+ 413:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     case CHAP_SUCCESS:
+ 414:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       ChapReceiveSuccess(cstate, inp, id, len);
+ 415:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       break;
+ 416:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     
+ 417:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     default:        /* Need code reject? */
+ 418:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       CHAPDEBUG((LOG_WARNING, "Unknown CHAP code (%d) received.\n", code));
+ 419:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       break;
+ 420:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 421:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 422:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 423:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 424:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 425:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapReceiveChallenge - Receive Challenge and send Response.
+ 426:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 427:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 428:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapReceiveChallenge(chap_state *cstate, u_char *inp, int id, int len)
+ 429:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 430:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int rchallenge_len;
+ 431:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *rchallenge;
+ 432:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int secret_len;
+ 433:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   char secret[MAXSECRETLEN];
+ 434:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   char rhostname[256];
+ 435:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   MD5_CTX mdContext;
+ 436:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char hash[MD5_SIGNATURE_SIZE];
+ 437:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 438:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: Rcvd id %d.\n", id));
+ 439:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_CLOSED ||
+ 440:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->clientstate == CHAPCS_PENDING) {
+ 441:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: in state %d\n",
+ 442:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****          cstate->clientstate));
+ 443:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 444:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 445:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 446:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len < 2) {
+ 447:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: rcvd short packet.\n"));
+ 448:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 449:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 450:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 451:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   GETCHAR(rchallenge_len, inp);
+ 452:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   len -= sizeof (u_char) + rchallenge_len;  /* now name field length */
+ 453:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len < 0) {
+ 454:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: rcvd short packet.\n"));
+ 455:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 456:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 457:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   rchallenge = inp;
+ 458:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   INCPTR(rchallenge_len, inp);
+ 459:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 460:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len >= sizeof(rhostname)) {
+ 461:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     len = sizeof(rhostname) - 1;
+ 462:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 463:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(inp, rhostname, len);
+ 464:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   rhostname[len] = '\000';
+ 465:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 466:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: received name field '%s'\n", rhostname));
+ 467:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 468:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* Microsoft doesn't send their name back in the PPP packet */
+ 469:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (ppp_settings.remote_name[0] != 0 && (ppp_settings.explicit_remote || rhostname[0] == 0)) {
+ 470:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     strncpy(rhostname, ppp_settings.remote_name, sizeof(rhostname));
+ 471:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     rhostname[sizeof(rhostname) - 1] = 0;
+ 472:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveChallenge: using '%s' as remote name\n", rhostname));
+ 473:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 474:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 475:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* get secret for authenticating ourselves with the specified host */
+ 476:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (!get_secret(cstate->unit, cstate->resp_name, rhostname, secret, &secret_len, 0)) {
+ 477:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     secret_len = 0;    /* assume null secret if can't find one */
+ 478:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_WARNING, "No CHAP secret found for authenticating us to %s\n", rhostname));
+ 479:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 480:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 481:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* cancel response send timeout if necessary */
+ 482:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_RESPONSE) {
+ 483:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     UNTIMEOUT(ChapResponseTimeout, cstate);
+ 484:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 485:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 486:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->resp_id = id;
+ 487:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->resp_transmits = 0;
+ 488:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 489:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*  generate MD based on negotiated type */
+ 490:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   switch (cstate->resp_type) { 
+ 491:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 492:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   case CHAP_DIGEST_MD5:
+ 493:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     MD5Init(&mdContext);
+ 494:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     MD5Update(&mdContext, &cstate->resp_id, 1);
+ 495:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     MD5Update(&mdContext, (u_char*)secret, secret_len);
+ 496:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     MD5Update(&mdContext, rchallenge, rchallenge_len);
+ 497:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     MD5Final(hash, &mdContext);
+ 498:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     BCOPY(hash, cstate->response, MD5_SIGNATURE_SIZE);
+ 499:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->resp_length = MD5_SIGNATURE_SIZE;
+ 500:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     break;
+ 501:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 502:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #ifdef CHAPMS
+ 503:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   case CHAP_MICROSOFT:
+ 504:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     ChapMS(cstate, rchallenge, rchallenge_len, secret, secret_len);
+ 505:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     break;
+ 506:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** #endif
+ 507:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 508:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   default:
+ 509:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "unknown digest type %d\n", cstate->resp_type));
+ 510:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 511:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 512:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 513:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BZERO(secret, sizeof(secret));
+ 514:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendResponse(cstate);
+ 515:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 516:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 517:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 518:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 519:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapReceiveResponse - Receive and process response.
+ 520:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 521:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 522:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapReceiveResponse(chap_state *cstate, u_char *inp, int id, int len)
+ 523:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 524:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *remmd, remmd_len;
+ 525:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int secret_len, old_state;
+ 526:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int code;
+ 527:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   char rhostname[256];
+ 528:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   MD5_CTX mdContext;
+ 529:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   char secret[MAXSECRETLEN];
+ 530:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char hash[MD5_SIGNATURE_SIZE];
+ 531:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 532:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveResponse: Rcvd id %d.\n", id));
+ 533:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 534:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_CLOSED ||
+ 535:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       cstate->serverstate == CHAPSS_PENDING) {
+ 536:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveResponse: in state %d\n",
+ 537:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate));
+ 538:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 539:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 540:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 541:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (id != cstate->chal_id) {
+ 542:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;      /* doesn't match ID of last challenge */
+ 543:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 544:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 545:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 546:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   * If we have received a duplicate or bogus Response,
+ 547:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   * we have to send the same answer (Success/Failure)
+ 548:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   * as we did for the first Response we saw.
+ 549:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   */
+ 550:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_OPEN) {
+ 551:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     ChapSendStatus(cstate, CHAP_SUCCESS);
+ 552:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 553:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 554:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->serverstate == CHAPSS_BADAUTH) {
+ 555:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     ChapSendStatus(cstate, CHAP_FAILURE);
+ 556:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 557:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 558:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 559:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len < 2) {
+ 560:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveResponse: rcvd short packet.\n"));
+ 561:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 562:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 563:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   GETCHAR(remmd_len, inp); /* get length of MD */
+ 564:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   remmd = inp;             /* get pointer to MD */
+ 565:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   INCPTR(remmd_len, inp);
+ 566:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 567:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   len -= sizeof (u_char) + remmd_len;
+ 568:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len < 0) {
+ 569:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveResponse: rcvd short packet.\n"));
+ 570:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 571:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 572:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 573:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   UNTIMEOUT(ChapChallengeTimeout, cstate);
+ 574:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 575:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len >= sizeof(rhostname)) {
+ 576:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     len = sizeof(rhostname) - 1;
+ 577:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 578:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(inp, rhostname, len);
+ 579:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   rhostname[len] = '\000';
+ 580:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 581:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveResponse: received name field: %s\n", rhostname));
+ 582:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 583:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 584:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   * Get secret for authenticating them with us,
+ 585:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   * do the hash ourselves, and compare the result.
+ 586:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   */
+ 587:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   code = CHAP_FAILURE;
+ 588:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (!get_secret(cstate->unit, rhostname, cstate->chal_name, secret, &secret_len, 1)) {
+ 589:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* CHAPDEBUG((LOG_WARNING, TL_CHAP, "No CHAP secret found for authenticating %s\n", rhostname))
+ 590:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_WARNING, "No CHAP secret found for authenticating %s\n",
+ 591:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     rhostname));
+ 592:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else {
+ 593:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /*  generate MD based on negotiated type */
+ 594:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     switch (cstate->chal_type) {
+ 595:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 596:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       case CHAP_DIGEST_MD5:    /* only MD5 is defined for now */
+ 597:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         if (remmd_len != MD5_SIGNATURE_SIZE) {
+ 598:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****           break;      /* it's not even the right length */
+ 599:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         }
+ 600:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         MD5Init(&mdContext);
+ 601:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         MD5Update(&mdContext, &cstate->chal_id, 1);
+ 602:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         MD5Update(&mdContext, (u_char*)secret, secret_len);
+ 603:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         MD5Update(&mdContext, cstate->challenge, cstate->chal_len);
+ 604:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         MD5Final(hash, &mdContext); 
+ 605:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         
+ 606:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         /* compare local and remote MDs and send the appropriate status */
+ 607:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         if (memcmp (hash, remmd, MD5_SIGNATURE_SIZE) == 0) {
+ 608:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****           code = CHAP_SUCCESS;  /* they are the same! */
+ 609:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         }
+ 610:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         break;
+ 611:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       
+ 612:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       default:
+ 613:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         CHAPDEBUG((LOG_INFO, "unknown digest type %d\n", cstate->chal_type));
+ 614:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     }
+ 615:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 616:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 617:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BZERO(secret, sizeof(secret));
+ 618:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ChapSendStatus(cstate, code);
+ 619:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 620:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (code == CHAP_SUCCESS) {
+ 621:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     old_state = cstate->serverstate;
+ 622:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_OPEN;
+ 623:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     if (old_state == CHAPSS_INITIAL_CHAL) {
+ 624:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       auth_peer_success(cstate->unit, PPP_CHAP, rhostname, len);
+ 625:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     }
+ 626:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     if (cstate->chal_interval != 0) {
+ 627:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****       TIMEOUT(ChapRechallenge, cstate, cstate->chal_interval);
+ 628:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     }
+ 629:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else {
+ 630:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_ERR, "CHAP peer authentication failed\n"));
+ 631:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     cstate->serverstate = CHAPSS_BADAUTH;
+ 632:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     auth_peer_fail(cstate->unit, PPP_CHAP);
+ 633:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 634:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 635:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 636:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 637:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapReceiveSuccess - Receive Success
+ 638:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 639:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 640:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapReceiveSuccess(chap_state *cstate, u_char *inp, u_char id, int len)
+ 641:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 642:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   LWIP_UNUSED_ARG(id);
+ 643:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   LWIP_UNUSED_ARG(inp);
+ 644:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 645:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveSuccess: Rcvd id %d.\n", id));
+ 646:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 647:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate == CHAPCS_OPEN) {
+ 648:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* presumably an answer to a duplicate response */
+ 649:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 650:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 651:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 652:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate != CHAPCS_RESPONSE) {
+ 653:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* don't know what this is */
+ 654:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveSuccess: in state %d\n", cstate->clientstate));
+ 655:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 656:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 657:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 658:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   UNTIMEOUT(ChapResponseTimeout, cstate);
+ 659:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 660:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 661:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * Print message.
+ 662:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    */
+ 663:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len > 0) {
+ 664:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     PRINTMSG(inp, len);
+ 665:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 666:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 667:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->clientstate = CHAPCS_OPEN;
+ 668:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 669:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   auth_withpeer_success(cstate->unit, PPP_CHAP);
+ 670:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 671:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 672:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 673:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 674:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapReceiveFailure - Receive failure.
+ 675:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 676:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 677:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapReceiveFailure(chap_state *cstate, u_char *inp, u_char id, int len)
+ 678:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 679:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   LWIP_UNUSED_ARG(id);
+ 680:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   LWIP_UNUSED_ARG(inp);
+ 681:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 682:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapReceiveFailure: Rcvd id %d.\n", id));
+ 683:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 684:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (cstate->clientstate != CHAPCS_RESPONSE) {
+ 685:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     /* don't know what this is */
+ 686:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     CHAPDEBUG((LOG_INFO, "ChapReceiveFailure: in state %d\n", cstate->clientstate));
+ 687:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     return;
+ 688:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 689:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 690:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   UNTIMEOUT(ChapResponseTimeout, cstate);
+ 691:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 692:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /*
+ 693:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    * Print message.
+ 694:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****    */
+ 695:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (len > 0) {
+ 696:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     PRINTMSG(inp, len);
+ 697:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 698:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 699:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_ERR, "CHAP authentication failed\n"));
+ 700:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   auth_withpeer_fail(cstate->unit, PPP_CHAP);
+ 701:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 702:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 703:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 704:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 705:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapSendChallenge - Send an Authenticate challenge.
+ 706:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 707:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 708:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapSendChallenge(chap_state *cstate)
+ 709:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 710:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *outp;
+ 711:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int chal_len, name_len;
+ 712:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int outlen;
+ 713:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 714:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chal_len = cstate->chal_len;
+ 715:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   name_len = strlen(cstate->chal_name);
+ 716:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outlen = CHAP_HEADERLEN + sizeof (u_char) + chal_len + name_len;
+ 717:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outp = outpacket_buf[cstate->unit];
+ 718:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 719:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   MAKEHEADER(outp, PPP_CHAP);    /* paste in a CHAP header */
+ 720:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 721:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(CHAP_CHALLENGE, outp);
+ 722:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(cstate->chal_id, outp);
+ 723:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTSHORT(outlen, outp);
+ 724:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 725:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(chal_len, outp);    /* put length of challenge */
+ 726:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(cstate->challenge, outp, chal_len);
+ 727:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   INCPTR(chal_len, outp);
+ 728:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 729:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(cstate->chal_name, outp, name_len);  /* append hostname */
+ 730:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 731:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   pppWrite(cstate->unit, outpacket_buf[cstate->unit], outlen + PPP_HDRLEN);
+ 732:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 733:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapSendChallenge: Sent id %d.\n", cstate->chal_id));
+ 734:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 735:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   TIMEOUT(ChapChallengeTimeout, cstate, cstate->timeouttime);
+ 736:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ++cstate->chal_transmits;
+ 737:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 738:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 739:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 740:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 741:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapSendStatus - Send a status response (ack or nak).
+ 742:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 743:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 744:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapSendStatus(chap_state *cstate, int code)
+ 745:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 746:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *outp;
+ 747:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int outlen, msglen;
+ 748:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   char msg[256];
+ 749:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 750:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   if (code == CHAP_SUCCESS) {
+ 751:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     strcpy(msg, "Welcome!");
+ 752:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   } else {
+ 753:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     strcpy(msg, "I don't like you.  Go 'way.");
+ 754:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 755:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   msglen = strlen(msg);
+ 756:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 757:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outlen = CHAP_HEADERLEN + msglen;
+ 758:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outp = outpacket_buf[cstate->unit];
+ 759:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 760:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   MAKEHEADER(outp, PPP_CHAP);    /* paste in a header */
+ 761:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 762:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(code, outp);
+ 763:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(cstate->chal_id, outp);
+ 764:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTSHORT(outlen, outp);
+ 765:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(msg, outp, msglen);
+ 766:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   pppWrite(cstate->unit, outpacket_buf[cstate->unit], outlen + PPP_HDRLEN);
+ 767:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 768:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   CHAPDEBUG((LOG_INFO, "ChapSendStatus: Sent code %d, id %d.\n", code, cstate->chal_id));
+ 769:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 770:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 771:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 772:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapGenChallenge is used to generate a pseudo-random challenge string of
+ 773:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * a pseudo-random length between min_len and max_len.  The challenge
+ 774:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * string and its length are stored in *cstate, and various other fields of
+ 775:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * *cstate are initialized.
+ 776:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 777:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 778:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 779:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapGenChallenge(chap_state *cstate)
+ 780:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 781:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int chal_len;
+ 782:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *ptr = cstate->challenge;
+ 783:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int i;
+ 784:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 785:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* pick a random challenge length between MIN_CHALLENGE_LENGTH and 
+ 786:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****      MAX_CHALLENGE_LENGTH */  
+ 787:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   chal_len = (unsigned)
+ 788:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****         ((((magic() >> 16) *
+ 789:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****               (MAX_CHALLENGE_LENGTH - MIN_CHALLENGE_LENGTH)) >> 16)
+ 790:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****            + MIN_CHALLENGE_LENGTH);
+ 791:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->chal_len = chal_len;
+ 792:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->chal_id = ++cstate->id;
+ 793:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->chal_transmits = 0;
+ 794:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 795:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* generate a random string */
+ 796:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   for (i = 0; i < chal_len; i++ ) {
+ 797:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****     *ptr++ = (char) (magic() & 0xff);
+ 798:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   }
+ 799:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 800:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** 
+ 801:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /*
+ 802:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * ChapSendResponse - send a response packet with values as specified
+ 803:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  * in *cstate.
+ 804:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****  */
+ 805:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** /* ARGSUSED */
+ 806:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** static void
+ 807:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** ChapSendResponse(chap_state *cstate)
+ 808:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** {
+ 141              		.loc 1 808 0
+ 142 0088 70B5     		push	{r4, r5, r6, lr}
+ 143              	.LCFI1:
+ 144 008a 5E46     		mov	r6, fp
+ 145 008c 5546     		mov	r5, sl
+ 146 008e 4C46     		mov	r4, r9
+ 147 0090 70B4     		push	{r4, r5, r6}
+ 148              	.LCFI2:
+ 149 0092 4646     		mov	r6, r8
+ 150 0094 40B4     		push	{r6}
+ 151              	.LCFI3:
+ 152              	.LVL12:
+ 153 0096 051C     		mov	r5, r0
+ 809:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   u_char *outp;
+ 810:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   int outlen, md_len, name_len;
+ 811:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 812:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   md_len = cstate->resp_length;
+ 154              		.loc 1 812 0
+ 155 0098 A823     		mov	r3, #168
+ 156 009a C35C     		ldrb	r3, [r0, r3]
+ 157 009c 9846     		mov	r8, r3
+ 813:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   name_len = strlen(cstate->resp_name);
+ 158              		.loc 1 813 0
+ 159 009e AC23     		mov	r3, #172
+ 160 00a0 9B46     		mov	fp, r3
+ 161 00a2 C058     		ldr	r0, [r0, r3]
+ 162              	.LVL13:
+ 163 00a4 FFF7FEFF 		bl	strlen
+ 164 00a8 8146     		mov	r9, r0
+ 814:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outlen = CHAP_HEADERLEN + sizeof (u_char) + md_len + name_len;
+ 165              		.loc 1 814 0
+ 166 00aa 061C     		mov	r6, r0
+ 167 00ac 0536     		add	r6, r6, #5
+ 168 00ae 4644     		add	r6, r6, r8
+ 169              	.LVL14:
+ 815:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   outp = outpacket_buf[cstate->unit];
+ 170              		.loc 1 815 0
+ 171 00b0 2D4B     		ldr	r3, .L20
+ 172 00b2 9A46     		mov	sl, r3
+ 173 00b4 2B68     		ldr	r3, [r5]
+ 174 00b6 5C00     		lsl	r4, r3, #1
+ 175 00b8 E418     		add	r4, r4, r3
+ 176 00ba 2401     		lsl	r4, r4, #4
+ 177 00bc E41A     		sub	r4, r4, r3
+ 178 00be 6401     		lsl	r4, r4, #5
+ 179 00c0 5444     		add	r4, r4, sl
+ 180              	.LVL15:
+ 816:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 817:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   MAKEHEADER(outp, PPP_CHAP);
+ 181              		.loc 1 817 0
+ 182 00c2 0123     		mov	r3, #1
+ 183 00c4 5B42     		neg	r3, r3
+ 184 00c6 2370     		strb	r3, [r4]
+ 185 00c8 0134     		add	r4, r4, #1
+ 186              	.LVL16:
+ 187 00ca 0323     		mov	r3, #3
+ 188 00cc 2370     		strb	r3, [r4]
+ 189 00ce 0134     		add	r4, r4, #1
+ 190              	.LVL17:
+ 191 00d0 3E23     		mov	r3, #62
+ 192 00d2 5B42     		neg	r3, r3
+ 193 00d4 2370     		strb	r3, [r4]
+ 194 00d6 0134     		add	r4, r4, #1
+ 195              	.LVL18:
+ 196 00d8 2323     		mov	r3, #35
+ 197 00da 2370     		strb	r3, [r4]
+ 198 00dc 0134     		add	r4, r4, #1
+ 199              	.LVL19:
+ 818:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 819:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(CHAP_RESPONSE, outp);  /* we are a response */
+ 200              		.loc 1 819 0
+ 201 00de 0223     		mov	r3, #2
+ 202 00e0 2370     		strb	r3, [r4]
+ 203 00e2 0134     		add	r4, r4, #1
+ 204              	.LVL20:
+ 820:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(cstate->resp_id, outp);  /* copy id from challenge packet */
+ 205              		.loc 1 820 0
+ 206 00e4 A923     		mov	r3, #169
+ 207 00e6 EB5C     		ldrb	r3, [r5, r3]
+ 208 00e8 2370     		strb	r3, [r4]
+ 209 00ea 0134     		add	r4, r4, #1
+ 210              	.LVL21:
+ 821:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTSHORT(outlen, outp);      /* packet length */
+ 211              		.loc 1 821 0
+ 212 00ec 3312     		asr	r3, r6, #8
+ 213 00ee 2370     		strb	r3, [r4]
+ 214 00f0 0134     		add	r4, r4, #1
+ 215              	.LVL22:
+ 216 00f2 2670     		strb	r6, [r4]
+ 217 00f4 0134     		add	r4, r4, #1
+ 218              	.LVL23:
+ 822:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 823:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   PUTCHAR(md_len, outp);      /* length of MD */
+ 219              		.loc 1 823 0
+ 220 00f6 4346     		mov	r3, r8
+ 221 00f8 2370     		strb	r3, [r4]
+ 222 00fa 0134     		add	r4, r4, #1
+ 223              	.LVL24:
+ 824:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(cstate->response, outp, md_len);    /* copy MD to buffer */
+ 224              		.loc 1 824 0
+ 225 00fc 291C     		mov	r1, r5
+ 226 00fe 6831     		add	r1, r1, #104
+ 227 0100 201C     		mov	r0, r4
+ 228 0102 4246     		mov	r2, r8
+ 229 0104 FFF7FEFF 		bl	memcpy
+ 825:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   INCPTR(md_len, outp);
+ 826:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 827:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   BCOPY(cstate->resp_name, outp, name_len);  /* append our name */
+ 230              		.loc 1 827 0
+ 231 0108 4444     		add	r4, r4, r8
+ 232              	.LVL25:
+ 233 010a 5B46     		mov	r3, fp
+ 234 010c E958     		ldr	r1, [r5, r3]
+ 235 010e 201C     		mov	r0, r4
+ 236 0110 4A46     		mov	r2, r9
+ 237 0112 FFF7FEFF 		bl	memcpy
+ 828:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 829:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   /* send the packet */
+ 830:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   pppWrite(cstate->unit, outpacket_buf[cstate->unit], outlen + PPP_HDRLEN);
+ 238              		.loc 1 830 0
+ 239 0116 2868     		ldr	r0, [r5]
+ 240 0118 4300     		lsl	r3, r0, #1
+ 241 011a 1B18     		add	r3, r3, r0
+ 242 011c 1B01     		lsl	r3, r3, #4
+ 243 011e 1B1A     		sub	r3, r3, r0
+ 244 0120 5B01     		lsl	r3, r3, #5
+ 245 0122 9A44     		add	sl, sl, r3
+ 246 0124 0436     		add	r6, r6, #4
+ 247              	.LVL26:
+ 248 0126 5146     		mov	r1, sl
+ 249 0128 321C     		mov	r2, r6
+ 250 012a FFF7FEFF 		bl	pppWrite
+ 831:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   
+ 832:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   cstate->clientstate = CHAPCS_RESPONSE;
+ 251              		.loc 1 832 0
+ 252 012e 0423     		mov	r3, #4
+ 253 0130 6B60     		str	r3, [r5, #4]
+ 833:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   TIMEOUT(ChapResponseTimeout, cstate, cstate->timeouttime);
+ 254              		.loc 1 833 0
+ 255 0132 0E4C     		ldr	r4, .L20+4
+ 256 0134 201C     		mov	r0, r4
+ 257 0136 291C     		mov	r1, r5
+ 258 0138 FFF7FEFF 		bl	sys_untimeout
+ 259 013c AB6D     		ldr	r3, [r5, #88]
+ 260 013e 5801     		lsl	r0, r3, #5
+ 261 0140 C01A     		sub	r0, r0, r3
+ 262 0142 8000     		lsl	r0, r0, #2
+ 263 0144 C018     		add	r0, r0, r3
+ 264 0146 C000     		lsl	r0, r0, #3
+ 265 0148 211C     		mov	r1, r4
+ 266 014a 2A1C     		mov	r2, r5
+ 267 014c FFF7FEFF 		bl	sys_timeout
+ 834:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c ****   ++cstate->resp_transmits;
+ 268              		.loc 1 834 0
+ 269 0150 6B6E     		ldr	r3, [r5, #100]
+ 270 0152 0133     		add	r3, r3, #1
+ 271 0154 6B66     		str	r3, [r5, #100]
+ 835:rtos/common/ethernet/lwIP_132/src/netif/ppp/chap.c **** }
+ 272              		.loc 1 835 0
+ 273              		@ sp needed for prologue
+ 274              	.LVL27:
+ 275 0156 3CBC     		pop	{r2, r3, r4, r5}
+ 276 0158 9046     		mov	r8, r2
+ 277 015a 9946     		mov	r9, r3
+ 278 015c A246     		mov	sl, r4
+ 279 015e AB46     		mov	fp, r5
+ 280 0160 70BC     		pop	{r4, r5, r6}
+ 281 0162 01BC     		pop	{r0}
+ 282 0164 0047     		bx	r0
+ 283              	.L21:
+ 284 0166 C046     		.align	2
+ 285              	.L20:
+ 286 0168 00000000 		.word	outpacket_buf
+ 287 016c 00000000 		.word	ChapResponseTimeout
+ 288              	.LFE307:
+ 290              		.align	2
+ 291              		.code	16
+ 292              		.thumb_func
+ 294              	ChapResponseTimeout:
+ 295              	.LFB294:
+ 296              		.loc 1 261 0
+ 297 0170 00B5     		push	{lr}
+ 298              	.LCFI4:
+ 299              	.LVL28:
+ 300              		.loc 1 265 0
+ 301 0172 4368     		ldr	r3, [r0, #4]
+ 302              	.LVL29:
+ 303 0174 042B     		cmp	r3, #4
+ 304 0176 01D1     		bne	.L24
+ 305              		.loc 1 269 0
+ 306 0178 FFF786FF 		bl	ChapSendResponse
+ 307              	.LVL30:
+ 308              	.L24:
+ 309              		.loc 1 270 0
+ 310              		@ sp needed for prologue
+ 311 017c 01BC     		pop	{r0}
+ 312 017e 0047     		bx	r0
+ 313              	.LFE294:
+ 315              		.align	2
+ 316              		.code	16
+ 317              		.thumb_func
+ 319              	ChapGenChallenge:
+ 320              	.LFB306:
+ 321              		.loc 1 780 0
+ 322 0180 70B5     		push	{r4, r5, r6, lr}
+ 323              	.LCFI5:
+ 324              	.LVL31:
+ 325 0182 041C     		mov	r4, r0
+ 326              		.loc 1 787 0
+ 327 0184 FFF7FEFF 		bl	magic
+ 328              	.LVL32:
+ 329 0188 C00E     		lsr	r0, r0, #27
+ 330 018a 061C     		mov	r6, r0
+ 331              	.LVL33:
+ 332 018c 2036     		add	r6, r6, #32
+ 333              		.loc 1 791 0
+ 334 018e 4C23     		mov	r3, #76
+ 335 0190 E654     		strb	r6, [r4, r3]
+ 336              		.loc 1 792 0
+ 337 0192 4F22     		mov	r2, #79
+ 338 0194 A35C     		ldrb	r3, [r4, r2]
+ 339 0196 0133     		add	r3, r3, #1
+ 340 0198 1B06     		lsl	r3, r3, #24
+ 341 019a 1B0E     		lsr	r3, r3, #24
+ 342 019c A354     		strb	r3, [r4, r2]
+ 343 019e 4D22     		mov	r2, #77
+ 344 01a0 A354     		strb	r3, [r4, r2]
+ 345              		.loc 1 793 0
+ 346 01a2 0023     		mov	r3, #0
+ 347 01a4 2366     		str	r3, [r4, #96]
+ 348              		.loc 1 796 0
+ 349 01a6 002E     		cmp	r6, #0
+ 350 01a8 08DD     		ble	.L28
+ 351              		.loc 1 782 0
+ 352 01aa 251C     		mov	r5, r4
+ 353              	.LVL34:
+ 354 01ac 0C35     		add	r5, r5, #12
+ 355 01ae 0024     		mov	r4, #0
+ 356              	.LVL35:
+ 357              	.L27:
+ 358              		.loc 1 797 0
+ 359 01b0 FFF7FEFF 		bl	magic
+ 360 01b4 2855     		strb	r0, [r5, r4]
+ 361              		.loc 1 796 0
+ 362 01b6 0134     		add	r4, r4, #1
+ 363 01b8 A642     		cmp	r6, r4
+ 364 01ba F9DC     		bgt	.L27
+ 365              	.LVL36:
+ 366              	.L28:
+ 367              		.loc 1 799 0
+ 368              		@ sp needed for prologue
+ 369              	.LVL37:
+ 370              	.LVL38:
+ 371              	.LVL39:
+ 372 01bc 70BC     		pop	{r4, r5, r6}
+ 373 01be 01BC     		pop	{r0}
+ 374 01c0 0047     		bx	r0
+ 375              	.LFE306:
+ 377              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 378              		.align	2
+ 379              	.LC10:
+ 380 0000 43686170 		.ascii	"ChapSendChallenge: Sent id %d.\012\000"
+ 380      53656E64 
+ 380      4368616C 
+ 380      6C656E67 
+ 380      653A2053 
+ 381              		.text
+ 382 01c2 C046     		.align	2
+ 383              		.code	16
+ 384              		.thumb_func
+ 386              	ChapSendChallenge:
+ 387              	.LFB304:
+ 388              		.loc 1 709 0
+ 389 01c4 70B5     		push	{r4, r5, r6, lr}
+ 390              	.LCFI6:
+ 391 01c6 5E46     		mov	r6, fp
+ 392 01c8 5546     		mov	r5, sl
+ 393 01ca 4C46     		mov	r4, r9
+ 394 01cc 70B4     		push	{r4, r5, r6}
+ 395              	.LCFI7:
+ 396 01ce 4646     		mov	r6, r8
+ 397 01d0 40B4     		push	{r6}
+ 398              	.LCFI8:
+ 399              	.LVL40:
+ 400 01d2 051C     		mov	r5, r0
+ 401              		.loc 1 714 0
+ 402 01d4 4C23     		mov	r3, #76
+ 403 01d6 C35C     		ldrb	r3, [r0, r3]
+ 404 01d8 9846     		mov	r8, r3
+ 405              		.loc 1 715 0
+ 406 01da 006D     		ldr	r0, [r0, #80]
+ 407              	.LVL41:
+ 408 01dc FFF7FEFF 		bl	strlen
+ 409 01e0 8346     		mov	fp, r0
+ 410              		.loc 1 716 0
+ 411 01e2 061C     		mov	r6, r0
+ 412 01e4 0536     		add	r6, r6, #5
+ 413 01e6 4644     		add	r6, r6, r8
+ 414              	.LVL42:
+ 415              		.loc 1 717 0
+ 416 01e8 2F4A     		ldr	r2, .L32
+ 417 01ea 9246     		mov	sl, r2
+ 418 01ec 2B68     		ldr	r3, [r5]
+ 419 01ee 5C00     		lsl	r4, r3, #1
+ 420 01f0 E418     		add	r4, r4, r3
+ 421 01f2 2401     		lsl	r4, r4, #4
+ 422 01f4 E41A     		sub	r4, r4, r3
+ 423 01f6 6401     		lsl	r4, r4, #5
+ 424 01f8 5444     		add	r4, r4, sl
+ 425              	.LVL43:
+ 426              		.loc 1 719 0
+ 427 01fa 0123     		mov	r3, #1
+ 428 01fc 5B42     		neg	r3, r3
+ 429 01fe 2370     		strb	r3, [r4]
+ 430 0200 0134     		add	r4, r4, #1
+ 431              	.LVL44:
+ 432 0202 0323     		mov	r3, #3
+ 433 0204 2370     		strb	r3, [r4]
+ 434 0206 0134     		add	r4, r4, #1
+ 435              	.LVL45:
+ 436 0208 3E23     		mov	r3, #62
+ 437 020a 5B42     		neg	r3, r3
+ 438 020c 2370     		strb	r3, [r4]
+ 439 020e 0134     		add	r4, r4, #1
+ 440              	.LVL46:
+ 441 0210 2323     		mov	r3, #35
+ 442 0212 2370     		strb	r3, [r4]
+ 443 0214 0134     		add	r4, r4, #1
+ 444              	.LVL47:
+ 445              		.loc 1 721 0
+ 446 0216 0123     		mov	r3, #1
+ 447 0218 2370     		strb	r3, [r4]
+ 448 021a 0134     		add	r4, r4, #1
+ 449              	.LVL48:
+ 450              		.loc 1 722 0
+ 451 021c 4D23     		mov	r3, #77
+ 452 021e 9946     		mov	r9, r3
+ 453 0220 EB5C     		ldrb	r3, [r5, r3]
+ 454 0222 2370     		strb	r3, [r4]
+ 455 0224 0134     		add	r4, r4, #1
+ 456              	.LVL49:
+ 457              		.loc 1 723 0
+ 458 0226 3312     		asr	r3, r6, #8
+ 459 0228 2370     		strb	r3, [r4]
+ 460 022a 0134     		add	r4, r4, #1
+ 461              	.LVL50:
+ 462 022c 2670     		strb	r6, [r4]
+ 463 022e 0134     		add	r4, r4, #1
+ 464              	.LVL51:
+ 465              		.loc 1 725 0
+ 466 0230 4246     		mov	r2, r8
+ 467 0232 2270     		strb	r2, [r4]
+ 468 0234 0134     		add	r4, r4, #1
+ 469              	.LVL52:
+ 470              		.loc 1 726 0
+ 471 0236 291C     		mov	r1, r5
+ 472 0238 0C31     		add	r1, r1, #12
+ 473 023a 201C     		mov	r0, r4
+ 474 023c 4246     		mov	r2, r8
+ 475 023e FFF7FEFF 		bl	memcpy
+ 476              		.loc 1 729 0
+ 477 0242 4444     		add	r4, r4, r8
+ 478              	.LVL53:
+ 479 0244 296D     		ldr	r1, [r5, #80]
+ 480 0246 201C     		mov	r0, r4
+ 481 0248 5A46     		mov	r2, fp
+ 482 024a FFF7FEFF 		bl	memcpy
+ 483              		.loc 1 731 0
+ 484 024e 2868     		ldr	r0, [r5]
+ 485 0250 4300     		lsl	r3, r0, #1
+ 486 0252 1B18     		add	r3, r3, r0
+ 487 0254 1B01     		lsl	r3, r3, #4
+ 488 0256 1B1A     		sub	r3, r3, r0
+ 489 0258 5B01     		lsl	r3, r3, #5
+ 490 025a 9A44     		add	sl, sl, r3
+ 491 025c 0436     		add	r6, r6, #4
+ 492              	.LVL54:
+ 493 025e 5146     		mov	r1, sl
+ 494 0260 321C     		mov	r2, r6
+ 495 0262 FFF7FEFF 		bl	pppWrite
+ 496              		.loc 1 733 0
+ 497 0266 1149     		ldr	r1, .L32+4
+ 498 0268 4B46     		mov	r3, r9
+ 499 026a EA5C     		ldrb	r2, [r5, r3]
+ 500 026c 0520     		mov	r0, #5
+ 501 026e FFF7FEFF 		bl	ppp_trace
+ 502              		.loc 1 735 0
+ 503 0272 0F4C     		ldr	r4, .L32+8
+ 504 0274 201C     		mov	r0, r4
+ 505 0276 291C     		mov	r1, r5
+ 506 0278 FFF7FEFF 		bl	sys_untimeout
+ 507 027c AB6D     		ldr	r3, [r5, #88]
+ 508 027e 5801     		lsl	r0, r3, #5
+ 509 0280 C01A     		sub	r0, r0, r3
+ 510 0282 8000     		lsl	r0, r0, #2
+ 511 0284 C018     		add	r0, r0, r3
+ 512 0286 C000     		lsl	r0, r0, #3
+ 513 0288 211C     		mov	r1, r4
+ 514 028a 2A1C     		mov	r2, r5
+ 515 028c FFF7FEFF 		bl	sys_timeout
+ 516              		.loc 1 736 0
+ 517 0290 2B6E     		ldr	r3, [r5, #96]
+ 518 0292 0133     		add	r3, r3, #1
+ 519 0294 2B66     		str	r3, [r5, #96]
+ 520              		.loc 1 737 0
+ 521              		@ sp needed for prologue
+ 522              	.LVL55:
+ 523 0296 3CBC     		pop	{r2, r3, r4, r5}
+ 524 0298 9046     		mov	r8, r2
+ 525 029a 9946     		mov	r9, r3
+ 526 029c A246     		mov	sl, r4
+ 527 029e AB46     		mov	fp, r5
+ 528 02a0 70BC     		pop	{r4, r5, r6}
+ 529 02a2 01BC     		pop	{r0}
+ 530 02a4 0047     		bx	r0
+ 531              	.L33:
+ 532 02a6 C046     		.align	2
+ 533              	.L32:
+ 534 02a8 00000000 		.word	outpacket_buf
+ 535 02ac 00000000 		.word	.LC10
+ 536 02b0 00000000 		.word	ChapChallengeTimeout
+ 537              	.LFE304:
+ 539              		.align	2
+ 540              		.code	16
+ 541              		.thumb_func
+ 543              	ChapRechallenge:
+ 544              	.LFB295:
+ 545              		.loc 1 278 0
+ 546 02b4 10B5     		push	{r4, lr}
+ 547              	.LCFI9:
+ 548              	.LVL56:
+ 549 02b6 041C     		mov	r4, r0
+ 550              	.LVL57:
+ 551              		.loc 1 282 0
+ 552 02b8 8368     		ldr	r3, [r0, #8]
+ 553 02ba 042B     		cmp	r3, #4
+ 554 02bc 06D1     		bne	.L36
+ 555              	.LVL58:
+ 556              		.loc 1 286 0
+ 557 02be FFF75FFF 		bl	ChapGenChallenge
+ 558              	.LVL59:
+ 559              		.loc 1 287 0
+ 560 02c2 201C     		mov	r0, r4
+ 561 02c4 FFF77EFF 		bl	ChapSendChallenge
+ 562              		.loc 1 288 0
+ 563 02c8 0523     		mov	r3, #5
+ 564 02ca A360     		str	r3, [r4, #8]
+ 565              	.LVL60:
+ 566              	.L36:
+ 567              		.loc 1 289 0
+ 568              		@ sp needed for prologue
+ 569              	.LVL61:
+ 570 02cc 10BC     		pop	{r4}
+ 571 02ce 01BC     		pop	{r0}
+ 572 02d0 0047     		bx	r0
+ 573              	.LFE295:
+ 575 02d2 C046     		.align	2
+ 576              		.code	16
+ 577              		.thumb_func
+ 579              	ChapLowerUp:
+ 580              	.LFB296:
+ 581              		.loc 1 299 0
+ 582 02d4 10B5     		push	{r4, lr}
+ 583              	.LCFI10:
+ 584              	.LVL62:
+ 585              		.loc 1 300 0
+ 586 02d6 B023     		mov	r3, #176
+ 587 02d8 1A1C     		mov	r2, r3
+ 588 02da 4243     		mul	r2, r0
+ 589 02dc 0F4B     		ldr	r3, .L43
+ 590 02de 9C18     		add	r4, r3, r2
+ 591              	.LVL63:
+ 592              		.loc 1 302 0
+ 593 02e0 6368     		ldr	r3, [r4, #4]
+ 594 02e2 002B     		cmp	r3, #0
+ 595 02e4 02D1     		bne	.L38
+ 596              		.loc 1 303 0
+ 597 02e6 0123     		mov	r3, #1
+ 598 02e8 6360     		str	r3, [r4, #4]
+ 599 02ea 03E0     		b	.L39
+ 600              	.L38:
+ 601              		.loc 1 304 0
+ 602 02ec 022B     		cmp	r3, #2
+ 603 02ee 01D1     		bne	.L39
+ 604              		.loc 1 305 0
+ 605 02f0 0323     		mov	r3, #3
+ 606 02f2 6360     		str	r3, [r4, #4]
+ 607              	.L39:
+ 608              		.loc 1 308 0
+ 609 02f4 A368     		ldr	r3, [r4, #8]
+ 610 02f6 002B     		cmp	r3, #0
+ 611 02f8 02D1     		bne	.L40
+ 612              		.loc 1 309 0
+ 613 02fa 0123     		mov	r3, #1
+ 614 02fc A360     		str	r3, [r4, #8]
+ 615 02fe 09E0     		b	.L42
+ 616              	.L40:
+ 617              		.loc 1 310 0
+ 618 0300 022B     		cmp	r3, #2
+ 619 0302 07D1     		bne	.L42
+ 620              		.loc 1 311 0
+ 621 0304 201C     		mov	r0, r4
+ 622              	.LVL64:
+ 623 0306 FFF73BFF 		bl	ChapGenChallenge
+ 624              		.loc 1 312 0
+ 625 030a 201C     		mov	r0, r4
+ 626 030c FFF75AFF 		bl	ChapSendChallenge
+ 627              		.loc 1 313 0
+ 628 0310 0323     		mov	r3, #3
+ 629 0312 A360     		str	r3, [r4, #8]
+ 630              	.LVL65:
+ 631              	.L42:
+ 632              		.loc 1 315 0
+ 633              		@ sp needed for prologue
+ 634              	.LVL66:
+ 635 0314 10BC     		pop	{r4}
+ 636 0316 01BC     		pop	{r0}
+ 637 0318 0047     		bx	r0
+ 638              	.L44:
+ 639 031a C046     		.align	2
+ 640              	.L43:
+ 641 031c 00000000 		.word	chap
+ 642              	.LFE296:
+ 644              		.align	2
+ 645              		.global	ChapAuthPeer
+ 646              		.code	16
+ 647              		.thumb_func
+ 649              	ChapAuthPeer:
+ 650              	.LFB291:
+ 651              		.loc 1 189 0
+ 652 0320 10B5     		push	{r4, lr}
+ 653              	.LCFI11:
+ 654              	.LVL67:
+ 655              		.loc 1 190 0
+ 656 0322 B023     		mov	r3, #176
+ 657 0324 5843     		mul	r0, r3
+ 658              	.LVL68:
+ 659 0326 0C4B     		ldr	r3, .L51
+ 660 0328 1C18     		add	r4, r3, r0
+ 661              	.LVL69:
+ 662              		.loc 1 192 0
+ 663 032a 2165     		str	r1, [r4, #80]
+ 664              		.loc 1 193 0
+ 665 032c 4E23     		mov	r3, #78
+ 666 032e E254     		strb	r2, [r4, r3]
+ 667              		.loc 1 195 0
+ 668 0330 A368     		ldr	r3, [r4, #8]
+ 669 0332 002B     		cmp	r3, #0
+ 670 0334 01D0     		beq	.L50
+ 671 0336 022B     		cmp	r3, #2
+ 672 0338 02D1     		bne	.L46
+ 673              	.L50:
+ 674              		.loc 1 198 0
+ 675 033a 0223     		mov	r3, #2
+ 676 033c A360     		str	r3, [r4, #8]
+ 677 033e 07E0     		b	.L49
+ 678              	.L46:
+ 679              		.loc 1 202 0
+ 680 0340 201C     		mov	r0, r4
+ 681 0342 FFF71DFF 		bl	ChapGenChallenge
+ 682              	.LVL70:
+ 683              		.loc 1 203 0
+ 684 0346 201C     		mov	r0, r4
+ 685 0348 FFF73CFF 		bl	ChapSendChallenge
+ 686              		.loc 1 204 0
+ 687 034c 0323     		mov	r3, #3
+ 688 034e A360     		str	r3, [r4, #8]
+ 689              	.LVL71:
+ 690              	.L49:
+ 691              		.loc 1 205 0
+ 692              		@ sp needed for prologue
+ 693              	.LVL72:
+ 694 0350 10BC     		pop	{r4}
+ 695 0352 01BC     		pop	{r0}
+ 696 0354 0047     		bx	r0
+ 697              	.L52:
+ 698 0356 C046     		.align	2
+ 699              	.L51:
+ 700 0358 00000000 		.word	chap
+ 701              	.LFE291:
+ 703              		.section	.rodata.str1.4
+ 704              		.align	2
+ 705              	.LC15:
+ 706 0020 50656572 		.ascii	"Peer failed to respond to CHAP challenge\012\000"
+ 706      20666169 
+ 706      6C656420 
+ 706      746F2072 
+ 706      6573706F 
+ 707              		.text
+ 708              		.align	2
+ 709              		.code	16
+ 710              		.thumb_func
+ 712              	ChapChallengeTimeout:
+ 713              	.LFB293:
+ 714              		.loc 1 234 0
+ 715 035c 10B5     		push	{r4, lr}
+ 716              	.LCFI12:
+ 717              	.LVL73:
+ 718 035e 041C     		mov	r4, r0
+ 719              	.LVL74:
+ 720              		.loc 1 239 0
+ 721 0360 8368     		ldr	r3, [r0, #8]
+ 722 0362 032B     		cmp	r3, #3
+ 723 0364 01D0     		beq	.L58
+ 724              	.LVL75:
+ 725 0366 052B     		cmp	r3, #5
+ 726 0368 11D1     		bne	.L57
+ 727              	.L58:
+ 728              		.loc 1 244 0
+ 729 036a 226E     		ldr	r2, [r4, #96]
+ 730 036c E36D     		ldr	r3, [r4, #92]
+ 731 036e 9A42     		cmp	r2, r3
+ 732 0370 0ADB     		blt	.L56
+ 733              	.LVL76:
+ 734              		.loc 1 246 0
+ 735 0372 0849     		ldr	r1, .L59
+ 736 0374 0120     		mov	r0, #1
+ 737              	.LVL77:
+ 738 0376 FFF7FEFF 		bl	ppp_trace
+ 739              		.loc 1 247 0
+ 740 037a 0623     		mov	r3, #6
+ 741 037c A360     		str	r3, [r4, #8]
+ 742              		.loc 1 248 0
+ 743 037e 2068     		ldr	r0, [r4]
+ 744 0380 0549     		ldr	r1, .L59+4
+ 745 0382 FFF7FEFF 		bl	auth_peer_fail
+ 746 0386 02E0     		b	.L57
+ 747              	.LVL78:
+ 748              	.L56:
+ 749              		.loc 1 252 0
+ 750 0388 201C     		mov	r0, r4
+ 751              	.LVL79:
+ 752 038a FFF71BFF 		bl	ChapSendChallenge
+ 753              	.LVL80:
+ 754              	.L57:
+ 755              		.loc 1 253 0
+ 756              		@ sp needed for prologue
+ 757              	.LVL81:
+ 758 038e 10BC     		pop	{r4}
+ 759 0390 01BC     		pop	{r0}
+ 760 0392 0047     		bx	r0
+ 761              	.L60:
+ 762              		.align	2
+ 763              	.L59:
+ 764 0394 20000000 		.word	.LC15
+ 765 0398 23C20000 		.word	49699
+ 766              	.LFE293:
+ 768              		.align	2
+ 769              		.code	16
+ 770              		.thumb_func
+ 772              	ChapProtocolReject:
+ 773              	.LFB298:
+ 774              		.loc 1 349 0
+ 775 039c 30B5     		push	{r4, r5, lr}
+ 776              	.LCFI13:
+ 777              	.LVL82:
+ 778 039e 041C     		mov	r4, r0
+ 779              		.loc 1 350 0
+ 780 03a0 B023     		mov	r3, #176
+ 781 03a2 1A1C     		mov	r2, r3
+ 782 03a4 4243     		mul	r2, r0
+ 783 03a6 0A4B     		ldr	r3, .L65
+ 784 03a8 9D18     		add	r5, r3, r2
+ 785              	.LVL83:
+ 786              		.loc 1 352 0
+ 787 03aa AB68     		ldr	r3, [r5, #8]
+ 788 03ac 012B     		cmp	r3, #1
+ 789 03ae 02D9     		bls	.L62
+ 790              		.loc 1 354 0
+ 791 03b0 0849     		ldr	r1, .L65+4
+ 792 03b2 FFF7FEFF 		bl	auth_peer_fail
+ 793              	.LVL84:
+ 794              	.L62:
+ 795              		.loc 1 356 0
+ 796 03b6 6B68     		ldr	r3, [r5, #4]
+ 797 03b8 012B     		cmp	r3, #1
+ 798 03ba 03D9     		bls	.L63
+ 799              		.loc 1 358 0
+ 800 03bc 201C     		mov	r0, r4
+ 801 03be 0549     		ldr	r1, .L65+4
+ 802 03c0 FFF7FEFF 		bl	auth_withpeer_fail
+ 803              	.LVL85:
+ 804              	.L63:
+ 805              		.loc 1 360 0
+ 806 03c4 201C     		mov	r0, r4
+ 807 03c6 FFF731FE 		bl	ChapLowerDown
+ 808              		.loc 1 361 0
+ 809              		@ sp needed for prologue
+ 810              	.LVL86:
+ 811              	.LVL87:
+ 812 03ca 30BC     		pop	{r4, r5}
+ 813 03cc 01BC     		pop	{r0}
+ 814 03ce 0047     		bx	r0
+ 815              	.L66:
+ 816              		.align	2
+ 817              	.L65:
+ 818 03d0 00000000 		.word	chap
+ 819 03d4 23C20000 		.word	49699
+ 820              	.LFE298:
+ 822              		.section	.rodata.str1.4
+ 823 004a 0000     		.align	2
+ 824              	.LC18:
+ 825 004c 43686170 		.ascii	"ChapReceiveChallenge: Rcvd id %d.\012\000"
+ 825      52656365 
+ 825      69766543 
+ 825      68616C6C 
+ 825      656E6765 
+ 826 006f 00       		.align	2
+ 827              	.LC20:
+ 828 0070 43686170 		.ascii	"ChapReceiveChallenge: in state %d\012\000"
+ 828      52656365 
+ 828      69766543 
+ 828      68616C6C 
+ 828      656E6765 
+ 829 0093 00       		.align	2
+ 830              	.LC22:
+ 831 0094 43686170 		.ascii	"ChapReceiveChallenge: rcvd short packet.\012\000"
+ 831      52656365 
+ 831      69766543 
+ 831      68616C6C 
+ 831      656E6765 
+ 832 00be 0000     		.align	2
+ 833              	.LC24:
+ 834 00c0 43686170 		.ascii	"ChapReceiveChallenge: received name field '%s'\012\000"
+ 834      52656365 
+ 834      69766543 
+ 834      68616C6C 
+ 834      656E6765 
+ 835              		.align	2
+ 836              	.LC28:
+ 837 00f0 43686170 		.ascii	"ChapReceiveChallenge: using '%s' as remote name\012"
+ 837      52656365 
+ 837      69766543 
+ 837      68616C6C 
+ 837      656E6765 
+ 838 0120 00       		.ascii	"\000"
+ 839 0121 000000   		.align	2
+ 840              	.LC30:
+ 841 0124 4E6F2043 		.ascii	"No CHAP secret found for authenticating us to %s\012"
+ 841      48415020 
+ 841      73656372 
+ 841      65742066 
+ 841      6F756E64 
+ 842 0155 00       		.ascii	"\000"
+ 843 0156 0000     		.align	2
+ 844              	.LC33:
+ 845 0158 756E6B6E 		.ascii	"unknown digest type %d\012\000"
+ 845      6F776E20 
+ 845      64696765 
+ 845      73742074 
+ 845      79706520 
+ 846              		.text
+ 847              		.align	2
+ 848              		.code	16
+ 849              		.thumb_func
+ 851              	ChapReceiveChallenge:
+ 852              	.LFB300:
+ 853              		.loc 1 429 0
+ 854 03d8 F0B5     		push	{r4, r5, r6, r7, lr}
+ 855              	.LCFI14:
+ 856 03da 5746     		mov	r7, sl
+ 857 03dc 4E46     		mov	r6, r9
+ 858 03de 4546     		mov	r5, r8
+ 859 03e0 E0B4     		push	{r5, r6, r7}
+ 860              	.LCFI15:
+ 861              	.LVL88:
+ 862 03e2 5A4C     		ldr	r4, .L81
+ 863 03e4 A544     		add	sp, sp, r4
+ 864              	.LCFI16:
+ 865 03e6 071C     		mov	r7, r0
+ 866 03e8 0E1C     		mov	r6, r1
+ 867 03ea 9246     		mov	sl, r2
+ 868 03ec 1C1C     		mov	r4, r3
+ 869              		.loc 1 438 0
+ 870 03ee 5849     		ldr	r1, .L81+4
+ 871              	.LVL89:
+ 872 03f0 0520     		mov	r0, #5
+ 873              	.LVL90:
+ 874 03f2 FFF7FEFF 		bl	ppp_trace
+ 875              	.LVL91:
+ 876              		.loc 1 439 0
+ 877 03f6 7A68     		ldr	r2, [r7, #4]
+ 878 03f8 531E     		sub	r3, r2, #1
+ 879 03fa 012B     		cmp	r3, #1
+ 880 03fc 04D8     		bhi	.L68
+ 881              		.loc 1 441 0
+ 882 03fe 5549     		ldr	r1, .L81+8
+ 883 0400 0520     		mov	r0, #5
+ 884 0402 FFF7FEFF 		bl	ppp_trace
+ 885 0406 96E0     		b	.L79
+ 886              	.L68:
+ 887              		.loc 1 446 0
+ 888 0408 012C     		cmp	r4, #1
+ 889 040a 04DC     		bgt	.L70
+ 890              		.loc 1 447 0
+ 891 040c 5249     		ldr	r1, .L81+12
+ 892 040e 0520     		mov	r0, #5
+ 893 0410 FFF7FEFF 		bl	ppp_trace
+ 894 0414 8FE0     		b	.L79
+ 895              	.L70:
+ 896              		.loc 1 452 0
+ 897 0416 3078     		ldrb	r0, [r6]
+ 898 0418 8046     		mov	r8, r0
+ 899 041a C343     		mvn	r3, r0
+ 900 041c 1B19     		add	r3, r3, r4
+ 901 041e 1D1C     		mov	r5, r3
+ 902              	.LVL92:
+ 903              		.loc 1 453 0
+ 904 0420 002B     		cmp	r3, #0
+ 905 0422 04DA     		bge	.L71
+ 906              		.loc 1 454 0
+ 907 0424 4C49     		ldr	r1, .L81+12
+ 908 0426 0520     		mov	r0, #5
+ 909 0428 FFF7FEFF 		bl	ppp_trace
+ 910 042c 83E0     		b	.L79
+ 911              	.L71:
+ 912              		.loc 1 460 0
+ 913 042e FF2B     		cmp	r3, #255
+ 914 0430 00D9     		bls	.L72
+ 915 0432 FF25     		mov	r5, #255
+ 916              	.L72:
+ 917              		.loc 1 451 0
+ 918 0434 0136     		add	r6, r6, #1
+ 919              	.LVL93:
+ 920 0436 B146     		mov	r9, r6
+ 921              	.LVL94:
+ 922              		.loc 1 463 0
+ 923 0438 20AC     		add	r4, sp, #128
+ 924 043a 311C     		mov	r1, r6
+ 925 043c 4144     		add	r1, r1, r8
+ 926 043e 201C     		mov	r0, r4
+ 927 0440 2A1C     		mov	r2, r5
+ 928 0442 FFF7FEFF 		bl	memcpy
+ 929              		.loc 1 464 0
+ 930 0446 0023     		mov	r3, #0
+ 931 0448 6355     		strb	r3, [r4, r5]
+ 932              		.loc 1 466 0
+ 933 044a 4449     		ldr	r1, .L81+16
+ 934 044c 0520     		mov	r0, #5
+ 935 044e 221C     		mov	r2, r4
+ 936 0450 FFF7FEFF 		bl	ppp_trace
+ 937              		.loc 1 469 0
+ 938 0454 424A     		ldr	r2, .L81+20
+ 939 0456 434B     		ldr	r3, .L81+24
+ 940 0458 D35C     		ldrb	r3, [r2, r3]
+ 941 045a 002B     		cmp	r3, #0
+ 942 045c 15D0     		beq	.L73
+ 943              	.LVL95:
+ 944 045e 1378     		ldrb	r3, [r2]
+ 945 0460 5907     		lsl	r1, r3, #29
+ 946 0462 03D4     		bmi	.L74
+ 947 0464 20AB     		add	r3, sp, #128
+ 948 0466 1B78     		ldrb	r3, [r3]
+ 949 0468 002B     		cmp	r3, #0
+ 950 046a 0ED1     		bne	.L73
+ 951              	.L74:
+ 952              		.loc 1 470 0
+ 953 046c 20AC     		add	r4, sp, #128
+ 954 046e 3E49     		ldr	r1, .L81+28
+ 955 0470 8022     		mov	r2, #128
+ 956 0472 5200     		lsl	r2, r2, #1
+ 957 0474 201C     		mov	r0, r4
+ 958 0476 FFF7FEFF 		bl	strncpy
+ 959              		.loc 1 471 0
+ 960 047a 0022     		mov	r2, #0
+ 961 047c FF23     		mov	r3, #255
+ 962 047e E254     		strb	r2, [r4, r3]
+ 963              		.loc 1 472 0
+ 964 0480 3A49     		ldr	r1, .L81+32
+ 965 0482 0520     		mov	r0, #5
+ 966 0484 221C     		mov	r2, r4
+ 967 0486 FFF7FEFF 		bl	ppp_trace
+ 968              	.L73:
+ 969              		.loc 1 476 0
+ 970 048a 3868     		ldr	r0, [r7]
+ 971 048c AC23     		mov	r3, #172
+ 972 048e F958     		ldr	r1, [r7, r3]
+ 973 0490 A0AB     		add	r3, sp, #640
+ 974 0492 0093     		str	r3, [sp]
+ 975 0494 0023     		mov	r3, #0
+ 976 0496 0193     		str	r3, [sp, #4]
+ 977 0498 20AA     		add	r2, sp, #128
+ 978 049a 60AB     		add	r3, sp, #384
+ 979 049c FFF7FEFF 		bl	get_secret
+ 980 04a0 0028     		cmp	r0, #0
+ 981 04a2 06D1     		bne	.L75
+ 982              		.loc 1 477 0
+ 983 04a4 0023     		mov	r3, #0
+ 984 04a6 A093     		str	r3, [sp, #640]
+ 985              	.LVL96:
+ 986              		.loc 1 478 0
+ 987 04a8 3149     		ldr	r1, .L81+36
+ 988 04aa 0320     		mov	r0, #3
+ 989 04ac 20AA     		add	r2, sp, #128
+ 990 04ae FFF7FEFF 		bl	ppp_trace
+ 991              	.L75:
+ 992              		.loc 1 482 0
+ 993 04b2 7B68     		ldr	r3, [r7, #4]
+ 994 04b4 042B     		cmp	r3, #4
+ 995 04b6 03D1     		bne	.L76
+ 996              		.loc 1 483 0
+ 997 04b8 2E48     		ldr	r0, .L81+40
+ 998 04ba 391C     		mov	r1, r7
+ 999 04bc FFF7FEFF 		bl	sys_untimeout
+ 1000              	.L76:
+ 1001              		.loc 1 486 0
+ 1002 04c0 A923     		mov	r3, #169
+ 1003 04c2 5246     		mov	r2, sl
+ 1004              	.LVL97:
+ 1005 04c4 FA54     		strb	r2, [r7, r3]
+ 1006              		.loc 1 487 0
+ 1007 04c6 0023     		mov	r3, #0
+ 1008 04c8 7B66     		str	r3, [r7, #100]
+ 1009              		.loc 1 490 0
+ 1010 04ca AA23     		mov	r3, #170
+ 1011 04cc FA5C     		ldrb	r2, [r7, r3]
+ 1012 04ce 052A     		cmp	r2, #5
+ 1013 04d0 2DD1     		bne	.L80
+ 1014              		.loc 1 493 0
+ 1015 04d2 06AD     		add	r5, sp, #24
+ 1016              	.LVL98:
+ 1017 04d4 281C     		mov	r0, r5
+ 1018 04d6 FFF7FEFF 		bl	MD5Init
+ 1019              		.loc 1 494 0
+ 1020 04da 391C     		mov	r1, r7
+ 1021 04dc A931     		add	r1, r1, #169
+ 1022 04de 281C     		mov	r0, r5
+ 1023 04e0 0122     		mov	r2, #1
+ 1024 04e2 FFF7FEFF 		bl	MD5Update
+ 1025              		.loc 1 495 0
+ 1026 04e6 60AE     		add	r6, sp, #384
+ 1027              	.LVL99:
+ 1028 04e8 A09A     		ldr	r2, [sp, #640]
+ 1029 04ea 281C     		mov	r0, r5
+ 1030 04ec 311C     		mov	r1, r6
+ 1031 04ee FFF7FEFF 		bl	MD5Update
+ 1032              		.loc 1 496 0
+ 1033 04f2 281C     		mov	r0, r5
+ 1034 04f4 4946     		mov	r1, r9
+ 1035 04f6 4246     		mov	r2, r8
+ 1036 04f8 FFF7FEFF 		bl	MD5Update
+ 1037              		.loc 1 497 0
+ 1038 04fc 02AC     		add	r4, sp, #8
+ 1039 04fe 201C     		mov	r0, r4
+ 1040 0500 291C     		mov	r1, r5
+ 1041 0502 FFF7FEFF 		bl	MD5Final
+ 1042              		.loc 1 498 0
+ 1043 0506 3B1C     		mov	r3, r7
+ 1044 0508 6833     		add	r3, r3, #104
+ 1045 050a 221C     		mov	r2, r4
+ 1046 050c 23CA     		ldmia	r2!, {r0, r1, r5}
+ 1047 050e 23C3     		stmia	r3!, {r0, r1, r5}
+ 1048 0510 1268     		ldr	r2, [r2]
+ 1049 0512 1A60     		str	r2, [r3]
+ 1050              		.loc 1 499 0
+ 1051 0514 1022     		mov	r2, #16
+ 1052 0516 A823     		mov	r3, #168
+ 1053 0518 FA54     		strb	r2, [r7, r3]
+ 1054              		.loc 1 513 0
+ 1055 051a 8022     		mov	r2, #128
+ 1056 051c 5200     		lsl	r2, r2, #1
+ 1057 051e 301C     		mov	r0, r6
+ 1058 0520 0021     		mov	r1, #0
+ 1059 0522 FFF7FEFF 		bl	memset
+ 1060              		.loc 1 514 0
+ 1061 0526 381C     		mov	r0, r7
+ 1062 0528 FFF7AEFD 		bl	ChapSendResponse
+ 1063 052c 03E0     		b	.L79
+ 1064              	.LVL100:
+ 1065              	.L80:
+ 1066              		.loc 1 509 0
+ 1067 052e 1249     		ldr	r1, .L81+44
+ 1068 0530 0520     		mov	r0, #5
+ 1069 0532 FFF7FEFF 		bl	ppp_trace
+ 1070              	.LVL101:
+ 1071              	.L79:
+ 1072              		.loc 1 515 0
+ 1073 0536 A123     		mov	r3, #161
+ 1074 0538 9B00     		lsl	r3, r3, #2
+ 1075 053a 9D44     		add	sp, sp, r3
+ 1076              		@ sp needed for prologue
+ 1077              	.LVL102:
+ 1078              	.LVL103:
+ 1079              	.LVL104:
+ 1080              	.LVL105:
+ 1081              	.LVL106:
+ 1082 053c 1CBC     		pop	{r2, r3, r4}
+ 1083 053e 9046     		mov	r8, r2
+ 1084 0540 9946     		mov	r9, r3
+ 1085 0542 A246     		mov	sl, r4
+ 1086 0544 F0BC     		pop	{r4, r5, r6, r7}
+ 1087 0546 01BC     		pop	{r0}
+ 1088 0548 0047     		bx	r0
+ 1089              	.L82:
+ 1090 054a C046     		.align	2
+ 1091              	.L81:
+ 1092 054c 7CFDFFFF 		.word	-644
+ 1093 0550 4C000000 		.word	.LC18
+ 1094 0554 70000000 		.word	.LC20
+ 1095 0558 94000000 		.word	.LC22
+ 1096 055c C0000000 		.word	.LC24
+ 1097 0560 00000000 		.word	ppp_settings
+ 1098 0564 0B030000 		.word	779
+ 1099 0568 0B030000 		.word	ppp_settings+779
+ 1100 056c F0000000 		.word	.LC28
+ 1101 0570 24010000 		.word	.LC30
+ 1102 0574 00000000 		.word	ChapResponseTimeout
+ 1103 0578 58010000 		.word	.LC33
+ 1104              	.LFE300:
+ 1106              		.align	2
+ 1107              		.code	16
+ 1108              		.thumb_func
+ 1110              	ChapInit:
+ 1111              	.LFB292:
+ 1112              		.loc 1 216 0
+ 1113 057c 30B5     		push	{r4, r5, lr}
+ 1114              	.LCFI17:
+ 1115              	.LVL107:
+ 1116 057e 051C     		mov	r5, r0
+ 1117              		.loc 1 217 0
+ 1118 0580 B023     		mov	r3, #176
+ 1119 0582 4343     		mul	r3, r0
+ 1120 0584 084C     		ldr	r4, .L85
+ 1121 0586 E418     		add	r4, r4, r3
+ 1122              	.LVL108:
+ 1123              		.loc 1 219 0
+ 1124 0588 201C     		mov	r0, r4
+ 1125              	.LVL109:
+ 1126 058a 0021     		mov	r1, #0
+ 1127 058c B022     		mov	r2, #176
+ 1128 058e FFF7FEFF 		bl	memset
+ 1129              		.loc 1 220 0
+ 1130 0592 2560     		str	r5, [r4]
+ 1131              		.loc 1 221 0
+ 1132 0594 0023     		mov	r3, #0
+ 1133 0596 6360     		str	r3, [r4, #4]
+ 1134              		.loc 1 222 0
+ 1135 0598 A360     		str	r3, [r4, #8]
+ 1136              		.loc 1 223 0
+ 1137 059a 0623     		mov	r3, #6
+ 1138 059c A365     		str	r3, [r4, #88]
+ 1139              		.loc 1 224 0
+ 1140 059e 0A23     		mov	r3, #10
+ 1141 05a0 E365     		str	r3, [r4, #92]
+ 1142              		.loc 1 226 0
+ 1143              		@ sp needed for prologue
+ 1144              	.LVL110:
+ 1145              	.LVL111:
+ 1146 05a2 30BC     		pop	{r4, r5}
+ 1147 05a4 01BC     		pop	{r0}
+ 1148 05a6 0047     		bx	r0
+ 1149              	.L86:
+ 1150              		.align	2
+ 1151              	.L85:
+ 1152 05a8 00000000 		.word	chap
+ 1153              	.LFE292:
+ 1155              		.section	.rodata.str1.4
+ 1156              		.align	2
+ 1157              	.LC36:
+ 1158 0170 57656C63 		.ascii	"Welcome!\000"
+ 1158      6F6D6521 
+ 1158      00
+ 1159 0179 000000   		.align	2
+ 1160              	.LC38:
+ 1161 017c 4920646F 		.ascii	"I don't like you.  Go 'way.\000"
+ 1161      6E277420 
+ 1161      6C696B65 
+ 1161      20796F75 
+ 1161      2E202047 
+ 1162              		.align	2
+ 1163              	.LC41:
+ 1164 0198 43686170 		.ascii	"ChapSendStatus: Sent code %d, id %d.\012\000"
+ 1164      53656E64 
+ 1164      53746174 
+ 1164      75733A20 
+ 1164      53656E74 
+ 1165              		.text
+ 1166              		.align	2
+ 1167              		.code	16
+ 1168              		.thumb_func
+ 1170              	ChapSendStatus:
+ 1171              	.LFB305:
+ 1172              		.loc 1 745 0
+ 1173 05ac F0B5     		push	{r4, r5, r6, r7, lr}
+ 1174              	.LCFI18:
+ 1175 05ae 5746     		mov	r7, sl
+ 1176 05b0 4646     		mov	r6, r8
+ 1177 05b2 C0B4     		push	{r6, r7}
+ 1178              	.LCFI19:
+ 1179              	.LVL112:
+ 1180 05b4 C0B0     		sub	sp, sp, #256
+ 1181              	.LCFI20:
+ 1182 05b6 071C     		mov	r7, r0
+ 1183 05b8 0E1C     		mov	r6, r1
+ 1184              		.loc 1 750 0
+ 1185 05ba 0329     		cmp	r1, #3
+ 1186 05bc 06D1     		bne	.L88
+ 1187              	.LVL113:
+ 1188              		.loc 1 751 0
+ 1189 05be 6A46     		mov	r2, sp
+ 1190 05c0 284B     		ldr	r3, .L91
+ 1191 05c2 03CB     		ldmia	r3!, {r0, r1}
+ 1192 05c4 03C2     		stmia	r2!, {r0, r1}
+ 1193              	.LVL114:
+ 1194 05c6 1B78     		ldrb	r3, [r3]
+ 1195 05c8 1370     		strb	r3, [r2]
+ 1196 05ca 07E0     		b	.L89
+ 1197              	.LVL115:
+ 1198              	.L88:
+ 1199              		.loc 1 753 0
+ 1200 05cc 6A46     		mov	r2, sp
+ 1201 05ce 264B     		ldr	r3, .L91+4
+ 1202 05d0 13CB     		ldmia	r3!, {r0, r1, r4}
+ 1203 05d2 13C2     		stmia	r2!, {r0, r1, r4}
+ 1204              	.LVL116:
+ 1205 05d4 13CB     		ldmia	r3!, {r0, r1, r4}
+ 1206 05d6 13C2     		stmia	r2!, {r0, r1, r4}
+ 1207 05d8 1B68     		ldr	r3, [r3]
+ 1208 05da 1360     		str	r3, [r2]
+ 1209              	.L89:
+ 1210              		.loc 1 755 0
+ 1211 05dc 6846     		mov	r0, sp
+ 1212 05de FFF7FEFF 		bl	strlen
+ 1213 05e2 021C     		mov	r2, r0
+ 1214              		.loc 1 757 0
+ 1215 05e4 041D     		add	r4, r0, #4
+ 1216              	.LVL117:
+ 1217              		.loc 1 758 0
+ 1218 05e6 214D     		ldr	r5, .L91+8
+ 1219 05e8 3B68     		ldr	r3, [r7]
+ 1220 05ea 5800     		lsl	r0, r3, #1
+ 1221 05ec C018     		add	r0, r0, r3
+ 1222 05ee 0001     		lsl	r0, r0, #4
+ 1223 05f0 C01A     		sub	r0, r0, r3
+ 1224 05f2 4001     		lsl	r0, r0, #5
+ 1225 05f4 2818     		add	r0, r5, r0
+ 1226              	.LVL118:
+ 1227              		.loc 1 760 0
+ 1228 05f6 0123     		mov	r3, #1
+ 1229 05f8 5B42     		neg	r3, r3
+ 1230 05fa 0370     		strb	r3, [r0]
+ 1231 05fc 0130     		add	r0, r0, #1
+ 1232              	.LVL119:
+ 1233 05fe 0323     		mov	r3, #3
+ 1234 0600 0370     		strb	r3, [r0]
+ 1235 0602 0130     		add	r0, r0, #1
+ 1236              	.LVL120:
+ 1237 0604 3E23     		mov	r3, #62
+ 1238 0606 5B42     		neg	r3, r3
+ 1239 0608 0370     		strb	r3, [r0]
+ 1240 060a 0130     		add	r0, r0, #1
+ 1241              	.LVL121:
+ 1242 060c 2323     		mov	r3, #35
+ 1243 060e 0370     		strb	r3, [r0]
+ 1244 0610 0130     		add	r0, r0, #1
+ 1245              	.LVL122:
+ 1246              		.loc 1 762 0
+ 1247 0612 0670     		strb	r6, [r0]
+ 1248 0614 0130     		add	r0, r0, #1
+ 1249              	.LVL123:
+ 1250              		.loc 1 763 0
+ 1251 0616 4D23     		mov	r3, #77
+ 1252 0618 9A46     		mov	sl, r3
+ 1253 061a FB5C     		ldrb	r3, [r7, r3]
+ 1254 061c 0370     		strb	r3, [r0]
+ 1255 061e 0130     		add	r0, r0, #1
+ 1256              	.LVL124:
+ 1257              		.loc 1 764 0
+ 1258 0620 2312     		asr	r3, r4, #8
+ 1259 0622 0370     		strb	r3, [r0]
+ 1260 0624 0130     		add	r0, r0, #1
+ 1261              	.LVL125:
+ 1262 0626 0470     		strb	r4, [r0]
+ 1263              		.loc 1 765 0
+ 1264 0628 0130     		add	r0, r0, #1
+ 1265              	.LVL126:
+ 1266 062a 6946     		mov	r1, sp
+ 1267 062c FFF7FEFF 		bl	memcpy
+ 1268              		.loc 1 766 0
+ 1269 0630 3868     		ldr	r0, [r7]
+ 1270 0632 4300     		lsl	r3, r0, #1
+ 1271 0634 1B18     		add	r3, r3, r0
+ 1272 0636 1B01     		lsl	r3, r3, #4
+ 1273 0638 1B1A     		sub	r3, r3, r0
+ 1274 063a 5B01     		lsl	r3, r3, #5
+ 1275 063c ED18     		add	r5, r5, r3
+ 1276 063e 0434     		add	r4, r4, #4
+ 1277              	.LVL127:
+ 1278 0640 291C     		mov	r1, r5
+ 1279 0642 221C     		mov	r2, r4
+ 1280 0644 FFF7FEFF 		bl	pppWrite
+ 1281              		.loc 1 768 0
+ 1282 0648 0949     		ldr	r1, .L91+12
+ 1283 064a 5446     		mov	r4, sl
+ 1284 064c 3B5D     		ldrb	r3, [r7, r4]
+ 1285 064e 0520     		mov	r0, #5
+ 1286 0650 321C     		mov	r2, r6
+ 1287 0652 FFF7FEFF 		bl	ppp_trace
+ 1288              		.loc 1 769 0
+ 1289 0656 40B0     		add	sp, sp, #256
+ 1290              		@ sp needed for prologue
+ 1291              	.LVL128:
+ 1292              	.LVL129:
+ 1293 0658 0CBC     		pop	{r2, r3}
+ 1294 065a 9046     		mov	r8, r2
+ 1295 065c 9A46     		mov	sl, r3
+ 1296 065e F0BC     		pop	{r4, r5, r6, r7}
+ 1297 0660 01BC     		pop	{r0}
+ 1298 0662 0047     		bx	r0
+ 1299              	.L92:
+ 1300              		.align	2
+ 1301              	.L91:
+ 1302 0664 70010000 		.word	.LC36
+ 1303 0668 7C010000 		.word	.LC38
+ 1304 066c 00000000 		.word	outpacket_buf
+ 1305 0670 98010000 		.word	.LC41
+ 1306              	.LFE305:
+ 1308              		.section	.rodata.str1.4
+ 1309 01be 0000     		.align	2
+ 1310              	.LC43:
+ 1311 01c0 43686170 		.ascii	"ChapReceiveResponse: Rcvd id %d.\012\000"
+ 1311      52656365 
+ 1311      69766552 
+ 1311      6573706F 
+ 1311      6E73653A 
+ 1312 01e2 0000     		.align	2
+ 1313              	.LC45:
+ 1314 01e4 43686170 		.ascii	"ChapReceiveResponse: in state %d\012\000"
+ 1314      52656365 
+ 1314      69766552 
+ 1314      6573706F 
+ 1314      6E73653A 
+ 1315 0206 0000     		.align	2
+ 1316              	.LC47:
+ 1317 0208 43686170 		.ascii	"ChapReceiveResponse: rcvd short packet.\012\000"
+ 1317      52656365 
+ 1317      69766552 
+ 1317      6573706F 
+ 1317      6E73653A 
+ 1318 0231 000000   		.align	2
+ 1319              	.LC50:
+ 1320 0234 43686170 		.ascii	"ChapReceiveResponse: received name field: %s\012\000"
+ 1320      52656365 
+ 1320      69766552 
+ 1320      6573706F 
+ 1320      6E73653A 
+ 1321 0262 0000     		.align	2
+ 1322              	.LC52:
+ 1323 0264 4E6F2043 		.ascii	"No CHAP secret found for authenticating %s\012\000"
+ 1323      48415020 
+ 1323      73656372 
+ 1323      65742066 
+ 1323      6F756E64 
+ 1324              		.align	2
+ 1325              	.LC55:
+ 1326 0290 43484150 		.ascii	"CHAP peer authentication failed\012\000"
+ 1326      20706565 
+ 1326      72206175 
+ 1326      7468656E 
+ 1326      74696361 
+ 1327              		.text
+ 1328              		.align	2
+ 1329              		.code	16
+ 1330              		.thumb_func
+ 1332              	ChapReceiveResponse:
+ 1333              	.LFB301:
+ 1334              		.loc 1 523 0
+ 1335 0674 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1336              	.LCFI21:
+ 1337 0676 5746     		mov	r7, sl
+ 1338 0678 4E46     		mov	r6, r9
+ 1339 067a 4546     		mov	r5, r8
+ 1340 067c E0B4     		push	{r5, r6, r7}
+ 1341              	.LCFI22:
+ 1342              	.LVL130:
+ 1343 067e 6D4C     		ldr	r4, .L111
+ 1344 0680 A544     		add	sp, sp, r4
+ 1345              	.LCFI23:
+ 1346 0682 061C     		mov	r6, r0
+ 1347 0684 0F1C     		mov	r7, r1
+ 1348 0686 141C     		mov	r4, r2
+ 1349 0688 1D1C     		mov	r5, r3
+ 1350              		.loc 1 532 0
+ 1351 068a 6B49     		ldr	r1, .L111+4
+ 1352              	.LVL131:
+ 1353 068c 0520     		mov	r0, #5
+ 1354              	.LVL132:
+ 1355 068e FFF7FEFF 		bl	ppp_trace
+ 1356              	.LVL133:
+ 1357              		.loc 1 534 0
+ 1358 0692 B268     		ldr	r2, [r6, #8]
+ 1359 0694 531E     		sub	r3, r2, #1
+ 1360 0696 012B     		cmp	r3, #1
+ 1361 0698 04D8     		bhi	.L94
+ 1362              		.loc 1 536 0
+ 1363 069a 6849     		ldr	r1, .L111+8
+ 1364 069c 0520     		mov	r0, #5
+ 1365 069e FFF7FEFF 		bl	ppp_trace
+ 1366 06a2 BCE0     		b	.L108
+ 1367              	.L94:
+ 1368              		.loc 1 541 0
+ 1369 06a4 4D23     		mov	r3, #77
+ 1370 06a6 F35C     		ldrb	r3, [r6, r3]
+ 1371 06a8 A342     		cmp	r3, r4
+ 1372 06aa 00D0     		beq	.LCB1144
+ 1373 06ac B7E0     		b	.L108	@long jump
+ 1374              	.LCB1144:
+ 1375              		.loc 1 550 0
+ 1376 06ae 042A     		cmp	r2, #4
+ 1377 06b0 04D1     		bne	.L96
+ 1378              		.loc 1 551 0
+ 1379 06b2 301C     		mov	r0, r6
+ 1380 06b4 0321     		mov	r1, #3
+ 1381 06b6 FFF779FF 		bl	ChapSendStatus
+ 1382 06ba B0E0     		b	.L108
+ 1383              	.L96:
+ 1384              		.loc 1 554 0
+ 1385 06bc 062A     		cmp	r2, #6
+ 1386 06be 04D1     		bne	.L97
+ 1387              		.loc 1 555 0
+ 1388 06c0 301C     		mov	r0, r6
+ 1389 06c2 0421     		mov	r1, #4
+ 1390 06c4 FFF772FF 		bl	ChapSendStatus
+ 1391 06c8 A9E0     		b	.L108
+ 1392              	.L97:
+ 1393              		.loc 1 559 0
+ 1394 06ca 012D     		cmp	r5, #1
+ 1395 06cc 04DC     		bgt	.L98
+ 1396              		.loc 1 560 0
+ 1397 06ce 5C49     		ldr	r1, .L111+12
+ 1398 06d0 0520     		mov	r0, #5
+ 1399 06d2 FFF7FEFF 		bl	ppp_trace
+ 1400 06d6 A2E0     		b	.L108
+ 1401              	.L98:
+ 1402              		.loc 1 563 0
+ 1403 06d8 3A78     		ldrb	r2, [r7]
+ 1404 06da 9046     		mov	r8, r2
+ 1405              	.LVL134:
+ 1406              		.loc 1 565 0
+ 1407 06dc 9246     		mov	sl, r2
+ 1408              		.loc 1 567 0
+ 1409 06de D343     		mvn	r3, r2
+ 1410 06e0 EC18     		add	r4, r5, r3
+ 1411              	.LVL135:
+ 1412 06e2 A146     		mov	r9, r4
+ 1413              	.LVL136:
+ 1414              		.loc 1 568 0
+ 1415 06e4 002C     		cmp	r4, #0
+ 1416 06e6 04DA     		bge	.L99
+ 1417              		.loc 1 569 0
+ 1418 06e8 5549     		ldr	r1, .L111+12
+ 1419 06ea 0520     		mov	r0, #5
+ 1420 06ec FFF7FEFF 		bl	ppp_trace
+ 1421 06f0 95E0     		b	.L108
+ 1422              	.L99:
+ 1423              		.loc 1 573 0
+ 1424 06f2 5448     		ldr	r0, .L111+16
+ 1425 06f4 311C     		mov	r1, r6
+ 1426 06f6 FFF7FEFF 		bl	sys_untimeout
+ 1427              		.loc 1 575 0
+ 1428 06fa FF2C     		cmp	r4, #255
+ 1429 06fc 01D9     		bls	.L100
+ 1430 06fe FF23     		mov	r3, #255
+ 1431 0700 9946     		mov	r9, r3
+ 1432              	.L100:
+ 1433              		.loc 1 563 0
+ 1434 0702 0137     		add	r7, r7, #1
+ 1435              	.LVL137:
+ 1436              		.loc 1 578 0
+ 1437 0704 60AC     		add	r4, sp, #384
+ 1438 0706 5246     		mov	r2, sl
+ 1439 0708 B918     		add	r1, r7, r2
+ 1440 070a 201C     		mov	r0, r4
+ 1441 070c 4A46     		mov	r2, r9
+ 1442 070e FFF7FEFF 		bl	memcpy
+ 1443              		.loc 1 579 0
+ 1444 0712 0023     		mov	r3, #0
+ 1445 0714 4A46     		mov	r2, r9
+ 1446 0716 A354     		strb	r3, [r4, r2]
+ 1447              		.loc 1 581 0
+ 1448 0718 4B49     		ldr	r1, .L111+20
+ 1449 071a 0520     		mov	r0, #5
+ 1450 071c 221C     		mov	r2, r4
+ 1451 071e FFF7FEFF 		bl	ppp_trace
+ 1452              		.loc 1 588 0
+ 1453 0722 3068     		ldr	r0, [r6]
+ 1454 0724 326D     		ldr	r2, [r6, #80]
+ 1455 0726 A0AB     		add	r3, sp, #640
+ 1456 0728 0093     		str	r3, [sp]
+ 1457 072a 0123     		mov	r3, #1
+ 1458 072c 0193     		str	r3, [sp, #4]
+ 1459 072e 211C     		mov	r1, r4
+ 1460 0730 06AB     		add	r3, sp, #24
+ 1461 0732 FFF7FEFF 		bl	get_secret
+ 1462 0736 0028     		cmp	r0, #0
+ 1463 0738 05D1     		bne	.L101
+ 1464              		.loc 1 590 0
+ 1465 073a 4449     		ldr	r1, .L111+24
+ 1466 073c 0320     		mov	r0, #3
+ 1467 073e 60AA     		add	r2, sp, #384
+ 1468 0740 FFF7FEFF 		bl	ppp_trace
+ 1469 0744 2DE0     		b	.L102
+ 1470              	.L101:
+ 1471              		.loc 1 594 0
+ 1472 0746 4E23     		mov	r3, #78
+ 1473 0748 F25C     		ldrb	r2, [r6, r3]
+ 1474 074a 052A     		cmp	r2, #5
+ 1475 074c 25D1     		bne	.L109
+ 1476              		.loc 1 597 0
+ 1477 074e 4346     		mov	r3, r8
+ 1478 0750 102B     		cmp	r3, #16
+ 1479 0752 26D1     		bne	.L102
+ 1480              		.loc 1 600 0
+ 1481 0754 46AD     		add	r5, sp, #280
+ 1482 0756 281C     		mov	r0, r5
+ 1483 0758 FFF7FEFF 		bl	MD5Init
+ 1484              		.loc 1 601 0
+ 1485 075c 311C     		mov	r1, r6
+ 1486 075e 4D31     		add	r1, r1, #77
+ 1487 0760 281C     		mov	r0, r5
+ 1488 0762 0122     		mov	r2, #1
+ 1489 0764 FFF7FEFF 		bl	MD5Update
+ 1490              		.loc 1 602 0
+ 1491 0768 A09A     		ldr	r2, [sp, #640]
+ 1492              	.LVL138:
+ 1493 076a 281C     		mov	r0, r5
+ 1494 076c 06A9     		add	r1, sp, #24
+ 1495 076e FFF7FEFF 		bl	MD5Update
+ 1496              		.loc 1 603 0
+ 1497 0772 311C     		mov	r1, r6
+ 1498 0774 0C31     		add	r1, r1, #12
+ 1499 0776 4C23     		mov	r3, #76
+ 1500 0778 F25C     		ldrb	r2, [r6, r3]
+ 1501 077a 281C     		mov	r0, r5
+ 1502 077c FFF7FEFF 		bl	MD5Update
+ 1503              		.loc 1 604 0
+ 1504 0780 02AC     		add	r4, sp, #8
+ 1505 0782 201C     		mov	r0, r4
+ 1506 0784 291C     		mov	r1, r5
+ 1507 0786 FFF7FEFF 		bl	MD5Final
+ 1508              		.loc 1 607 0
+ 1509 078a 201C     		mov	r0, r4
+ 1510 078c 391C     		mov	r1, r7
+ 1511 078e 1022     		mov	r2, #16
+ 1512 0790 FFF7FEFF 		bl	memcmp
+ 1513 0794 0028     		cmp	r0, #0
+ 1514 0796 32D0     		beq	.L105
+ 1515 0798 03E0     		b	.L102
+ 1516              	.LVL139:
+ 1517              	.L109:
+ 1518              		.loc 1 613 0
+ 1519 079a 2D49     		ldr	r1, .L111+28
+ 1520 079c 0520     		mov	r0, #5
+ 1521 079e FFF7FEFF 		bl	ppp_trace
+ 1522              	.LVL140:
+ 1523              	.L102:
+ 1524              		.loc 1 617 0
+ 1525 07a2 8022     		mov	r2, #128
+ 1526 07a4 5200     		lsl	r2, r2, #1
+ 1527 07a6 06A8     		add	r0, sp, #24
+ 1528 07a8 0021     		mov	r1, #0
+ 1529 07aa FFF7FEFF 		bl	memset
+ 1530              		.loc 1 618 0
+ 1531 07ae 301C     		mov	r0, r6
+ 1532 07b0 0421     		mov	r1, #4
+ 1533 07b2 FFF7FBFE 		bl	ChapSendStatus
+ 1534              		.loc 1 630 0
+ 1535 07b6 2749     		ldr	r1, .L111+32
+ 1536 07b8 0120     		mov	r0, #1
+ 1537 07ba FFF7FEFF 		bl	ppp_trace
+ 1538              		.loc 1 631 0
+ 1539 07be 0623     		mov	r3, #6
+ 1540 07c0 B360     		str	r3, [r6, #8]
+ 1541              		.loc 1 632 0
+ 1542 07c2 3068     		ldr	r0, [r6]
+ 1543 07c4 2449     		ldr	r1, .L111+36
+ 1544 07c6 FFF7FEFF 		bl	auth_peer_fail
+ 1545 07ca 28E0     		b	.L108
+ 1546              	.LVL141:
+ 1547              	.L110:
+ 1548              		.loc 1 624 0
+ 1549 07cc 3068     		ldr	r0, [r6]
+ 1550 07ce 2249     		ldr	r1, .L111+36
+ 1551 07d0 60AA     		add	r2, sp, #384
+ 1552              	.LVL142:
+ 1553 07d2 4B46     		mov	r3, r9
+ 1554 07d4 FFF7FEFF 		bl	auth_peer_success
+ 1555              	.LVL143:
+ 1556              	.L107:
+ 1557              		.loc 1 626 0
+ 1558 07d8 736D     		ldr	r3, [r6, #84]
+ 1559 07da 002B     		cmp	r3, #0
+ 1560 07dc 1FD0     		beq	.L108
+ 1561              		.loc 1 627 0
+ 1562 07de 1F4C     		ldr	r4, .L111+40
+ 1563 07e0 201C     		mov	r0, r4
+ 1564 07e2 311C     		mov	r1, r6
+ 1565 07e4 FFF7FEFF 		bl	sys_untimeout
+ 1566              	.LVL144:
+ 1567 07e8 736D     		ldr	r3, [r6, #84]
+ 1568 07ea 5801     		lsl	r0, r3, #5
+ 1569 07ec C01A     		sub	r0, r0, r3
+ 1570 07ee 8000     		lsl	r0, r0, #2
+ 1571 07f0 C018     		add	r0, r0, r3
+ 1572 07f2 C000     		lsl	r0, r0, #3
+ 1573 07f4 211C     		mov	r1, r4
+ 1574 07f6 321C     		mov	r2, r6
+ 1575 07f8 FFF7FEFF 		bl	sys_timeout
+ 1576 07fc 0FE0     		b	.L108
+ 1577              	.L105:
+ 1578              		.loc 1 617 0
+ 1579 07fe 8022     		mov	r2, #128
+ 1580 0800 5200     		lsl	r2, r2, #1
+ 1581 0802 06A8     		add	r0, sp, #24
+ 1582 0804 0021     		mov	r1, #0
+ 1583 0806 FFF7FEFF 		bl	memset
+ 1584              		.loc 1 618 0
+ 1585 080a 301C     		mov	r0, r6
+ 1586 080c 0321     		mov	r1, #3
+ 1587 080e FFF7CDFE 		bl	ChapSendStatus
+ 1588              		.loc 1 621 0
+ 1589 0812 B268     		ldr	r2, [r6, #8]
+ 1590              	.LVL145:
+ 1591              		.loc 1 622 0
+ 1592 0814 0423     		mov	r3, #4
+ 1593 0816 B360     		str	r3, [r6, #8]
+ 1594              		.loc 1 623 0
+ 1595 0818 032A     		cmp	r2, #3
+ 1596 081a DDD1     		bne	.L107
+ 1597 081c D6E7     		b	.L110
+ 1598              	.LVL146:
+ 1599              	.L108:
+ 1600              		.loc 1 634 0
+ 1601 081e A123     		mov	r3, #161
+ 1602 0820 9B00     		lsl	r3, r3, #2
+ 1603 0822 9D44     		add	sp, sp, r3
+ 1604              		@ sp needed for prologue
+ 1605              	.LVL147:
+ 1606              	.LVL148:
+ 1607              	.LVL149:
+ 1608              	.LVL150:
+ 1609              	.LVL151:
+ 1610 0824 1CBC     		pop	{r2, r3, r4}
+ 1611 0826 9046     		mov	r8, r2
+ 1612 0828 9946     		mov	r9, r3
+ 1613 082a A246     		mov	sl, r4
+ 1614 082c F0BC     		pop	{r4, r5, r6, r7}
+ 1615 082e 01BC     		pop	{r0}
+ 1616 0830 0047     		bx	r0
+ 1617              	.L112:
+ 1618 0832 C046     		.align	2
+ 1619              	.L111:
+ 1620 0834 7CFDFFFF 		.word	-644
+ 1621 0838 C0010000 		.word	.LC43
+ 1622 083c E4010000 		.word	.LC45
+ 1623 0840 08020000 		.word	.LC47
+ 1624 0844 00000000 		.word	ChapChallengeTimeout
+ 1625 0848 34020000 		.word	.LC50
+ 1626 084c 64020000 		.word	.LC52
+ 1627 0850 58010000 		.word	.LC33
+ 1628 0854 90020000 		.word	.LC55
+ 1629 0858 23C20000 		.word	49699
+ 1630 085c 00000000 		.word	ChapRechallenge
+ 1631              	.LFE301:
+ 1633              		.section	.rodata.str1.4
+ 1634 02b1 000000   		.align	2
+ 1635              	.LC58:
+ 1636 02b4 43686170 		.ascii	"ChapInput: rcvd short header.\012\000"
+ 1636      496E7075 
+ 1636      743A2072 
+ 1636      63766420 
+ 1636      73686F72 
+ 1637 02d3 00       		.align	2
+ 1638              	.LC60:
+ 1639 02d4 43686170 		.ascii	"ChapInput: rcvd illegal length.\012\000"
+ 1639      496E7075 
+ 1639      743A2072 
+ 1639      63766420 
+ 1639      696C6C65 
+ 1640 02f5 000000   		.align	2
+ 1641              	.LC62:
+ 1642 02f8 43686170 		.ascii	"ChapInput: rcvd short packet.\012\000"
+ 1642      496E7075 
+ 1642      743A2072 
+ 1642      63766420 
+ 1642      73686F72 
+ 1643 0317 00       		.align	2
+ 1644              	.LC65:
+ 1645 0318 43686170 		.ascii	"ChapReceiveFailure: Rcvd id %d.\012\000"
+ 1645      52656365 
+ 1645      69766546 
+ 1645      61696C75 
+ 1645      72653A20 
+ 1646 0339 000000   		.align	2
+ 1647              	.LC67:
+ 1648 033c 43686170 		.ascii	"ChapReceiveFailure: in state %d\012\000"
+ 1648      52656365 
+ 1648      69766546 
+ 1648      61696C75 
+ 1648      72653A20 
+ 1649 035d 000000   		.align	2
+ 1650              	.LC70:
+ 1651 0360 52656D6F 		.ascii	"Remote message: %s\012\000"
+ 1651      7465206D 
+ 1651      65737361 
+ 1651      67653A20 
+ 1651      25730A00 
+ 1652              		.align	2
+ 1653              	.LC72:
+ 1654 0374 43484150 		.ascii	"CHAP authentication failed\012\000"
+ 1654      20617574 
+ 1654      68656E74 
+ 1654      69636174 
+ 1654      696F6E20 
+ 1655              		.align	2
+ 1656              	.LC74:
+ 1657 0390 43686170 		.ascii	"ChapReceiveSuccess: Rcvd id %d.\012\000"
+ 1657      52656365 
+ 1657      69766553 
+ 1657      75636365 
+ 1657      73733A20 
+ 1658 03b1 000000   		.align	2
+ 1659              	.LC76:
+ 1660 03b4 43686170 		.ascii	"ChapReceiveSuccess: in state %d\012\000"
+ 1660      52656365 
+ 1660      69766553 
+ 1660      75636365 
+ 1660      73733A20 
+ 1661 03d5 000000   		.align	2
+ 1662              	.LC78:
+ 1663 03d8 556E6B6E 		.ascii	"Unknown CHAP code (%d) received.\012\000"
+ 1663      6F776E20 
+ 1663      43484150 
+ 1663      20636F64 
+ 1663      65202825 
+ 1664              		.text
+ 1665              		.align	2
+ 1666              		.code	16
+ 1667              		.thumb_func
+ 1669              	ChapInput:
+ 1670              	.LFB299:
+ 1671              		.loc 1 369 0
+ 1672 0860 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1673              	.LCFI24:
+ 1674 0862 4746     		mov	r7, r8
+ 1675 0864 80B4     		push	{r7}
+ 1676              	.LCFI25:
+ 1677              	.LVL152:
+ 1678 0866 061C     		mov	r6, r0
+ 1679 0868 101C     		mov	r0, r2
+ 1680              	.LVL153:
+ 1681              		.loc 1 380 0
+ 1682 086a 032A     		cmp	r2, #3
+ 1683 086c 04DC     		bgt	.L114
+ 1684              		.loc 1 381 0
+ 1685 086e 4749     		ldr	r1, .L131
+ 1686              	.LVL154:
+ 1687 0870 0520     		mov	r0, #5
+ 1688 0872 FFF7FEFF 		bl	ppp_trace
+ 1689              	.LVL155:
+ 1690 0876 84E0     		b	.L128
+ 1691              	.LVL156:
+ 1692              	.L114:
+ 1693              		.loc 1 384 0
+ 1694 0878 0D78     		ldrb	r5, [r1]
+ 1695              	.LVL157:
+ 1696 087a 4B1C     		add	r3, r1, #1
+ 1697              	.LVL158:
+ 1698              		.loc 1 385 0
+ 1699 087c 1F78     		ldrb	r7, [r3]
+ 1700              	.LVL159:
+ 1701 087e 0133     		add	r3, r3, #1
+ 1702              	.LVL160:
+ 1703              		.loc 1 386 0
+ 1704 0880 1A78     		ldrb	r2, [r3]
+ 1705              	.LVL161:
+ 1706 0882 5C1C     		add	r4, r3, #1
+ 1707              	.LVL162:
+ 1708 0884 1202     		lsl	r2, r2, #8
+ 1709              	.LVL163:
+ 1710 0886 2378     		ldrb	r3, [r4]
+ 1711 0888 191C     		mov	r1, r3
+ 1712              	.LVL164:
+ 1713 088a 1143     		orr	r1, r1, r2
+ 1714              		.loc 1 387 0
+ 1715 088c 0329     		cmp	r1, #3
+ 1716 088e 04DC     		bgt	.L116
+ 1717              		.loc 1 388 0
+ 1718 0890 3F49     		ldr	r1, .L131+4
+ 1719              	.LVL165:
+ 1720 0892 0520     		mov	r0, #5
+ 1721              	.LVL166:
+ 1722 0894 FFF7FEFF 		bl	ppp_trace
+ 1723 0898 73E0     		b	.L128
+ 1724              	.LVL167:
+ 1725              	.L116:
+ 1726              		.loc 1 391 0
+ 1727 089a 8842     		cmp	r0, r1
+ 1728 089c 04DA     		bge	.L117
+ 1729              		.loc 1 392 0
+ 1730 089e 3D49     		ldr	r1, .L131+8
+ 1731              	.LVL168:
+ 1732 08a0 0520     		mov	r0, #5
+ 1733              	.LVL169:
+ 1734 08a2 FFF7FEFF 		bl	ppp_trace
+ 1735 08a6 6CE0     		b	.L128
+ 1736              	.LVL170:
+ 1737              	.L117:
+ 1738              		.loc 1 370 0
+ 1739 08a8 B023     		mov	r3, #176
+ 1740 08aa 1A1C     		mov	r2, r3
+ 1741 08ac 7243     		mul	r2, r6
+ 1742 08ae 3A4B     		ldr	r3, .L131+12
+ 1743 08b0 9E18     		add	r6, r3, r2
+ 1744              	.LVL171:
+ 1745              		.loc 1 386 0
+ 1746 08b2 0134     		add	r4, r4, #1
+ 1747              	.LVL172:
+ 1748 08b4 A046     		mov	r8, r4
+ 1749              	.LVL173:
+ 1750              		.loc 1 395 0
+ 1751 08b6 0C1F     		sub	r4, r1, #4
+ 1752              	.LVL174:
+ 1753              		.loc 1 400 0
+ 1754 08b8 022D     		cmp	r5, #2
+ 1755 08ba 10D0     		beq	.L120
+ 1756 08bc 022D     		cmp	r5, #2
+ 1757 08be 02D8     		bhi	.L123
+ 1758 08c0 012D     		cmp	r5, #1
+ 1759 08c2 59D1     		bne	.L118
+ 1760 08c4 04E0     		b	.L129
+ 1761              	.L123:
+ 1762 08c6 032D     		cmp	r5, #3
+ 1763 08c8 33D0     		beq	.L121
+ 1764 08ca 042D     		cmp	r5, #4
+ 1765 08cc 54D1     		bne	.L118
+ 1766 08ce 0DE0     		b	.L130
+ 1767              	.L129:
+ 1768              		.loc 1 402 0
+ 1769 08d0 301C     		mov	r0, r6
+ 1770              	.LVL175:
+ 1771 08d2 4146     		mov	r1, r8
+ 1772 08d4 3A1C     		mov	r2, r7
+ 1773 08d6 231C     		mov	r3, r4
+ 1774 08d8 FFF77EFD 		bl	ChapReceiveChallenge
+ 1775 08dc 51E0     		b	.L128
+ 1776              	.LVL176:
+ 1777              	.L120:
+ 1778              		.loc 1 406 0
+ 1779 08de 301C     		mov	r0, r6
+ 1780              	.LVL177:
+ 1781 08e0 4146     		mov	r1, r8
+ 1782 08e2 3A1C     		mov	r2, r7
+ 1783 08e4 231C     		mov	r3, r4
+ 1784 08e6 FFF7C5FE 		bl	ChapReceiveResponse
+ 1785 08ea 4AE0     		b	.L128
+ 1786              	.LVL178:
+ 1787              	.L130:
+ 1788              	.LBB6:
+ 1789              	.LBB7:
+ 1790              		.loc 1 682 0
+ 1791 08ec 2B49     		ldr	r1, .L131+16
+ 1792 08ee 0520     		mov	r0, #5
+ 1793              	.LVL179:
+ 1794 08f0 3A1C     		mov	r2, r7
+ 1795 08f2 FFF7FEFF 		bl	ppp_trace
+ 1796              		.loc 1 684 0
+ 1797 08f6 7268     		ldr	r2, [r6, #4]
+ 1798 08f8 042A     		cmp	r2, #4
+ 1799 08fa 04D0     		beq	.L124
+ 1800              		.loc 1 686 0
+ 1801 08fc 2849     		ldr	r1, .L131+20
+ 1802 08fe 0520     		mov	r0, #5
+ 1803 0900 FFF7FEFF 		bl	ppp_trace
+ 1804 0904 3DE0     		b	.L128
+ 1805              	.L124:
+ 1806              		.loc 1 690 0
+ 1807 0906 2748     		ldr	r0, .L131+24
+ 1808 0908 311C     		mov	r1, r6
+ 1809 090a FFF7FEFF 		bl	sys_untimeout
+ 1810              		.loc 1 695 0
+ 1811 090e 002C     		cmp	r4, #0
+ 1812 0910 06DD     		ble	.L125
+ 1813              		.loc 1 696 0
+ 1814 0912 0023     		mov	r3, #0
+ 1815 0914 4246     		mov	r2, r8
+ 1816 0916 1355     		strb	r3, [r2, r4]
+ 1817 0918 2349     		ldr	r1, .L131+28
+ 1818 091a 0520     		mov	r0, #5
+ 1819 091c FFF7FEFF 		bl	ppp_trace
+ 1820              	.L125:
+ 1821              		.loc 1 699 0
+ 1822 0920 2249     		ldr	r1, .L131+32
+ 1823 0922 0120     		mov	r0, #1
+ 1824 0924 FFF7FEFF 		bl	ppp_trace
+ 1825              		.loc 1 700 0
+ 1826 0928 3068     		ldr	r0, [r6]
+ 1827 092a 2149     		ldr	r1, .L131+36
+ 1828 092c FFF7FEFF 		bl	auth_withpeer_fail
+ 1829 0930 27E0     		b	.L128
+ 1830              	.LVL180:
+ 1831              	.L121:
+ 1832              	.LBE7:
+ 1833              	.LBE6:
+ 1834              	.LBB8:
+ 1835              	.LBB9:
+ 1836              		.loc 1 645 0
+ 1837 0932 2049     		ldr	r1, .L131+40
+ 1838 0934 0520     		mov	r0, #5
+ 1839              	.LVL181:
+ 1840 0936 3A1C     		mov	r2, r7
+ 1841 0938 FFF7FEFF 		bl	ppp_trace
+ 1842              		.loc 1 647 0
+ 1843 093c 7268     		ldr	r2, [r6, #4]
+ 1844 093e 052A     		cmp	r2, #5
+ 1845 0940 1FD0     		beq	.L128
+ 1846              		.loc 1 652 0
+ 1847 0942 042A     		cmp	r2, #4
+ 1848 0944 04D0     		beq	.L126
+ 1849              		.loc 1 654 0
+ 1850 0946 1C49     		ldr	r1, .L131+44
+ 1851 0948 0520     		mov	r0, #5
+ 1852 094a FFF7FEFF 		bl	ppp_trace
+ 1853 094e 18E0     		b	.L128
+ 1854              	.L126:
+ 1855              		.loc 1 658 0
+ 1856 0950 1448     		ldr	r0, .L131+24
+ 1857 0952 311C     		mov	r1, r6
+ 1858 0954 FFF7FEFF 		bl	sys_untimeout
+ 1859              		.loc 1 663 0
+ 1860 0958 002C     		cmp	r4, #0
+ 1861 095a 06DD     		ble	.L127
+ 1862              		.loc 1 664 0
+ 1863 095c 0023     		mov	r3, #0
+ 1864 095e 4246     		mov	r2, r8
+ 1865 0960 1355     		strb	r3, [r2, r4]
+ 1866 0962 1149     		ldr	r1, .L131+28
+ 1867 0964 0520     		mov	r0, #5
+ 1868 0966 FFF7FEFF 		bl	ppp_trace
+ 1869              	.L127:
+ 1870              		.loc 1 667 0
+ 1871 096a 0523     		mov	r3, #5
+ 1872 096c 7360     		str	r3, [r6, #4]
+ 1873              		.loc 1 669 0
+ 1874 096e 3068     		ldr	r0, [r6]
+ 1875 0970 0F49     		ldr	r1, .L131+36
+ 1876 0972 FFF7FEFF 		bl	auth_withpeer_success
+ 1877 0976 04E0     		b	.L128
+ 1878              	.LVL182:
+ 1879              	.L118:
+ 1880              	.LBE9:
+ 1881              	.LBE8:
+ 1882              		.loc 1 418 0
+ 1883 0978 1049     		ldr	r1, .L131+48
+ 1884 097a 0320     		mov	r0, #3
+ 1885              	.LVL183:
+ 1886 097c 2A1C     		mov	r2, r5
+ 1887 097e FFF7FEFF 		bl	ppp_trace
+ 1888              	.LVL184:
+ 1889              	.L128:
+ 1890              		.loc 1 421 0
+ 1891              		@ sp needed for prologue
+ 1892              	.LVL185:
+ 1893              	.LVL186:
+ 1894              	.LVL187:
+ 1895              	.LVL188:
+ 1896              	.LVL189:
+ 1897 0982 04BC     		pop	{r2}
+ 1898 0984 9046     		mov	r8, r2
+ 1899 0986 F0BC     		pop	{r4, r5, r6, r7}
+ 1900 0988 01BC     		pop	{r0}
+ 1901 098a 0047     		bx	r0
+ 1902              	.L132:
+ 1903              		.align	2
+ 1904              	.L131:
+ 1905 098c B4020000 		.word	.LC58
+ 1906 0990 D4020000 		.word	.LC60
+ 1907 0994 F8020000 		.word	.LC62
+ 1908 0998 00000000 		.word	chap
+ 1909 099c 18030000 		.word	.LC65
+ 1910 09a0 3C030000 		.word	.LC67
+ 1911 09a4 00000000 		.word	ChapResponseTimeout
+ 1912 09a8 60030000 		.word	.LC70
+ 1913 09ac 74030000 		.word	.LC72
+ 1914 09b0 23C20000 		.word	49699
+ 1915 09b4 90030000 		.word	.LC74
+ 1916 09b8 B4030000 		.word	.LC76
+ 1917 09bc D8030000 		.word	.LC78
+ 1918              	.LFE299:
+ 1920              		.global	chap_protent
+ 1921              		.section	.rodata.str1.4
+ 1922 03fa 0000     		.align	2
+ 1923              	.LC80:
+ 1924 03fc 43484150 		.ascii	"CHAP\000"
+ 1924      00
+ 1925 0401 000000   		.data
+ 1926              		.align	2
+ 1929              	chap_protent:
+ 1930 0000 23C2     		.short	-15837
+ 1931 0002 0000     		.space	2
+ 1932 0004 00000000 		.word	ChapInit
+ 1933 0008 00000000 		.word	ChapInput
+ 1934 000c 00000000 		.word	ChapProtocolReject
+ 1935 0010 00000000 		.word	ChapLowerUp
+ 1936 0014 00000000 		.word	ChapLowerDown
+ 1937 0018 00000000 		.word	0
+ 1938 001c 00000000 		.word	0
+ 1939 0020 01000000 		.word	1
+ 1940 0024 FC030000 		.word	.LC80
+ 1941              		.comm	chap,176,4
+ 2322              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 chap.c
+     /tmp/ccd5WCO2.s:1      .text:00000000 $t
+     /tmp/ccd5WCO2.s:16     .text:00000000 ChapAuthWithPeer
+     /tmp/ccd5WCO2.s:56     .text:00000028 $d
+                            *COM*:000000b0 chap
+     /tmp/ccd5WCO2.s:60     .text:0000002c $t
+     /tmp/ccd5WCO2.s:63     .text:0000002c ChapLowerDown
+     /tmp/ccd5WCO2.s:129    .text:00000078 $d
+     /tmp/ccd5WCO2.s:712    .text:0000035c ChapChallengeTimeout
+     /tmp/ccd5WCO2.s:543    .text:000002b4 ChapRechallenge
+     /tmp/ccd5WCO2.s:294    .text:00000170 ChapResponseTimeout
+     /tmp/ccd5WCO2.s:136    .text:00000088 $t
+     /tmp/ccd5WCO2.s:139    .text:00000088 ChapSendResponse
+     /tmp/ccd5WCO2.s:286    .text:00000168 $d
+     /tmp/ccd5WCO2.s:291    .text:00000170 $t
+     /tmp/ccd5WCO2.s:319    .text:00000180 ChapGenChallenge
+     /tmp/ccd5WCO2.s:386    .text:000001c4 ChapSendChallenge
+     /tmp/ccd5WCO2.s:534    .text:000002a8 $d
+     /tmp/ccd5WCO2.s:540    .text:000002b4 $t
+     /tmp/ccd5WCO2.s:579    .text:000002d4 ChapLowerUp
+     /tmp/ccd5WCO2.s:641    .text:0000031c $d
+     /tmp/ccd5WCO2.s:649    .text:00000320 ChapAuthPeer
+     /tmp/ccd5WCO2.s:646    .text:00000320 $t
+     /tmp/ccd5WCO2.s:700    .text:00000358 $d
+     /tmp/ccd5WCO2.s:709    .text:0000035c $t
+     /tmp/ccd5WCO2.s:764    .text:00000394 $d
+     /tmp/ccd5WCO2.s:769    .text:0000039c $t
+     /tmp/ccd5WCO2.s:772    .text:0000039c ChapProtocolReject
+     /tmp/ccd5WCO2.s:818    .text:000003d0 $d
+     /tmp/ccd5WCO2.s:848    .text:000003d8 $t
+     /tmp/ccd5WCO2.s:851    .text:000003d8 ChapReceiveChallenge
+     /tmp/ccd5WCO2.s:1092   .text:0000054c $d
+     /tmp/ccd5WCO2.s:1107   .text:0000057c $t
+     /tmp/ccd5WCO2.s:1110   .text:0000057c ChapInit
+     /tmp/ccd5WCO2.s:1152   .text:000005a8 $d
+     /tmp/ccd5WCO2.s:1167   .text:000005ac $t
+     /tmp/ccd5WCO2.s:1170   .text:000005ac ChapSendStatus
+     /tmp/ccd5WCO2.s:1302   .text:00000664 $d
+     /tmp/ccd5WCO2.s:1329   .text:00000674 $t
+     /tmp/ccd5WCO2.s:1332   .text:00000674 ChapReceiveResponse
+     /tmp/ccd5WCO2.s:1620   .text:00000834 $d
+     /tmp/ccd5WCO2.s:1666   .text:00000860 $t
+     /tmp/ccd5WCO2.s:1669   .text:00000860 ChapInput
+     /tmp/ccd5WCO2.s:1905   .text:0000098c $d
+     /tmp/ccd5WCO2.s:1929   .data:00000000 chap_protent
+     /tmp/ccd5WCO2.s:1930   .data:00000000 $d
+
+UNDEFINED SYMBOLS
+sys_untimeout
+strlen
+memcpy
+pppWrite
+sys_timeout
+outpacket_buf
+magic
+ppp_trace
+auth_peer_fail
+auth_withpeer_fail
+strncpy
+get_secret
+MD5Init
+MD5Update
+MD5Final
+memset
+ppp_settings
+memcmp
+auth_peer_success
+auth_withpeer_success

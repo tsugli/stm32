@@ -1,0 +1,2305 @@
+   1              		.code	16
+   2              		.file	"pbuf.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	pbuf_header
+  13              		.code	16
+  14              		.thumb_func
+  16              	pbuf_header:
+  17              	.LFB294:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/pbuf.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Packet buffer management
+   4:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Packets are built from the pbuf data structure. It supports dynamic
+   6:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * memory allocation for packet contents or can reference externally
+   7:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * managed packet contents both in RAM and ROM. Quick allocation for
+   8:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * incoming packets is provided through pools with fixed sized pbufs.
+   9:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  10:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * A packet may span over multiple pbufs, chained as a singly linked
+  11:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * list. This is called a "pbuf chain".
+  12:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  13:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Multiple packets may be queued, also using this singly linked list.
+  14:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * This is called a "packet queue".
+  15:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+  16:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * So, a packet queue consists of one or more pbuf chains, each of
+  17:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * which consist of one or more pbufs. CURRENTLY, PACKET QUEUES ARE
+  18:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * NOT SUPPORTED!!! Use helper structs to queue multiple packets.
+  19:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+  20:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The differences between a pbuf chain and a packet queue are very
+  21:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * precise but subtle. 
+  22:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  23:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The last pbuf of a packet has a ->tot_len field that equals the
+  24:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * ->len field. It can be found by traversing the list. If the last
+  25:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * pbuf of a packet has a ->next field other than NULL, more packets
+  26:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * are on the queue.
+  27:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  28:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Therefore, looping through a pbuf of a single packet, has an
+  29:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * loop end condition (tot_len == p->len), NOT (next == NULL).
+  30:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+  31:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  32:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /*
+  33:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+  34:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * All rights reserved.
+  35:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  36:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  37:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * are permitted provided that the following conditions are met:
+  38:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  40:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *    this list of conditions and the following disclaimer.
+  41:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  42:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *    this list of conditions and the following disclaimer in the documentation
+  43:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *    and/or other materials provided with the distribution.
+  44:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 3. The name of the author may not be used to endorse or promote products
+  45:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *    derived from this software without specific prior written permission.
+  46:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  47:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  48:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  49:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  50:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  51:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  52:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  53:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  54:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  55:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  56:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * OF SUCH DAMAGE.
+  57:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  58:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * This file is part of the lwIP TCP/IP stack.
+  59:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  60:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Author: Adam Dunkels <adam@sics.se>
+  61:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+  62:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+  63:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  64:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/opt.h"
+  65:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  66:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/stats.h"
+  67:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/def.h"
+  68:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/mem.h"
+  69:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/memp.h"
+  70:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/pbuf.h"
+  71:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/sys.h"
+  72:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "arch/perf.h"
+  73:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #if TCP_QUEUE_OOSEQ
+  74:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/tcp.h"
+  75:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #endif
+  76:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include <string.h>
+  78:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  79:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #define SIZEOF_STRUCT_PBUF        LWIP_MEM_ALIGN_SIZE(sizeof(struct pbuf))
+  80:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /* Since the pool is created in memp, PBUF_POOL_BUFSIZE will be automatically
+  81:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****    aligned there. Therefore, PBUF_POOL_BUFSIZE_ALIGNED can be used here. */
+  82:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #define PBUF_POOL_BUFSIZE_ALIGNED LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE)
+  83:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  84:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #if !TCP_QUEUE_OOSEQ || NO_SYS
+  85:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #define PBUF_POOL_IS_EMPTY()
+  86:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #else /* !TCP_QUEUE_OOSEQ || NO_SYS */
+  87:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /** Define this to 0 to prevent freeing ooseq pbufs when the PBUF_POOL is empty */
+  88:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #ifndef PBUF_POOL_FREE_OOSEQ
+  89:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #define PBUF_POOL_FREE_OOSEQ 1
+  90:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #endif /* PBUF_POOL_FREE_OOSEQ */
+  91:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+  92:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #if PBUF_POOL_FREE_OOSEQ
+  93:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #include "lwip/tcpip.h"
+  94:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #define PBUF_POOL_IS_EMPTY() pbuf_pool_is_empty()
+  95:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** static u8_t pbuf_free_ooseq_queued;
+  96:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+  97:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Attempt to reclaim some memory from queued out-of-sequence TCP segments
+  98:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * if we run out of pool pbufs. It's better to give priority to new packets
+  99:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * if we're running out.
+ 100:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 101:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * This must be done in the correct thread context therefore this function
+ 102:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * can only be used with NO_SYS=0 and through tcpip_callback.
+ 103:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 104:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** static void
+ 105:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_free_ooseq(void* arg)
+ 106:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 107:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct tcp_pcb* pcb;
+ 108:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_DECL_PROTECT(old_level);
+ 109:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_UNUSED_ARG(arg);
+ 110:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 111:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_PROTECT(old_level);
+ 112:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   pbuf_free_ooseq_queued = 0;
+ 113:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_UNPROTECT(old_level);
+ 114:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 115:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   for (pcb = tcp_active_pcbs; NULL != pcb; pcb = pcb->next) {
+ 116:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (NULL != pcb->ooseq) {
+ 117:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /** Free the ooseq pbufs of one PCB only */
+ 118:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_free_ooseq: freeing out-of-sequence pbufs\n")
+ 119:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       tcp_segs_free(pcb->ooseq);
+ 120:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       pcb->ooseq = NULL;
+ 121:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return;
+ 122:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 123:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 124:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 125:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 126:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /** Queue a call to pbuf_free_ooseq if not already queued. */
+ 127:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** static void
+ 128:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_pool_is_empty(void)
+ 129:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 130:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u8_t queued;
+ 131:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_DECL_PROTECT(old_level);
+ 132:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 133:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_PROTECT(old_level);
+ 134:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   queued = pbuf_free_ooseq_queued;
+ 135:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   pbuf_free_ooseq_queued = 1;
+ 136:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_UNPROTECT(old_level);
+ 137:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if(!queued) {
+ 139:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* queue a call to pbuf_free_ooseq if not already queued */
+ 140:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if(tcpip_callback_with_block(pbuf_free_ooseq, NULL, 0) != ERR_OK) {
+ 141:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       SYS_ARCH_PROTECT(old_level);
+ 142:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       pbuf_free_ooseq_queued = 0;
+ 143:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       SYS_ARCH_UNPROTECT(old_level);
+ 144:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 145:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 146:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 147:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #endif /* PBUF_POOL_FREE_OOSEQ */
+ 148:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #endif /* !TCP_QUEUE_OOSEQ || NO_SYS */
+ 149:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 150:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 151:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Allocates a pbuf of the given type (possibly a chain for PBUF_POOL type).
+ 152:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 153:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The actual memory allocated for the pbuf is determined by the
+ 154:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * layer at which the pbuf is allocated and the requested size
+ 155:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * (from the size parameter).
+ 156:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 157:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param layer flag to define header size
+ 158:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param length size of the pbuf's payload
+ 159:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param type this parameter decides how and where the pbuf
+ 160:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * should be allocated as follows:
+ 161:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 162:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * - PBUF_RAM: buffer memory for pbuf is allocated as one large
+ 163:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             chunk. This includes protocol headers as well.
+ 164:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * - PBUF_ROM: no buffer memory is allocated for the pbuf, even for
+ 165:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             protocol headers. Additional headers must be prepended
+ 166:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             by allocating another pbuf and chain in to the front of
+ 167:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             the ROM pbuf. It is assumed that the memory used is really
+ 168:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             similar to ROM in that it is immutable and will not be
+ 169:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             changed. Memory which is dynamic should generally not
+ 170:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             be attached to PBUF_ROM pbufs. Use PBUF_REF instead.
+ 171:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * - PBUF_REF: no buffer memory is allocated for the pbuf, even for
+ 172:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             protocol headers. It is assumed that the pbuf is only
+ 173:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             being used in a single thread. If the pbuf gets queued,
+ 174:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *             then pbuf_take should be called to copy the buffer.
+ 175:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * - PBUF_POOL: the pbuf is allocated as a pbuf chain, with pbufs from
+ 176:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *              the pbuf pool that is allocated during pbuf_init().
+ 177:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 178:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return the allocated pbuf. If multiple pbufs where allocated, this
+ 179:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * is the first pbuf of a pbuf chain.
+ 180:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 181:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** struct pbuf *
+ 182:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
+ 183:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 184:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *p, *q, *r;
+ 185:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t offset;
+ 186:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   s32_t rem_len; /* remaining length */
+ 187:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_alloc(length=%"U16_F")\n", length));
+ 188:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 189:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* determine header offset */
+ 190:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   offset = 0;
+ 191:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   switch (layer) {
+ 192:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_TRANSPORT:
+ 193:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* add room for transport (often TCP) layer header */
+ 194:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     offset += PBUF_TRANSPORT_HLEN;
+ 195:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* FALLTHROUGH */
+ 196:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_IP:
+ 197:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* add room for IP layer header */
+ 198:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     offset += PBUF_IP_HLEN;
+ 199:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* FALLTHROUGH */
+ 200:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_LINK:
+ 201:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* add room for link layer header */
+ 202:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     offset += PBUF_LINK_HLEN;
+ 203:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     break;
+ 204:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_RAW:
+ 205:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     break;
+ 206:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   default:
+ 207:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_alloc: bad pbuf layer", 0);
+ 208:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return NULL;
+ 209:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 210:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 211:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   switch (type) {
+ 212:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_POOL:
+ 213:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* allocate head of pbuf chain into p */
+ 214:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p = memp_malloc(MEMP_PBUF_POOL);
+ 215:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_alloc: allocated pbuf %p\n", (void *)p));
+ 216:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (p == NULL) {
+ 217:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       PBUF_POOL_IS_EMPTY();
+ 218:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return NULL;
+ 219:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 220:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->type = type;
+ 221:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->next = NULL;
+ 222:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 223:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* make the payload pointer point 'offset' bytes into pbuf data memory */
+ 224:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->payload = LWIP_MEM_ALIGN((void *)((u8_t *)p + (SIZEOF_STRUCT_PBUF + offset)));
+ 225:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_alloc: pbuf p->payload properly aligned",
+ 226:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****             ((mem_ptr_t)p->payload % MEM_ALIGNMENT) == 0);
+ 227:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* the total length of the pbuf chain is the requested size */
+ 228:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->tot_len = length;
+ 229:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* set the length of the first pbuf in the chain */
+ 230:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->len = LWIP_MIN(length, PBUF_POOL_BUFSIZE_ALIGNED - LWIP_MEM_ALIGN_SIZE(offset));
+ 231:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("check p->payload + p->len does not overflow pbuf",
+ 232:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                 ((u8_t*)p->payload + p->len <=
+ 233:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                  (u8_t*)p + SIZEOF_STRUCT_PBUF + PBUF_POOL_BUFSIZE_ALIGNED));
+ 234:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("PBUF_POOL_BUFSIZE must be bigger than MEM_ALIGNMENT",
+ 235:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       (PBUF_POOL_BUFSIZE_ALIGNED - LWIP_MEM_ALIGN_SIZE(offset)) > 0 );
+ 236:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* set reference count (needed here in case we fail) */
+ 237:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->ref = 1;
+ 238:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 239:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* now allocate the tail of the pbuf chain */
+ 240:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 241:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* remember first pbuf for linkage in next iteration */
+ 242:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     r = p;
+ 243:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* remaining length to be allocated */
+ 244:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     rem_len = length - p->len;
+ 245:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* any remaining pbufs to be allocated? */
+ 246:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     while (rem_len > 0) {
+ 247:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q = memp_malloc(MEMP_PBUF_POOL);
+ 248:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       if (q == NULL) {
+ 249:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         PBUF_POOL_IS_EMPTY();
+ 250:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         /* free chain so far allocated */
+ 251:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         pbuf_free(p);
+ 252:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         /* bail out unsuccesfully */
+ 253:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         return NULL;
+ 254:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       }
+ 255:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->type = type;
+ 256:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->flags = 0;
+ 257:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->next = NULL;
+ 258:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* make previous pbuf point to this pbuf */
+ 259:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       r->next = q;
+ 260:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* set total length of this pbuf and next in chain */
+ 261:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_ASSERT("rem_len < max_u16_t", rem_len < 0xffff);
+ 262:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->tot_len = (u16_t)rem_len;
+ 263:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* this pbuf length is pool size, unless smaller sized tail */
+ 264:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->len = LWIP_MIN((u16_t)rem_len, PBUF_POOL_BUFSIZE_ALIGNED);
+ 265:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->payload = (void *)((u8_t *)q + SIZEOF_STRUCT_PBUF);
+ 266:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_ASSERT("pbuf_alloc: pbuf q->payload properly aligned",
+ 267:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****               ((mem_ptr_t)q->payload % MEM_ALIGNMENT) == 0);
+ 268:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_ASSERT("check p->payload + p->len does not overflow pbuf",
+ 269:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                   ((u8_t*)p->payload + p->len <=
+ 270:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                    (u8_t*)p + SIZEOF_STRUCT_PBUF + PBUF_POOL_BUFSIZE_ALIGNED));
+ 271:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q->ref = 1;
+ 272:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* calculate remaining length to be allocated */
+ 273:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       rem_len -= q->len;
+ 274:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* remember this pbuf for linkage in next iteration */
+ 275:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       r = q;
+ 276:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 277:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* end of chain */
+ 278:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /*r->next = NULL;*/
+ 279:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 280:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     break;
+ 281:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_RAM:
+ 282:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* If pbuf is to be allocated in RAM, allocate memory for it. */
+ 283:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p = (struct pbuf*)mem_malloc(LWIP_MEM_ALIGN_SIZE(SIZEOF_STRUCT_PBUF + offset) + LWIP_MEM_ALIGN_
+ 284:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (p == NULL) {
+ 285:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return NULL;
+ 286:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 287:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Set up internal structure of the pbuf. */
+ 288:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->payload = LWIP_MEM_ALIGN((void *)((u8_t *)p + SIZEOF_STRUCT_PBUF + offset));
+ 289:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->len = p->tot_len = length;
+ 290:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->next = NULL;
+ 291:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->type = type;
+ 292:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 293:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_alloc: pbuf->payload properly aligned",
+ 294:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****            ((mem_ptr_t)p->payload % MEM_ALIGNMENT) == 0);
+ 295:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     break;
+ 296:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf references existing (non-volatile static constant) ROM payload? */
+ 297:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_ROM:
+ 298:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf references existing (externally allocated) RAM payload? */
+ 299:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   case PBUF_REF:
+ 300:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* only allocate memory for the pbuf structure */
+ 301:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p = memp_malloc(MEMP_PBUF);
+ 302:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (p == NULL) {
+ 303:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 304:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                   ("pbuf_alloc: Could not allocate MEMP_PBUF for PBUF_%s.\n",
+ 305:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                   (type == PBUF_ROM) ? "ROM" : "REF"));
+ 306:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return NULL;
+ 307:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 308:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* caller must set this field properly, afterwards */
+ 309:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->payload = NULL;
+ 310:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->len = p->tot_len = length;
+ 311:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->next = NULL;
+ 312:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->type = type;
+ 313:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     break;
+ 314:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   default:
+ 315:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_alloc: erroneous type", 0);
+ 316:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return NULL;
+ 317:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 318:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* set reference count */
+ 319:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->ref = 1;
+ 320:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* set flags */
+ 321:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->flags = 0;
+ 322:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_alloc(length=%"U16_F") == %p\n", length, (void *)
+ 323:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return p;
+ 324:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 325:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 326:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 327:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 328:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Shrink a pbuf chain to a desired length.
+ 329:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 330:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p pbuf to shrink.
+ 331:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param new_len desired new length of pbuf chain
+ 332:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 333:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Depending on the desired length, the first few pbufs in a chain might
+ 334:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * be skipped and left unchanged. The new last pbuf in the chain will be
+ 335:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * resized, and any remaining pbufs will be freed.
+ 336:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 337:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note If the pbuf is ROM/REF, only the ->tot_len and ->len fields are adjusted.
+ 338:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note May not be called on a packet queue.
+ 339:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 340:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note Despite its name, pbuf_realloc cannot grow the size of a pbuf (chain).
+ 341:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 342:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** void
+ 343:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_realloc(struct pbuf *p, u16_t new_len)
+ 344:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 345:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *q;
+ 346:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t rem_len; /* remaining length */
+ 347:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   s32_t grow;
+ 348:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 349:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("pbuf_realloc: p != NULL", p != NULL);
+ 350:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("pbuf_realloc: sane p->type", p->type == PBUF_POOL ||
+ 351:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****               p->type == PBUF_ROM ||
+ 352:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****               p->type == PBUF_RAM ||
+ 353:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****               p->type == PBUF_REF);
+ 354:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 355:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* desired length larger than current length? */
+ 356:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (new_len >= p->tot_len) {
+ 357:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* enlarging not yet supported */
+ 358:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return;
+ 359:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 360:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 361:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* the pbuf chain grows by (new_len - p->tot_len) bytes
+ 362:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****    * (which may be negative in case of shrinking) */
+ 363:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   grow = new_len - p->tot_len;
+ 364:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 365:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* first, step over any pbufs that should remain in the chain */
+ 366:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   rem_len = new_len;
+ 367:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q = p;
+ 368:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* should this pbuf be kept? */
+ 369:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   while (rem_len > q->len) {
+ 370:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* decrease remaining length by pbuf length */
+ 371:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     rem_len -= q->len;
+ 372:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* decrease total length indicator */
+ 373:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("grow < max_u16_t", grow < 0xffff);
+ 374:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     q->tot_len += (u16_t)grow;
+ 375:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* proceed to next pbuf in chain */
+ 376:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     q = q->next;
+ 377:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_realloc: q != NULL", q != NULL);
+ 378:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 379:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* we have now reached the new last pbuf (in q) */
+ 380:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* rem_len == desired length for pbuf q */
+ 381:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 382:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* shrink allocated memory for PBUF_RAM */
+ 383:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* (other types merely adjust their length fields */
+ 384:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if ((q->type == PBUF_RAM) && (rem_len != q->len)) {
+ 385:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* reallocate and adjust the length of the pbuf that will be split */
+ 386:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     q = mem_realloc(q, (u8_t *)q->payload - (u8_t *)q + rem_len);
+ 387:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("mem_realloc give q == NULL", q != NULL);
+ 388:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 389:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* adjust length fields for new last pbuf */
+ 390:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q->len = rem_len;
+ 391:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q->tot_len = q->len;
+ 392:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 393:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* any remaining pbufs in chain? */
+ 394:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (q->next != NULL) {
+ 395:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* free remaining pbufs in chain */
+ 396:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     pbuf_free(q->next);
+ 397:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 398:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* q is last packet in chain */
+ 399:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q->next = NULL;
+ 400:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 401:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 402:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 403:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 404:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Adjusts the payload pointer to hide or reveal headers in the payload.
+ 405:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 406:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Adjusts the ->payload pointer so that space for a header
+ 407:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * (dis)appears in the pbuf payload.
+ 408:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 409:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The ->payload, ->tot_len and ->len fields are adjusted.
+ 410:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 411:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p pbuf to change the header size.
+ 412:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param header_size_increment Number of bytes to increment header size which
+ 413:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * increases the size of the pbuf. New space is on the front.
+ 414:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * (Using a negative value decreases the header size.)
+ 415:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * If hdr_size_inc is 0, this function does nothing and returns succesful.
+ 416:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 417:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * PBUF_ROM and PBUF_REF type buffers cannot have their sizes increased, so
+ 418:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * the call will fail. A check is made that the increase in header size does
+ 419:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * not move the payload pointer in front of the start of the buffer.
+ 420:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return non-zero on failure, zero on success.
+ 421:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 422:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 423:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** u8_t
+ 424:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_header(struct pbuf *p, s16_t header_size_increment)
+ 425:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+  19              		.loc 1 425 0
+  20 0000 10B5     		push	{r4, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 0904     		lsl	r1, r1, #16
+  24              	.LVL1:
+  25 0004 0914     		asr	r1, r1, #16
+  26              	.LVL2:
+ 426:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t type;
+ 427:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   void *payload;
+ 428:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t increment_magnitude;
+ 429:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 430:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("p != NULL", p != NULL);
+ 431:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if ((header_size_increment == 0) || (p == NULL))
+  27              		.loc 1 431 0
+  28 0006 0029     		cmp	r1, #0
+  29 0008 01D0     		beq	.L12
+  30 000a 0028     		cmp	r0, #0
+  31 000c 01D1     		bne	.L2
+  32              	.L12:
+  33 000e 0020     		mov	r0, #0
+  34              	.LVL3:
+  35 0010 30E0     		b	.L4
+  36              	.LVL4:
+  37              	.L2:
+ 432:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return 0;
+ 433:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  
+ 434:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (header_size_increment < 0){
+  38              		.loc 1 434 0
+  39 0012 0029     		cmp	r1, #0
+  40 0014 06DA     		bge	.L5
+ 435:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     increment_magnitude = -header_size_increment;
+  41              		.loc 1 435 0
+  42 0016 4B42     		neg	r3, r1
+  43 0018 1B04     		lsl	r3, r3, #16
+  44 001a 1A0C     		lsr	r2, r3, #16
+  45              	.LVL5:
+ 436:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Check that we aren't going to move off the end of the pbuf */
+ 437:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ERROR("increment_magnitude <= p->len", (increment_magnitude <= p->len), return 1;);
+  46              		.loc 1 437 0
+  47 001c 4389     		ldrh	r3, [r0, #10]
+  48 001e 9342     		cmp	r3, r2
+  49 0020 02D2     		bcs	.L7
+  50 0022 26E0     		b	.L6
+  51              	.LVL6:
+  52              	.L5:
+ 438:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   } else {
+ 439:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     increment_magnitude = header_size_increment;
+  53              		.loc 1 439 0
+  54 0024 0B04     		lsl	r3, r1, #16
+  55 0026 1A0C     		lsr	r2, r3, #16
+  56              	.LVL7:
+  57              	.L7:
+ 440:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #if 0
+ 441:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Can't assert these as some callers speculatively call
+ 442:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****          pbuf_header() to see if it's OK.  Will return 1 below instead. */
+ 443:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Check that we've got the correct type of pbuf to work with */
+ 444:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("p->type == PBUF_RAM || p->type == PBUF_POOL", 
+ 445:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                 p->type == PBUF_RAM || p->type == PBUF_POOL);
+ 446:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Check that we aren't going to move off the beginning of the pbuf */
+ 447:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("p->payload - increment_magnitude >= p + SIZEOF_STRUCT_PBUF",
+ 448:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                 (u8_t *)p->payload - increment_magnitude >= (u8_t *)p + SIZEOF_STRUCT_PBUF);
+ 449:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** #endif
+ 450:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 451:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 452:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   type = p->type;
+  58              		.loc 1 452 0
+  59 0028 037B     		ldrb	r3, [r0, #12]
+  60              	.LVL8:
+ 453:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* remember current payload pointer */
+ 454:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   payload = p->payload;
+  61              		.loc 1 454 0
+  62 002a 4468     		ldr	r4, [r0, #4]
+  63              	.LVL9:
+ 455:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 456:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf types containing payloads? */
+ 457:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (type == PBUF_RAM || type == PBUF_POOL) {
+  64              		.loc 1 457 0
+  65 002c 002B     		cmp	r3, #0
+  66 002e 01D0     		beq	.L13
+  67 0030 032B     		cmp	r3, #3
+  68 0032 08D1     		bne	.L8
+  69              	.L13:
+ 458:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* set new payload pointer */
+ 459:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->payload = (u8_t *)p->payload - header_size_increment;
+  70              		.loc 1 459 0
+  71 0034 621A     		sub	r2, r4, r1
+  72              	.LVL10:
+  73 0036 4260     		str	r2, [r0, #4]
+ 460:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* boundary check fails? */
+ 461:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if ((u8_t *)p->payload < (u8_t *)p + SIZEOF_STRUCT_PBUF) {
+  74              		.loc 1 461 0
+  75 0038 031C     		mov	r3, r0
+  76              	.LVL11:
+  77 003a 1033     		add	r3, r3, #16
+  78 003c 9A42     		cmp	r2, r3
+  79 003e 0ED2     		bcs	.L10
+ 462:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF( PBUF_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 463:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         ("pbuf_header: failed as %p < %p (not enough space for new header size)\n",
+ 464:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         (void *)p->payload, (void *)(p + 1)));
+ 465:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* restore old payload pointer */
+ 466:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p->payload = payload;
+  80              		.loc 1 466 0
+  81 0040 4460     		str	r4, [r0, #4]
+  82 0042 0120     		mov	r0, #1
+  83              	.LVL12:
+  84 0044 16E0     		b	.L4
+  85              	.LVL13:
+  86              	.L8:
+ 467:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* bail out unsuccesfully */
+ 468:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return 1;
+ 469:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 470:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf types refering to external payloads? */
+ 471:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   } else if (type == PBUF_REF || type == PBUF_ROM) {
+  87              		.loc 1 471 0
+  88 0046 013B     		sub	r3, r3, #1
+  89              	.LVL14:
+  90 0048 1B04     		lsl	r3, r3, #16
+  91 004a 1B0C     		lsr	r3, r3, #16
+  92 004c 012B     		cmp	r3, #1
+  93 004e 10D8     		bhi	.L6
+ 472:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* hide a header in the payload? */
+ 473:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if ((header_size_increment < 0) && (increment_magnitude <= p->len)) {
+  94              		.loc 1 473 0
+  95 0050 0029     		cmp	r1, #0
+  96 0052 0EDA     		bge	.L6
+  97 0054 4389     		ldrh	r3, [r0, #10]
+  98 0056 9342     		cmp	r3, r2
+  99 0058 0BD3     		bcc	.L6
+ 474:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* increase payload pointer */
+ 475:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p->payload = (u8_t *)p->payload - header_size_increment;
+ 100              		.loc 1 475 0
+ 101 005a 631A     		sub	r3, r4, r1
+ 102 005c 4360     		str	r3, [r0, #4]
+ 103              	.L10:
+ 476:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     } else {
+ 477:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* cannot expand payload to front (yet!)
+ 478:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****        * bail out unsuccesfully */
+ 479:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       return 1;
+ 480:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 481:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 482:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   else {
+ 483:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Unknown type */
+ 484:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("bad pbuf type", 0);
+ 485:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return 1;
+ 486:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 487:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* modify pbuf length fields */
+ 488:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->len += header_size_increment;
+ 104              		.loc 1 488 0
+ 105 005e 0B04     		lsl	r3, r1, #16
+ 106 0060 1B0C     		lsr	r3, r3, #16
+ 107 0062 4289     		ldrh	r2, [r0, #10]
+ 108              	.LVL15:
+ 109 0064 9A18     		add	r2, r3, r2
+ 110 0066 4281     		strh	r2, [r0, #10]
+ 489:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->tot_len += header_size_increment;
+ 111              		.loc 1 489 0
+ 112 0068 0289     		ldrh	r2, [r0, #8]
+ 113 006a 9B18     		add	r3, r3, r2
+ 114 006c 0381     		strh	r3, [r0, #8]
+ 115 006e 0020     		mov	r0, #0
+ 116              	.LVL16:
+ 117 0070 00E0     		b	.L4
+ 118              	.LVL17:
+ 119              	.L6:
+ 490:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 491:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_header: old %p new %p (%"S16_F")\n",
+ 492:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     (void *)payload, (void *)p->payload, header_size_increment));
+ 493:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 494:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return 0;
+ 120              		.loc 1 494 0
+ 121 0072 0120     		mov	r0, #1
+ 122              	.LVL18:
+ 123              	.L4:
+ 495:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 124              		.loc 1 495 0
+ 125              		@ sp needed for prologue
+ 126              	.LVL19:
+ 127 0074 10BC     		pop	{r4}
+ 128 0076 02BC     		pop	{r1}
+ 129 0078 0847     		bx	r1
+ 130              	.LFE294:
+ 132 007a C046     		.align	2
+ 133              		.global	pbuf_clen
+ 134              		.code	16
+ 135              		.thumb_func
+ 137              	pbuf_clen:
+ 138              	.LFB296:
+ 496:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 497:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 498:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Dereference a pbuf chain or queue and deallocate any no-longer-used
+ 499:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * pbufs at the head of this chain or queue.
+ 500:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 501:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Decrements the pbuf reference count. If it reaches zero, the pbuf is
+ 502:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * deallocated.
+ 503:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 504:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * For a pbuf chain, this is repeated for each pbuf in the chain,
+ 505:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * up to the first pbuf which has a non-zero reference count after
+ 506:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * decrementing. So, when all reference counts are one, the whole
+ 507:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * chain is free'd.
+ 508:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 509:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p The pbuf (chain) to be dereferenced.
+ 510:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 511:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return the number of pbufs that were de-allocated
+ 512:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * from the head of the chain.
+ 513:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 514:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note MUST NOT be called on a packet queue (Not verified to work yet).
+ 515:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note the reference counter of a pbuf equals the number of pointers
+ 516:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * that refer to the pbuf (or into the pbuf).
+ 517:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 518:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @internal examples:
+ 519:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 520:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Assuming existing chains a->b->c with the following reference
+ 521:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * counts, calling pbuf_free(a) results in:
+ 522:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+ 523:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 1->2->3 becomes ...1->3
+ 524:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 3->3->3 becomes 2->3->3
+ 525:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 1->1->2 becomes ......1
+ 526:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 2->1->1 becomes 1->1->1
+ 527:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 1->1->1 becomes .......
+ 528:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 529:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 530:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** u8_t
+ 531:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_free(struct pbuf *p)
+ 532:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 533:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t type;
+ 534:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *q;
+ 535:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u8_t count;
+ 536:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 537:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (p == NULL) {
+ 538:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("p != NULL", p != NULL);
+ 539:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* if assertions are disabled, proceed with debug output */
+ 540:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 541:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       ("pbuf_free(p == NULL) was called.\n"));
+ 542:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return 0;
+ 543:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 544:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_free(%p)\n", (void *)p));
+ 545:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 546:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   PERF_START;
+ 547:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 548:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("pbuf_free: sane type",
+ 549:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->type == PBUF_RAM || p->type == PBUF_ROM ||
+ 550:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->type == PBUF_REF || p->type == PBUF_POOL);
+ 551:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 552:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   count = 0;
+ 553:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* de-allocate all consecutive pbufs from the head of the chain that
+ 554:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****    * obtain a zero reference count after decrementing*/
+ 555:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   while (p != NULL) {
+ 556:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     u16_t ref;
+ 557:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     SYS_ARCH_DECL_PROTECT(old_level);
+ 558:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* Since decrementing ref cannot be guaranteed to be a single machine operation
+ 559:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****      * we must protect it. We put the new ref into a local variable to prevent
+ 560:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****      * further protection. */
+ 561:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     SYS_ARCH_PROTECT(old_level);
+ 562:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* all pbufs in a chain are referenced at least once */
+ 563:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_free: p->ref > 0", p->ref > 0);
+ 564:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* decrease reference count (number of pointers to pbuf) */
+ 565:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     ref = --(p->ref);
+ 566:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     SYS_ARCH_UNPROTECT(old_level);
+ 567:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* this pbuf is no longer referenced to? */
+ 568:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (ref == 0) {
+ 569:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* remember next pbuf in chain for next iteration */
+ 570:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       q = p->next;
+ 571:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF( PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_free: deallocating %p\n", (void *)p));
+ 572:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       type = p->type;
+ 573:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* is this a pbuf from the pool? */
+ 574:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       if (type == PBUF_POOL) {
+ 575:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         memp_free(MEMP_PBUF_POOL, p);
+ 576:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* is this a ROM or RAM referencing pbuf? */
+ 577:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       } else if (type == PBUF_ROM || type == PBUF_REF) {
+ 578:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         memp_free(MEMP_PBUF, p);
+ 579:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* type == PBUF_RAM */
+ 580:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       } else {
+ 581:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****         mem_free(p);
+ 582:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       }
+ 583:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       count++;
+ 584:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* proceed to next pbuf */
+ 585:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p = q;
+ 586:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* p->ref > 0, this pbuf is still referenced to */
+ 587:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* (and so the remaining pbufs in chain as well) */
+ 588:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     } else {
+ 589:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF( PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_free: %p has ref %"U16_F", ending here.\n", 
+ 590:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* stop walking through the chain */
+ 591:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p = NULL;
+ 592:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 593:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 594:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   PERF_STOP("pbuf_free");
+ 595:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* return number of de-allocated pbufs */
+ 596:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return count;
+ 597:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 598:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 599:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 600:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Count number of pbufs in a chain
+ 601:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 602:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p first pbuf of chain
+ 603:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return the number of pbufs in a chain
+ 604:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 605:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 606:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** u8_t
+ 607:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_clen(struct pbuf *p)
+ 608:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 139              		.loc 1 608 0
+ 140              	.LVL20:
+ 609:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u8_t len;
+ 610:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 611:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   len = 0;
+ 612:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   while (p != NULL) {
+ 141              		.loc 1 612 0
+ 142 007c 0028     		cmp	r0, #0
+ 143 007e 01D1     		bne	.L15
+ 144 0080 0023     		mov	r3, #0
+ 145              	.LVL21:
+ 146 0082 06E0     		b	.L16
+ 147              	.LVL22:
+ 148              	.L15:
+ 149 0084 0023     		mov	r3, #0
+ 150              	.LVL23:
+ 151              	.L17:
+ 613:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     ++len;
+ 152              		.loc 1 613 0
+ 153 0086 0133     		add	r3, r3, #1
+ 154              	.LVL24:
+ 155 0088 1B06     		lsl	r3, r3, #24
+ 156 008a 1B0E     		lsr	r3, r3, #24
+ 157              	.LVL25:
+ 614:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p = p->next;
+ 158              		.loc 1 614 0
+ 159 008c 0068     		ldr	r0, [r0]
+ 160              	.LVL26:
+ 161              		.loc 1 612 0
+ 162 008e 0028     		cmp	r0, #0
+ 163 0090 F9D1     		bne	.L17
+ 164              	.L16:
+ 615:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 616:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return len;
+ 617:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 165              		.loc 1 617 0
+ 166 0092 181C     		mov	r0, r3
+ 167              	.LVL27:
+ 168              		@ sp needed for prologue
+ 169 0094 7047     		bx	lr
+ 170              	.LFE296:
+ 172 0096 C046     		.align	2
+ 173              		.global	pbuf_cat
+ 174              		.code	16
+ 175              		.thumb_func
+ 177              	pbuf_cat:
+ 178              	.LFB298:
+ 618:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 619:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 620:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Increment the reference count of the pbuf.
+ 621:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 622:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p pbuf to increase reference counter of
+ 623:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 624:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 625:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** void
+ 626:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_ref(struct pbuf *p)
+ 627:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 628:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   SYS_ARCH_DECL_PROTECT(old_level);
+ 629:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf given? */
+ 630:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (p != NULL) {
+ 631:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     SYS_ARCH_PROTECT(old_level);
+ 632:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     ++(p->ref);
+ 633:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     SYS_ARCH_UNPROTECT(old_level);
+ 634:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 635:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 636:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 637:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 638:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Concatenate two pbufs (each may be a pbuf chain) and take over
+ 639:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * the caller's reference of the tail pbuf.
+ 640:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+ 641:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note The caller MAY NOT reference the tail pbuf afterwards.
+ 642:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Use pbuf_chain() for that purpose.
+ 643:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+ 644:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @see pbuf_chain()
+ 645:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 646:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 647:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** void
+ 648:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_cat(struct pbuf *h, struct pbuf *t)
+ 649:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 179              		.loc 1 649 0
+ 180              	.LVL28:
+ 650:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *p;
+ 651:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 652:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("(h != NULL) && (t != NULL) (programmer violates API)",
+ 181              		.loc 1 652 0
+ 182 0098 0028     		cmp	r0, #0
+ 183 009a 11D0     		beq	.L25
+ 184 009c 0029     		cmp	r1, #0
+ 185 009e 0FD0     		beq	.L25
+ 653:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****              ((h != NULL) && (t != NULL)), return;);
+ 654:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 655:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* proceed to last pbuf of chain */
+ 656:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   for (p = h; p->next != NULL; p = p->next) {
+ 186              		.loc 1 656 0
+ 187 00a0 0368     		ldr	r3, [r0]
+ 188 00a2 002B     		cmp	r3, #0
+ 189 00a4 07D0     		beq	.L23
+ 190              	.L24:
+ 657:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* add total length of second chain to all totals of first chain */
+ 658:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->tot_len += t->tot_len;
+ 191              		.loc 1 658 0
+ 192 00a6 0B89     		ldrh	r3, [r1, #8]
+ 193 00a8 0289     		ldrh	r2, [r0, #8]
+ 194              	.LVL29:
+ 195 00aa 9B18     		add	r3, r3, r2
+ 196 00ac 0381     		strh	r3, [r0, #8]
+ 197              		.loc 1 656 0
+ 198 00ae 0068     		ldr	r0, [r0]
+ 199              	.LVL30:
+ 200 00b0 0368     		ldr	r3, [r0]
+ 201 00b2 002B     		cmp	r3, #0
+ 202 00b4 F7D1     		bne	.L24
+ 203              	.LVL31:
+ 204              	.L23:
+ 659:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 660:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* { p is last pbuf of first h chain, p->next == NULL } */
+ 661:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("p->tot_len == p->len (of last pbuf in chain)", p->tot_len == p->len);
+ 662:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("p->next == NULL", p->next == NULL);
+ 663:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* add total length of second chain to last pbuf total of first chain */
+ 664:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->tot_len += t->tot_len;
+ 205              		.loc 1 664 0
+ 206 00b6 0B89     		ldrh	r3, [r1, #8]
+ 207 00b8 0289     		ldrh	r2, [r0, #8]
+ 208 00ba 9B18     		add	r3, r3, r2
+ 209 00bc 0381     		strh	r3, [r0, #8]
+ 665:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* chain last pbuf of head (p) with first of tail (t) */
+ 666:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   p->next = t;
+ 210              		.loc 1 666 0
+ 211 00be 0160     		str	r1, [r0]
+ 212              	.L25:
+ 667:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* p->next now references t, but the caller will drop its reference to t,
+ 668:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****    * so netto there is no change to the reference count of t.
+ 669:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****    */
+ 670:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 213              		.loc 1 670 0
+ 214              		@ sp needed for prologue
+ 215 00c0 7047     		bx	lr
+ 216              	.LFE298:
+ 218 00c2 C046     		.align	2
+ 219              		.global	pbuf_take
+ 220              		.code	16
+ 221              		.thumb_func
+ 223              	pbuf_take:
+ 224              	.LFB303:
+ 671:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 672:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 673:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Chain two pbufs (or pbuf chains) together.
+ 674:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+ 675:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The caller MUST call pbuf_free(t) once it has stopped
+ 676:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * using it. Use pbuf_cat() instead if you no longer use t.
+ 677:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * 
+ 678:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param h head pbuf (chain)
+ 679:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param t tail pbuf (chain)
+ 680:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note The pbufs MUST belong to the same packet.
+ 681:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note MAY NOT be called on a packet queue.
+ 682:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 683:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The ->tot_len fields of all pbufs of the head chain are adjusted.
+ 684:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The ->next field of the last pbuf of the head chain is adjusted.
+ 685:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * The ->ref field of the first pbuf of the tail chain is adjusted.
+ 686:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 687:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 688:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** void
+ 689:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_chain(struct pbuf *h, struct pbuf *t)
+ 690:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 691:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   pbuf_cat(h, t);
+ 692:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* t is now referenced by h */
+ 693:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   pbuf_ref(t);
+ 694:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_chain: %p references %p\n", (void *)h, (void *)t)
+ 695:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 696:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 697:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 698:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Dechains the first pbuf from its succeeding pbufs in the chain.
+ 699:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 700:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Makes p->tot_len field equal to p->len.
+ 701:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p pbuf to dechain
+ 702:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return remainder of the pbuf chain, or NULL if it was de-allocated.
+ 703:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note May not be called on a packet queue.
+ 704:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 705:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** struct pbuf *
+ 706:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_dechain(struct pbuf *p)
+ 707:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 708:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *q;
+ 709:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u8_t tail_gone = 1;
+ 710:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* tail */
+ 711:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q = p->next;
+ 712:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* pbuf has successor in chain? */
+ 713:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (q != NULL) {
+ 714:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* assert tot_len invariant: (p->tot_len == p->len + (p->next? p->next->tot_len: 0) */
+ 715:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("p->tot_len == p->len + q->tot_len", q->tot_len == p->tot_len - p->len);
+ 716:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* enforce invariant if assertion is disabled */
+ 717:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     q->tot_len = p->tot_len - p->len;
+ 718:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* decouple pbuf from remainder */
+ 719:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->next = NULL;
+ 720:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* total length of pbuf p is its own length only */
+ 721:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     p->tot_len = p->len;
+ 722:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* q is no longer referenced by p, free it */
+ 723:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_dechain: unreferencing %p\n", (void *)q));
+ 724:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     tail_gone = pbuf_free(q);
+ 725:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (tail_gone > 0) {
+ 726:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE,
+ 727:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                   ("pbuf_dechain: deallocated %p (as it is no longer referenced)\n", (void *)q));
+ 728:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 729:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* return remaining tail or NULL if deallocated */
+ 730:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 731:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* assert tot_len invariant: (p->tot_len == p->len + (p->next? p->next->tot_len: 0) */
+ 732:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("p->tot_len == p->len", p->tot_len == p->len);
+ 733:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return ((tail_gone > 0) ? NULL : q);
+ 734:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 735:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 736:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 737:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 738:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Create PBUF_RAM copies of pbufs.
+ 739:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 740:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Used to queue packets on behalf of the lwIP stack, such as
+ 741:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * ARP based queueing.
+ 742:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 743:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note You MUST explicitly use p = pbuf_take(p);
+ 744:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 745:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @note Only one packet is copied, no packet queue!
+ 746:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 747:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p_to pbuf destination of the copy
+ 748:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p_from pbuf source of the copy
+ 749:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 750:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return ERR_OK if pbuf was copied
+ 751:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *         ERR_ARG if one of the pbufs is NULL or p_to is not big
+ 752:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *                 enough to hold p_from
+ 753:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 754:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** err_t
+ 755:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_copy(struct pbuf *p_to, struct pbuf *p_from)
+ 756:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 757:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t offset_to=0, offset_from=0, len;
+ 758:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 759:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_copy(%p, %p)\n",
+ 760:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     (void*)p_to, (void*)p_from));
+ 761:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 762:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* is the target big enough to hold the source? */
+ 763:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("pbuf_copy: target not big enough to hold source", ((p_to != NULL) &&
+ 764:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****              (p_from != NULL) && (p_to->tot_len >= p_from->tot_len)), return ERR_ARG;);
+ 765:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 766:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* iterate through pbuf chain */
+ 767:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   do
+ 768:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   {
+ 769:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("p_to != NULL", p_to != NULL);
+ 770:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* copy one part of the original chain */
+ 771:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if ((p_to->len - offset_to) >= (p_from->len - offset_from)) {
+ 772:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* complete current p_from fits into current p_to */
+ 773:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       len = p_from->len - offset_from;
+ 774:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     } else {
+ 775:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* current p_from does not fit into current p_to */
+ 776:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       len = p_to->len - offset_to;
+ 777:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 778:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     MEMCPY((u8_t*)p_to->payload + offset_to, (u8_t*)p_from->payload + offset_from, len);
+ 779:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     offset_to += len;
+ 780:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     offset_from += len;
+ 781:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("offset_to <= p_to->len", offset_to <= p_to->len);
+ 782:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (offset_to == p_to->len) {
+ 783:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* on to next p_to (if any) */
+ 784:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       offset_to = 0;
+ 785:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p_to = p_to->next;
+ 786:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 787:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("offset_from <= p_from->len", offset_from <= p_from->len);
+ 788:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (offset_from >= p_from->len) {
+ 789:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* on to next p_from (if any) */
+ 790:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       offset_from = 0;
+ 791:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       p_from = p_from->next;
+ 792:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 793:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 794:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if((p_from != NULL) && (p_from->len == p_from->tot_len)) {
+ 795:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* don't copy more than one packet! */
+ 796:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_ERROR("pbuf_copy() does not allow packet queues!\n",
+ 797:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                  (p_from->next == NULL), return ERR_VAL;);
+ 798:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 799:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if((p_to != NULL) && (p_to->len == p_to->tot_len)) {
+ 800:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* don't copy more than one packet! */
+ 801:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       LWIP_ERROR("pbuf_copy() does not allow packet queues!\n",
+ 802:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****                   (p_to->next == NULL), return ERR_VAL;);
+ 803:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 804:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   } while (p_from);
+ 805:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_copy: end of chain reached.\n"));
+ 806:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return ERR_OK;
+ 807:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 808:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 809:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 810:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Copy (part of) the contents of a packet buffer
+ 811:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * to an application supplied buffer.
+ 812:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 813:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param buf the pbuf from which to copy data
+ 814:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param dataptr the application supplied buffer
+ 815:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param len length of data to copy (dataptr must be big enough). No more 
+ 816:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * than buf->tot_len will be copied, irrespective of len
+ 817:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param offset offset into the packet buffer from where to begin copying len bytes
+ 818:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return the number of bytes copied, or 0 on failure
+ 819:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 820:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** u16_t
+ 821:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_copy_partial(struct pbuf *buf, void *dataptr, u16_t len, u16_t offset)
+ 822:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 823:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *p;
+ 824:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t left;
+ 825:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t buf_copy_len;
+ 826:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t copied_total = 0;
+ 827:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 828:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("pbuf_copy_partial: invalid buf", (buf != NULL), return 0;);
+ 829:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("pbuf_copy_partial: invalid dataptr", (dataptr != NULL), return 0;);
+ 830:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 831:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   left = 0;
+ 832:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 833:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if((buf == NULL) || (dataptr == NULL)) {
+ 834:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return 0;
+ 835:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 836:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 837:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* Note some systems use byte copy if dataptr or one of the pbuf payload pointers are unaligned. 
+ 838:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   for(p = buf; len != 0 && p != NULL; p = p->next) {
+ 839:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if ((offset != 0) && (offset >= p->len)) {
+ 840:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* don't copy from this buffer -> on to the next */
+ 841:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       offset -= p->len;
+ 842:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     } else {
+ 843:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* copy from this buffer. maybe only partially. */
+ 844:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       buf_copy_len = p->len - offset;
+ 845:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       if (buf_copy_len > len)
+ 846:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****           buf_copy_len = len;
+ 847:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* copy the necessary parts of the buffer */
+ 848:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       MEMCPY(&((char*)dataptr)[left], &((char*)p->payload)[offset], buf_copy_len);
+ 849:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       copied_total += buf_copy_len;
+ 850:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       left += buf_copy_len;
+ 851:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       len -= buf_copy_len;
+ 852:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       offset = 0;
+ 853:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 854:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 855:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return copied_total;
+ 856:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 857:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 858:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 859:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Copy application supplied data into a pbuf.
+ 860:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * This function can only be used to copy the equivalent of buf->tot_len data.
+ 861:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 862:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param buf pbuf to fill with data
+ 863:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param dataptr application supplied data buffer
+ 864:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param len length of the application supplied data buffer
+ 865:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 866:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return ERR_OK if successful, ERR_MEM if the pbuf is not big enough
+ 867:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 868:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** err_t
+ 869:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_take(struct pbuf *buf, const void *dataptr, u16_t len)
+ 870:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 225              		.loc 1 870 0
+ 226 00c4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 227              	.LCFI1:
+ 228 00c6 4746     		mov	r7, r8
+ 229 00c8 80B4     		push	{r7}
+ 230              	.LCFI2:
+ 231              	.LVL32:
+ 232 00ca 0D1C     		mov	r5, r1
+ 233 00cc 1204     		lsl	r2, r2, #16
+ 234              	.LVL33:
+ 235 00ce 120C     		lsr	r2, r2, #16
+ 236              	.LVL34:
+ 871:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *p;
+ 872:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t buf_copy_len;
+ 873:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t total_copy_len = len;
+ 874:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   u16_t copied_total = 0;
+ 875:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 876:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("pbuf_take: invalid buf", (buf != NULL), return 0;);
+ 237              		.loc 1 876 0
+ 238 00d0 0028     		cmp	r0, #0
+ 239 00d2 25D0     		beq	.L28
+ 240              	.LVL35:
+ 877:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ERROR("pbuf_take: invalid dataptr", (dataptr != NULL), return 0;);
+ 241              		.loc 1 877 0
+ 242 00d4 0029     		cmp	r1, #0
+ 243 00d6 23D0     		beq	.L28
+ 244              	.LVL36:
+ 878:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 879:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if ((buf == NULL) || (dataptr == NULL) || (buf->tot_len < len)) {
+ 245              		.loc 1 879 0
+ 246 00d8 0389     		ldrh	r3, [r0, #8]
+ 247 00da 9342     		cmp	r3, r2
+ 248 00dc 01D2     		bcs	.L29
+ 249 00de F620     		mov	r0, #246
+ 250              	.LVL37:
+ 251 00e0 1FE0     		b	.L30
+ 252              	.LVL38:
+ 253              	.L29:
+ 880:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return ERR_ARG;
+ 881:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 882:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 883:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   /* Note some systems use byte copy if dataptr or one of the pbuf payload pointers are unaligned. 
+ 884:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   for(p = buf; total_copy_len != 0; p = p->next) {
+ 254              		.loc 1 884 0
+ 255 00e2 002A     		cmp	r2, #0
+ 256 00e4 1CD0     		beq	.L28
+ 257 00e6 071C     		mov	r7, r0
+ 258              	.LVL39:
+ 259 00e8 161C     		mov	r6, r2
+ 260              	.LVL40:
+ 261 00ea 0023     		mov	r3, #0
+ 262 00ec 9846     		mov	r8, r3
+ 263              	.LVL41:
+ 264              	.L32:
+ 265 00ee 7A89     		ldrh	r2, [r7, #10]
+ 266              	.LVL42:
+ 267 00f0 341C     		add	r4, r6, #0
+ 268 00f2 1304     		lsl	r3, r2, #16
+ 269 00f4 1B0C     		lsr	r3, r3, #16
+ 270 00f6 9E42     		cmp	r6, r3
+ 271 00f8 00D9     		bls	.L31
+ 272              	.LVL43:
+ 273 00fa 141C     		add	r4, r2, #0
+ 274              	.LVL44:
+ 275              	.L31:
+ 276 00fc 2404     		lsl	r4, r4, #16
+ 277              	.LVL45:
+ 278 00fe 240C     		lsr	r4, r4, #16
+ 279              	.LVL46:
+ 885:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     LWIP_ASSERT("pbuf_take: invalid pbuf", p != NULL);
+ 886:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     buf_copy_len = total_copy_len;
+ 887:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     if (buf_copy_len > p->len) {
+ 888:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       /* this pbuf cannot hold all remaining data */
+ 889:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****       buf_copy_len = p->len;
+ 890:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     }
+ 891:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* copy the necessary parts of the buffer */
+ 892:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     MEMCPY(p->payload, &((char*)dataptr)[copied_total], buf_copy_len);
+ 280              		.loc 1 892 0
+ 281 0100 7868     		ldr	r0, [r7, #4]
+ 282              	.LVL47:
+ 283 0102 4346     		mov	r3, r8
+ 284 0104 E918     		add	r1, r5, r3
+ 285              	.LVL48:
+ 286 0106 221C     		mov	r2, r4
+ 287 0108 FFF7FEFF 		bl	memcpy
+ 893:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     total_copy_len -= buf_copy_len;
+ 288              		.loc 1 893 0
+ 289 010c 331B     		sub	r3, r6, r4
+ 290 010e 1B04     		lsl	r3, r3, #16
+ 291 0110 1E0C     		lsr	r6, r3, #16
+ 292              	.LVL49:
+ 894:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     copied_total += buf_copy_len;
+ 293              		.loc 1 894 0
+ 294 0112 4444     		add	r4, r4, r8
+ 295              	.LVL50:
+ 296 0114 2404     		lsl	r4, r4, #16
+ 297 0116 240C     		lsr	r4, r4, #16
+ 298 0118 A046     		mov	r8, r4
+ 299              	.LVL51:
+ 300              		.loc 1 884 0
+ 301 011a 3F68     		ldr	r7, [r7]
+ 302 011c 002E     		cmp	r6, #0
+ 303 011e E6D1     		bne	.L32
+ 304              	.LVL52:
+ 305              	.L28:
+ 306 0120 0020     		mov	r0, #0
+ 307              	.LVL53:
+ 308              	.L30:
+ 309 0122 0006     		lsl	r0, r0, #24
+ 310 0124 0016     		asr	r0, r0, #24
+ 895:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 896:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("did not copy all data", total_copy_len == 0 && copied_total == len);
+ 897:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return ERR_OK;
+ 898:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 311              		.loc 1 898 0
+ 312              		@ sp needed for prologue
+ 313              	.LVL54:
+ 314              	.LVL55:
+ 315              	.LVL56:
+ 316              	.LVL57:
+ 317 0126 04BC     		pop	{r2}
+ 318 0128 9046     		mov	r8, r2
+ 319 012a F0BC     		pop	{r4, r5, r6, r7}
+ 320 012c 02BC     		pop	{r1}
+ 321 012e 0847     		bx	r1
+ 322              	.LFE303:
+ 324              		.align	2
+ 325              		.global	pbuf_copy_partial
+ 326              		.code	16
+ 327              		.thumb_func
+ 329              	pbuf_copy_partial:
+ 330              	.LFB302:
+ 331              		.loc 1 822 0
+ 332 0130 F0B5     		push	{r4, r5, r6, r7, lr}
+ 333              	.LCFI3:
+ 334 0132 5746     		mov	r7, sl
+ 335 0134 4E46     		mov	r6, r9
+ 336 0136 4546     		mov	r5, r8
+ 337 0138 E0B4     		push	{r5, r6, r7}
+ 338              	.LCFI4:
+ 339              	.LVL58:
+ 340 013a 8A46     		mov	sl, r1
+ 341 013c 1204     		lsl	r2, r2, #16
+ 342              	.LVL59:
+ 343 013e 160C     		lsr	r6, r2, #16
+ 344              	.LVL60:
+ 345 0140 1B04     		lsl	r3, r3, #16
+ 346              	.LVL61:
+ 347 0142 1A0C     		lsr	r2, r3, #16
+ 348              	.LVL62:
+ 349              		.loc 1 828 0
+ 350 0144 0028     		cmp	r0, #0
+ 351 0146 32D0     		beq	.L36
+ 352              	.LVL63:
+ 353              		.loc 1 829 0
+ 354 0148 0029     		cmp	r1, #0
+ 355 014a 30D0     		beq	.L36
+ 356              	.LVL64:
+ 357              		.loc 1 838 0
+ 358 014c 002E     		cmp	r6, #0
+ 359 014e 2ED0     		beq	.L36
+ 360 0150 051C     		mov	r5, r0
+ 361              	.LVL65:
+ 362 0152 0027     		mov	r7, #0
+ 363              	.LVL66:
+ 364 0154 B846     		mov	r8, r7
+ 365              	.LVL67:
+ 366              		.loc 1 851 0
+ 367 0156 B946     		mov	r9, r7
+ 368              	.LVL68:
+ 369              	.L40:
+ 370              		.loc 1 839 0
+ 371 0158 002A     		cmp	r2, #0
+ 372 015a 06D0     		beq	.L37
+ 373              	.LVL69:
+ 374 015c 6B89     		ldrh	r3, [r5, #10]
+ 375 015e 9342     		cmp	r3, r2
+ 376 0160 03D8     		bhi	.L37
+ 377              		.loc 1 841 0
+ 378 0162 D31A     		sub	r3, r2, r3
+ 379 0164 1B04     		lsl	r3, r3, #16
+ 380 0166 1A0C     		lsr	r2, r3, #16
+ 381              	.LVL70:
+ 382 0168 1BE0     		b	.L38
+ 383              	.LVL71:
+ 384              	.L37:
+ 385              		.loc 1 844 0
+ 386 016a 6B89     		ldrh	r3, [r5, #10]
+ 387 016c 9B1A     		sub	r3, r3, r2
+ 388 016e 1B04     		lsl	r3, r3, #16
+ 389 0170 1C0C     		lsr	r4, r3, #16
+ 390              	.LVL72:
+ 391 0172 B442     		cmp	r4, r6
+ 392 0174 00D9     		bls	.L39
+ 393              	.LVL73:
+ 394 0176 341C     		add	r4, r6, #0
+ 395              	.LVL74:
+ 396              	.L39:
+ 397 0178 2404     		lsl	r4, r4, #16
+ 398              	.LVL75:
+ 399 017a 240C     		lsr	r4, r4, #16
+ 400              	.LVL76:
+ 401              		.loc 1 848 0
+ 402 017c 5346     		mov	r3, sl
+ 403 017e D819     		add	r0, r3, r7
+ 404              	.LVL77:
+ 405 0180 6968     		ldr	r1, [r5, #4]
+ 406              	.LVL78:
+ 407 0182 8918     		add	r1, r1, r2
+ 408 0184 221C     		mov	r2, r4
+ 409              	.LVL79:
+ 410 0186 FFF7FEFF 		bl	memcpy
+ 411              		.loc 1 849 0
+ 412 018a 4246     		mov	r2, r8
+ 413 018c A318     		add	r3, r4, r2
+ 414 018e 1B04     		lsl	r3, r3, #16
+ 415 0190 1B0C     		lsr	r3, r3, #16
+ 416 0192 9846     		mov	r8, r3
+ 417              	.LVL80:
+ 418              		.loc 1 850 0
+ 419 0194 E319     		add	r3, r4, r7
+ 420 0196 1B04     		lsl	r3, r3, #16
+ 421 0198 1F0C     		lsr	r7, r3, #16
+ 422              	.LVL81:
+ 423              		.loc 1 851 0
+ 424 019a 341B     		sub	r4, r6, r4
+ 425              	.LVL82:
+ 426 019c 2404     		lsl	r4, r4, #16
+ 427 019e 260C     		lsr	r6, r4, #16
+ 428              	.LVL83:
+ 429 01a0 4A46     		mov	r2, r9
+ 430              	.LVL84:
+ 431              	.L38:
+ 432              		.loc 1 838 0
+ 433 01a2 2D68     		ldr	r5, [r5]
+ 434 01a4 002E     		cmp	r6, #0
+ 435 01a6 04D0     		beq	.L42
+ 436 01a8 002D     		cmp	r5, #0
+ 437 01aa D5D1     		bne	.L40
+ 438 01ac 01E0     		b	.L42
+ 439              	.LVL85:
+ 440              	.L36:
+ 441 01ae 0023     		mov	r3, #0
+ 442 01b0 9846     		mov	r8, r3
+ 443              	.LVL86:
+ 444              	.L42:
+ 445              		.loc 1 856 0
+ 446 01b2 4046     		mov	r0, r8
+ 447              	.LVL87:
+ 448              		@ sp needed for prologue
+ 449              	.LVL88:
+ 450              	.LVL89:
+ 451              	.LVL90:
+ 452              	.LVL91:
+ 453              	.LVL92:
+ 454 01b4 1CBC     		pop	{r2, r3, r4}
+ 455 01b6 9046     		mov	r8, r2
+ 456 01b8 9946     		mov	r9, r3
+ 457 01ba A246     		mov	sl, r4
+ 458 01bc F0BC     		pop	{r4, r5, r6, r7}
+ 459 01be 02BC     		pop	{r1}
+ 460 01c0 0847     		bx	r1
+ 461              	.LFE302:
+ 463 01c2 C046     		.align	2
+ 464              		.global	pbuf_copy
+ 465              		.code	16
+ 466              		.thumb_func
+ 468              	pbuf_copy:
+ 469              	.LFB301:
+ 470              		.loc 1 756 0
+ 471 01c4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 472              	.LCFI5:
+ 473 01c6 5746     		mov	r7, sl
+ 474 01c8 4646     		mov	r6, r8
+ 475 01ca C0B4     		push	{r6, r7}
+ 476              	.LCFI6:
+ 477              	.LVL93:
+ 478 01cc 051C     		mov	r5, r0
+ 479 01ce 0C1C     		mov	r4, r1
+ 480              		.loc 1 763 0
+ 481 01d0 0028     		cmp	r0, #0
+ 482 01d2 46D0     		beq	.L46
+ 483              	.LVL94:
+ 484 01d4 0029     		cmp	r1, #0
+ 485 01d6 44D0     		beq	.L46
+ 486              	.LVL95:
+ 487 01d8 0289     		ldrh	r2, [r0, #8]
+ 488 01da 0B89     		ldrh	r3, [r1, #8]
+ 489 01dc 9A42     		cmp	r2, r3
+ 490 01de 40D3     		bcc	.L46
+ 491 01e0 0022     		mov	r2, #0
+ 492 01e2 9046     		mov	r8, r2
+ 493              	.LVL96:
+ 494 01e4 0027     		mov	r7, #0
+ 495              	.LVL97:
+ 496              		.loc 1 785 0
+ 497 01e6 BA46     		mov	sl, r7
+ 498              	.LVL98:
+ 499              	.L54:
+ 500              		.loc 1 771 0
+ 501 01e8 6889     		ldrh	r0, [r5, #10]
+ 502 01ea 6189     		ldrh	r1, [r4, #10]
+ 503 01ec 4346     		mov	r3, r8
+ 504 01ee C21A     		sub	r2, r0, r3
+ 505 01f0 CB1B     		sub	r3, r1, r7
+ 506 01f2 9A42     		cmp	r2, r3
+ 507 01f4 02DB     		blt	.L47
+ 508              	.LVL99:
+ 509              		.loc 1 773 0
+ 510 01f6 1B04     		lsl	r3, r3, #16
+ 511 01f8 1E0C     		lsr	r6, r3, #16
+ 512              	.LVL100:
+ 513 01fa 03E0     		b	.L48
+ 514              	.L47:
+ 515              		.loc 1 776 0
+ 516 01fc 4246     		mov	r2, r8
+ 517 01fe 831A     		sub	r3, r0, r2
+ 518 0200 1B04     		lsl	r3, r3, #16
+ 519 0202 1E0C     		lsr	r6, r3, #16
+ 520              	.L48:
+ 521              		.loc 1 778 0
+ 522 0204 6868     		ldr	r0, [r5, #4]
+ 523 0206 4044     		add	r0, r0, r8
+ 524 0208 6168     		ldr	r1, [r4, #4]
+ 525 020a C919     		add	r1, r1, r7
+ 526 020c 321C     		mov	r2, r6
+ 527 020e FFF7FEFF 		bl	memcpy
+ 528              		.loc 1 779 0
+ 529 0212 4246     		mov	r2, r8
+ 530 0214 B318     		add	r3, r6, r2
+ 531 0216 1B04     		lsl	r3, r3, #16
+ 532 0218 1B0C     		lsr	r3, r3, #16
+ 533 021a 9846     		mov	r8, r3
+ 534              	.LVL101:
+ 535              		.loc 1 780 0
+ 536 021c F319     		add	r3, r6, r7
+ 537 021e 1B04     		lsl	r3, r3, #16
+ 538 0220 1F0C     		lsr	r7, r3, #16
+ 539              	.LVL102:
+ 540              		.loc 1 782 0
+ 541 0222 6B89     		ldrh	r3, [r5, #10]
+ 542 0224 4345     		cmp	r3, r8
+ 543 0226 01D1     		bne	.L49
+ 544              		.loc 1 785 0
+ 545 0228 2D68     		ldr	r5, [r5]
+ 546 022a D046     		mov	r8, sl
+ 547              	.L49:
+ 548              		.loc 1 788 0
+ 549 022c 6389     		ldrh	r3, [r4, #10]
+ 550 022e BB42     		cmp	r3, r7
+ 551 0230 01D8     		bhi	.L50
+ 552              		.loc 1 791 0
+ 553 0232 2468     		ldr	r4, [r4]
+ 554 0234 5746     		mov	r7, sl
+ 555              	.LVL103:
+ 556              	.L50:
+ 557              		.loc 1 794 0
+ 558 0236 002C     		cmp	r4, #0
+ 559 0238 06D0     		beq	.L51
+ 560 023a 6289     		ldrh	r2, [r4, #10]
+ 561 023c 2389     		ldrh	r3, [r4, #8]
+ 562 023e 9A42     		cmp	r2, r3
+ 563 0240 02D1     		bne	.L51
+ 564              		.loc 1 796 0
+ 565 0242 2368     		ldr	r3, [r4]
+ 566 0244 002B     		cmp	r3, #0
+ 567 0246 0ED1     		bne	.L52
+ 568              	.L51:
+ 569              		.loc 1 799 0
+ 570 0248 002D     		cmp	r5, #0
+ 571 024a 06D0     		beq	.L53
+ 572 024c 6A89     		ldrh	r2, [r5, #10]
+ 573 024e 2B89     		ldrh	r3, [r5, #8]
+ 574 0250 9A42     		cmp	r2, r3
+ 575 0252 02D1     		bne	.L53
+ 576              		.loc 1 801 0
+ 577 0254 2B68     		ldr	r3, [r5]
+ 578 0256 002B     		cmp	r3, #0
+ 579 0258 05D1     		bne	.L52
+ 580              	.L53:
+ 581              		.loc 1 804 0
+ 582 025a 002C     		cmp	r4, #0
+ 583 025c C4D1     		bne	.L54
+ 584 025e 0020     		mov	r0, #0
+ 585 0260 02E0     		b	.L55
+ 586              	.LVL104:
+ 587              	.L46:
+ 588 0262 F620     		mov	r0, #246
+ 589              	.LVL105:
+ 590 0264 00E0     		b	.L55
+ 591              	.LVL106:
+ 592              	.L52:
+ 593 0266 F720     		mov	r0, #247
+ 594              	.LVL107:
+ 595              	.L55:
+ 596 0268 0006     		lsl	r0, r0, #24
+ 597 026a 0016     		asr	r0, r0, #24
+ 598              		.loc 1 807 0
+ 599              		@ sp needed for prologue
+ 600              	.LVL108:
+ 601              	.LVL109:
+ 602              	.LVL110:
+ 603              	.LVL111:
+ 604              	.LVL112:
+ 605              	.LVL113:
+ 606 026c 0CBC     		pop	{r2, r3}
+ 607 026e 9046     		mov	r8, r2
+ 608 0270 9A46     		mov	sl, r3
+ 609 0272 F0BC     		pop	{r4, r5, r6, r7}
+ 610 0274 02BC     		pop	{r1}
+ 611 0276 0847     		bx	r1
+ 612              	.LFE301:
+ 614              		.align	2
+ 615              		.global	pbuf_ref
+ 616              		.code	16
+ 617              		.thumb_func
+ 619              	pbuf_ref:
+ 620              	.LFB297:
+ 621              		.loc 1 627 0
+ 622 0278 10B5     		push	{r4, lr}
+ 623              	.LCFI7:
+ 624              	.LVL114:
+ 625 027a 041C     		mov	r4, r0
+ 626              		.loc 1 630 0
+ 627 027c 0028     		cmp	r0, #0
+ 628 027e 06D0     		beq	.L60
+ 629              		.loc 1 631 0
+ 630 0280 FFF7FEFF 		bl	sys_arch_protect
+ 631              	.LVL115:
+ 632              		.loc 1 632 0
+ 633 0284 E389     		ldrh	r3, [r4, #14]
+ 634 0286 0133     		add	r3, r3, #1
+ 635 0288 E381     		strh	r3, [r4, #14]
+ 636              		.loc 1 633 0
+ 637 028a FFF7FEFF 		bl	sys_arch_unprotect
+ 638              	.LVL116:
+ 639              	.L60:
+ 640              		.loc 1 635 0
+ 641              		@ sp needed for prologue
+ 642              	.LVL117:
+ 643 028e 10BC     		pop	{r4}
+ 644 0290 01BC     		pop	{r0}
+ 645 0292 0047     		bx	r0
+ 646              	.LFE297:
+ 648              		.align	2
+ 649              		.global	pbuf_chain
+ 650              		.code	16
+ 651              		.thumb_func
+ 653              	pbuf_chain:
+ 654              	.LFB299:
+ 655              		.loc 1 690 0
+ 656 0294 10B5     		push	{r4, lr}
+ 657              	.LCFI8:
+ 658              	.LVL118:
+ 659 0296 0C1C     		mov	r4, r1
+ 660              		.loc 1 691 0
+ 661 0298 FFF7FEFF 		bl	pbuf_cat
+ 662              	.LVL119:
+ 663              		.loc 1 693 0
+ 664 029c 201C     		mov	r0, r4
+ 665 029e FFF7FEFF 		bl	pbuf_ref
+ 666              		.loc 1 695 0
+ 667              		@ sp needed for prologue
+ 668              	.LVL120:
+ 669 02a2 10BC     		pop	{r4}
+ 670 02a4 01BC     		pop	{r0}
+ 671 02a6 0047     		bx	r0
+ 672              	.LFE299:
+ 674              		.align	2
+ 675              		.global	pbuf_free
+ 676              		.code	16
+ 677              		.thumb_func
+ 679              	pbuf_free:
+ 680              	.LFB295:
+ 681              		.loc 1 532 0
+ 682 02a8 70B5     		push	{r4, r5, r6, lr}
+ 683              	.LCFI9:
+ 684              	.LVL121:
+ 685 02aa 051C     		mov	r5, r0
+ 686              		.loc 1 537 0
+ 687 02ac 0028     		cmp	r0, #0
+ 688 02ae 28D0     		beq	.L64
+ 689 02b0 0026     		mov	r6, #0
+ 690              	.LVL122:
+ 691              	.L69:
+ 692              	.LBB2:
+ 693              		.loc 1 561 0
+ 694 02b2 FFF7FEFF 		bl	sys_arch_protect
+ 695              		.loc 1 565 0
+ 696 02b6 EC89     		ldrh	r4, [r5, #14]
+ 697              	.LVL123:
+ 698 02b8 013C     		sub	r4, r4, #1
+ 699 02ba 2404     		lsl	r4, r4, #16
+ 700 02bc 240C     		lsr	r4, r4, #16
+ 701 02be EC81     		strh	r4, [r5, #14]
+ 702              		.loc 1 566 0
+ 703 02c0 FFF7FEFF 		bl	sys_arch_unprotect
+ 704              		.loc 1 568 0
+ 705 02c4 002C     		cmp	r4, #0
+ 706 02c6 1DD1     		bne	.L65
+ 707              		.loc 1 570 0
+ 708 02c8 2C68     		ldr	r4, [r5]
+ 709              	.LVL124:
+ 710              		.loc 1 572 0
+ 711 02ca 2B7B     		ldrb	r3, [r5, #12]
+ 712              	.LVL125:
+ 713              		.loc 1 574 0
+ 714 02cc 032B     		cmp	r3, #3
+ 715 02ce 04D1     		bne	.L66
+ 716              		.loc 1 575 0
+ 717 02d0 0D20     		mov	r0, #13
+ 718 02d2 291C     		mov	r1, r5
+ 719 02d4 FFF7FEFF 		bl	memp_free
+ 720              	.LVL126:
+ 721 02d8 0CE0     		b	.L67
+ 722              	.LVL127:
+ 723              	.L66:
+ 724              		.loc 1 577 0
+ 725 02da 013B     		sub	r3, r3, #1
+ 726              	.LVL128:
+ 727 02dc 1B04     		lsl	r3, r3, #16
+ 728 02de 1B0C     		lsr	r3, r3, #16
+ 729 02e0 012B     		cmp	r3, #1
+ 730 02e2 04D8     		bhi	.L68
+ 731              		.loc 1 578 0
+ 732 02e4 0C20     		mov	r0, #12
+ 733 02e6 291C     		mov	r1, r5
+ 734 02e8 FFF7FEFF 		bl	memp_free
+ 735 02ec 02E0     		b	.L67
+ 736              	.L68:
+ 737              		.loc 1 581 0
+ 738 02ee 281C     		mov	r0, r5
+ 739 02f0 FFF7FEFF 		bl	mem_free
+ 740              	.L67:
+ 741              		.loc 1 583 0
+ 742 02f4 731C     		add	r3, r6, #1
+ 743 02f6 1B06     		lsl	r3, r3, #24
+ 744 02f8 1E0E     		lsr	r6, r3, #24
+ 745              	.LVL129:
+ 746              	.LBE2:
+ 747              		.loc 1 555 0
+ 748 02fa 002C     		cmp	r4, #0
+ 749 02fc 02D0     		beq	.L65
+ 750 02fe 251C     		mov	r5, r4
+ 751 0300 D7E7     		b	.L69
+ 752              	.LVL130:
+ 753              	.L64:
+ 754 0302 0026     		mov	r6, #0
+ 755              	.LVL131:
+ 756              	.L65:
+ 757              		.loc 1 597 0
+ 758 0304 301C     		mov	r0, r6
+ 759              		@ sp needed for prologue
+ 760              	.LVL132:
+ 761              	.LVL133:
+ 762              	.LVL134:
+ 763 0306 70BC     		pop	{r4, r5, r6}
+ 764 0308 02BC     		pop	{r1}
+ 765 030a 0847     		bx	r1
+ 766              	.LFE295:
+ 768              		.align	2
+ 769              		.global	pbuf_dechain
+ 770              		.code	16
+ 771              		.thumb_func
+ 773              	pbuf_dechain:
+ 774              	.LFB300:
+ 775              		.loc 1 707 0
+ 776 030c 10B5     		push	{r4, lr}
+ 777              	.LCFI10:
+ 778              	.LVL135:
+ 779              		.loc 1 711 0
+ 780 030e 0468     		ldr	r4, [r0]
+ 781              	.LVL136:
+ 782              		.loc 1 713 0
+ 783 0310 002C     		cmp	r4, #0
+ 784 0312 0DD0     		beq	.L72
+ 785              		.loc 1 717 0
+ 786 0314 0389     		ldrh	r3, [r0, #8]
+ 787 0316 4289     		ldrh	r2, [r0, #10]
+ 788 0318 9B1A     		sub	r3, r3, r2
+ 789 031a 2381     		strh	r3, [r4, #8]
+ 790              		.loc 1 719 0
+ 791 031c 0023     		mov	r3, #0
+ 792 031e 0360     		str	r3, [r0]
+ 793              		.loc 1 721 0
+ 794 0320 4389     		ldrh	r3, [r0, #10]
+ 795 0322 0381     		strh	r3, [r0, #8]
+ 796              		.loc 1 724 0
+ 797 0324 201C     		mov	r0, r4
+ 798              	.LVL137:
+ 799 0326 FFF7FEFF 		bl	pbuf_free
+ 800              		.loc 1 733 0
+ 801 032a 0028     		cmp	r0, #0
+ 802 032c 00D0     		beq	.L72
+ 803 032e 0024     		mov	r4, #0
+ 804              	.LVL138:
+ 805              	.L72:
+ 806              		.loc 1 734 0
+ 807 0330 201C     		mov	r0, r4
+ 808              	.LVL139:
+ 809              		@ sp needed for prologue
+ 810              	.LVL140:
+ 811 0332 10BC     		pop	{r4}
+ 812 0334 02BC     		pop	{r1}
+ 813 0336 0847     		bx	r1
+ 814              	.LFE300:
+ 816              		.align	2
+ 817              		.global	pbuf_realloc
+ 818              		.code	16
+ 819              		.thumb_func
+ 821              	pbuf_realloc:
+ 822              	.LFB293:
+ 823              		.loc 1 344 0
+ 824 0338 30B5     		push	{r4, r5, lr}
+ 825              	.LCFI11:
+ 826              	.LVL141:
+ 827 033a 0904     		lsl	r1, r1, #16
+ 828              	.LVL142:
+ 829 033c 090C     		lsr	r1, r1, #16
+ 830              	.LVL143:
+ 831              		.loc 1 356 0
+ 832 033e 0289     		ldrh	r2, [r0, #8]
+ 833 0340 8A42     		cmp	r2, r1
+ 834 0342 2AD9     		bls	.L81
+ 835              		.loc 1 363 0
+ 836 0344 8B1A     		sub	r3, r1, r2
+ 837              	.LVL144:
+ 838              		.loc 1 369 0
+ 839 0346 4289     		ldrh	r2, [r0, #10]
+ 840 0348 9142     		cmp	r1, r2
+ 841 034a 02D8     		bhi	.L76
+ 842 034c 041C     		mov	r4, r0
+ 843              	.LVL145:
+ 844 034e 0D1C     		mov	r5, r1
+ 845              	.LVL146:
+ 846 0350 0CE0     		b	.L77
+ 847              	.LVL147:
+ 848              	.L76:
+ 849 0352 041C     		mov	r4, r0
+ 850              	.LVL148:
+ 851 0354 0D1C     		mov	r5, r1
+ 852              	.LVL149:
+ 853              		.loc 1 374 0
+ 854 0356 191C     		add	r1, r3, #0
+ 855              	.LVL150:
+ 856              	.L78:
+ 857              		.loc 1 371 0
+ 858 0358 AB1A     		sub	r3, r5, r2
+ 859 035a 1B04     		lsl	r3, r3, #16
+ 860 035c 1D0C     		lsr	r5, r3, #16
+ 861              	.LVL151:
+ 862              		.loc 1 374 0
+ 863 035e 2389     		ldrh	r3, [r4, #8]
+ 864 0360 CB18     		add	r3, r1, r3
+ 865 0362 2381     		strh	r3, [r4, #8]
+ 866              		.loc 1 376 0
+ 867 0364 2468     		ldr	r4, [r4]
+ 868              		.loc 1 369 0
+ 869 0366 6289     		ldrh	r2, [r4, #10]
+ 870 0368 AA42     		cmp	r2, r5
+ 871 036a F5D3     		bcc	.L78
+ 872              	.LVL152:
+ 873              	.L77:
+ 874              		.loc 1 384 0
+ 875 036c 237B     		ldrb	r3, [r4, #12]
+ 876 036e 002B     		cmp	r3, #0
+ 877 0370 0AD1     		bne	.L79
+ 878 0372 9542     		cmp	r5, r2
+ 879 0374 08D0     		beq	.L79
+ 880              		.loc 1 386 0
+ 881 0376 A188     		ldrh	r1, [r4, #4]
+ 882              	.LVL153:
+ 883 0378 6918     		add	r1, r5, r1
+ 884 037a 091B     		sub	r1, r1, r4
+ 885 037c 0904     		lsl	r1, r1, #16
+ 886 037e 090C     		lsr	r1, r1, #16
+ 887 0380 201C     		mov	r0, r4
+ 888              	.LVL154:
+ 889 0382 FFF7FEFF 		bl	mem_realloc
+ 890 0386 041C     		mov	r4, r0
+ 891              	.LVL155:
+ 892              	.L79:
+ 893              		.loc 1 390 0
+ 894 0388 6581     		strh	r5, [r4, #10]
+ 895              		.loc 1 391 0
+ 896 038a 2581     		strh	r5, [r4, #8]
+ 897              		.loc 1 394 0
+ 898 038c 2068     		ldr	r0, [r4]
+ 899              	.LVL156:
+ 900 038e 0028     		cmp	r0, #0
+ 901 0390 01D0     		beq	.L80
+ 902              		.loc 1 396 0
+ 903 0392 FFF7FEFF 		bl	pbuf_free
+ 904              	.LVL157:
+ 905              	.L80:
+ 906              		.loc 1 399 0
+ 907 0396 0023     		mov	r3, #0
+ 908 0398 2360     		str	r3, [r4]
+ 909              	.LVL158:
+ 910              	.L81:
+ 911              		.loc 1 401 0
+ 912              		@ sp needed for prologue
+ 913              	.LVL159:
+ 914              	.LVL160:
+ 915 039a 30BC     		pop	{r4, r5}
+ 916 039c 01BC     		pop	{r0}
+ 917 039e 0047     		bx	r0
+ 918              	.LFE293:
+ 920              		.align	2
+ 921              		.code	16
+ 922              		.thumb_func
+ 924              	pbuf_pool_is_empty:
+ 925              	.LFB291:
+ 926              		.loc 1 129 0
+ 927 03a0 10B5     		push	{r4, lr}
+ 928              	.LCFI12:
+ 929              		.loc 1 133 0
+ 930 03a2 FFF7FEFF 		bl	sys_arch_protect
+ 931              		.loc 1 134 0
+ 932 03a6 0D4A     		ldr	r2, .L86
+ 933 03a8 1478     		ldrb	r4, [r2]
+ 934              	.LVL161:
+ 935              		.loc 1 135 0
+ 936 03aa 0123     		mov	r3, #1
+ 937 03ac 1370     		strb	r3, [r2]
+ 938              		.loc 1 136 0
+ 939 03ae FFF7FEFF 		bl	sys_arch_unprotect
+ 940              		.loc 1 138 0
+ 941 03b2 002C     		cmp	r4, #0
+ 942 03b4 0ED1     		bne	.L85
+ 943              		.loc 1 140 0
+ 944 03b6 0A48     		ldr	r0, .L86+4
+ 945 03b8 0021     		mov	r1, #0
+ 946 03ba 0022     		mov	r2, #0
+ 947 03bc FFF7FEFF 		bl	tcpip_callback_with_block
+ 948 03c0 0006     		lsl	r0, r0, #24
+ 949 03c2 0028     		cmp	r0, #0
+ 950 03c4 06D0     		beq	.L85
+ 951              		.loc 1 141 0
+ 952 03c6 FFF7FEFF 		bl	sys_arch_protect
+ 953              		.loc 1 142 0
+ 954 03ca 044A     		ldr	r2, .L86
+ 955 03cc 0023     		mov	r3, #0
+ 956 03ce 1370     		strb	r3, [r2]
+ 957              		.loc 1 143 0
+ 958 03d0 FFF7FEFF 		bl	sys_arch_unprotect
+ 959              	.L85:
+ 960              		.loc 1 146 0
+ 961              		@ sp needed for prologue
+ 962              	.LVL162:
+ 963 03d4 10BC     		pop	{r4}
+ 964 03d6 01BC     		pop	{r0}
+ 965 03d8 0047     		bx	r0
+ 966              	.L87:
+ 967 03da C046     		.align	2
+ 968              	.L86:
+ 969 03dc 00000000 		.word	pbuf_free_ooseq_queued
+ 970 03e0 00000000 		.word	pbuf_free_ooseq
+ 971              	.LFE291:
+ 973              		.align	2
+ 974              		.global	pbuf_alloc
+ 975              		.code	16
+ 976              		.thumb_func
+ 978              	pbuf_alloc:
+ 979              	.LFB292:
+ 980              		.loc 1 183 0
+ 981 03e4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 982              	.LCFI13:
+ 983 03e6 5746     		mov	r7, sl
+ 984 03e8 4E46     		mov	r6, r9
+ 985 03ea 4546     		mov	r5, r8
+ 986 03ec E0B4     		push	{r5, r6, r7}
+ 987              	.LCFI14:
+ 988              	.LVL163:
+ 989 03ee 141C     		mov	r4, r2
+ 990 03f0 0904     		lsl	r1, r1, #16
+ 991              	.LVL164:
+ 992 03f2 0E0C     		lsr	r6, r1, #16
+ 993              	.LVL165:
+ 994              		.loc 1 191 0
+ 995 03f4 0128     		cmp	r0, #1
+ 996 03f6 0CD0     		beq	.L91
+ 997              	.LVL166:
+ 998 03f8 0028     		cmp	r0, #0
+ 999 03fa 08D0     		beq	.L90
+ 1000 03fc 0228     		cmp	r0, #2
+ 1001 03fe 04D0     		beq	.L92
+ 1002 0400 0328     		cmp	r0, #3
+ 1003 0402 00D0     		beq	.LCB936
+ 1004 0404 8CE0     		b	.L89	@long jump
+ 1005              	.LCB936:
+ 1006 0406 0027     		mov	r7, #0
+ 1007              	.LVL167:
+ 1008 0408 08E0     		b	.L94
+ 1009              	.LVL168:
+ 1010              	.L92:
+ 1011 040a 0023     		mov	r3, #0
+ 1012              	.LVL169:
+ 1013 040c 03E0     		b	.L95
+ 1014              	.LVL170:
+ 1015              	.L90:
+ 1016 040e 1423     		mov	r3, #20
+ 1017              	.LVL171:
+ 1018 0410 00E0     		b	.L96
+ 1019              	.LVL172:
+ 1020              	.L91:
+ 1021 0412 0023     		mov	r3, #0
+ 1022              	.LVL173:
+ 1023              	.L96:
+ 1024              		.loc 1 198 0
+ 1025 0414 1433     		add	r3, r3, #20
+ 1026              	.LVL174:
+ 1027              	.L95:
+ 1028              		.loc 1 202 0
+ 1029 0416 1033     		add	r3, r3, #16
+ 1030              	.LVL175:
+ 1031 0418 1B04     		lsl	r3, r3, #16
+ 1032 041a 1F0C     		lsr	r7, r3, #16
+ 1033              	.LVL176:
+ 1034              	.L94:
+ 1035              		.loc 1 211 0
+ 1036 041c 022C     		cmp	r4, #2
+ 1037 041e 02D8     		bhi	.L100
+ 1038 0420 002C     		cmp	r4, #0
+ 1039 0422 6CD1     		bne	.L98
+ 1040 0424 51E0     		b	.L111
+ 1041              	.L100:
+ 1042 0426 032C     		cmp	r4, #3
+ 1043 0428 7AD1     		bne	.L89
+ 1044              		.loc 1 214 0
+ 1045 042a 0D20     		mov	r0, #13
+ 1046              	.LVL177:
+ 1047 042c FFF7FEFF 		bl	memp_malloc
+ 1048 0430 051C     		mov	r5, r0
+ 1049              	.LVL178:
+ 1050              		.loc 1 216 0
+ 1051 0432 0028     		cmp	r0, #0
+ 1052 0434 02D1     		bne	.L101
+ 1053              	.LVL179:
+ 1054              		.loc 1 217 0
+ 1055 0436 FFF7B3FF 		bl	pbuf_pool_is_empty
+ 1056              	.LVL180:
+ 1057 043a 72E0     		b	.L102
+ 1058              	.LVL181:
+ 1059              	.L101:
+ 1060              		.loc 1 220 0
+ 1061 043c 0322     		mov	r2, #3
+ 1062 043e 0273     		strb	r2, [r0, #12]
+ 1063              		.loc 1 221 0
+ 1064 0440 0023     		mov	r3, #0
+ 1065 0442 0360     		str	r3, [r0]
+ 1066              		.loc 1 224 0
+ 1067 0444 3B1C     		mov	r3, r7
+ 1068 0446 1333     		add	r3, r3, #19
+ 1069 0448 C318     		add	r3, r0, r3
+ 1070 044a 9343     		bic	r3, r3, r2
+ 1071 044c 4360     		str	r3, [r0, #4]
+ 1072              		.loc 1 228 0
+ 1073 044e 0681     		strh	r6, [r0, #8]
+ 1074              		.loc 1 230 0
+ 1075 0450 311C     		mov	r1, r6
+ 1076 0452 FB1C     		add	r3, r7, #3
+ 1077 0454 9343     		bic	r3, r3, r2
+ 1078 0456 C822     		mov	r2, #200
+ 1079 0458 D01A     		sub	r0, r2, r3
+ 1080              	.LVL182:
+ 1081 045a 8842     		cmp	r0, r1
+ 1082 045c 00DD     		ble	.L103
+ 1083 045e 301C     		mov	r0, r6
+ 1084              	.LVL183:
+ 1085              	.L103:
+ 1086 0460 6881     		strh	r0, [r5, #10]
+ 1087              		.loc 1 237 0
+ 1088 0462 0123     		mov	r3, #1
+ 1089 0464 EB81     		strh	r3, [r5, #14]
+ 1090              		.loc 1 244 0
+ 1091 0466 6B89     		ldrh	r3, [r5, #10]
+ 1092 0468 CC1A     		sub	r4, r1, r3
+ 1093              	.LVL184:
+ 1094              		.loc 1 246 0
+ 1095 046a 002C     		cmp	r4, #0
+ 1096 046c 53DD     		ble	.L104
+ 1097 046e 2E1C     		mov	r6, r5
+ 1098              	.LVL185:
+ 1099              		.loc 1 255 0
+ 1100 0470 0323     		mov	r3, #3
+ 1101 0472 9A46     		mov	sl, r3
+ 1102              		.loc 1 256 0
+ 1103 0474 0027     		mov	r7, #0
+ 1104              	.LVL186:
+ 1105              		.loc 1 264 0
+ 1106 0476 C823     		mov	r3, #200
+ 1107 0478 9946     		mov	r9, r3
+ 1108              		.loc 1 271 0
+ 1109 047a 0123     		mov	r3, #1
+ 1110 047c 9846     		mov	r8, r3
+ 1111              	.LVL187:
+ 1112              	.L108:
+ 1113              		.loc 1 247 0
+ 1114 047e 0D20     		mov	r0, #13
+ 1115              	.LVL188:
+ 1116 0480 FFF7FEFF 		bl	memp_malloc
+ 1117              		.loc 1 248 0
+ 1118 0484 0028     		cmp	r0, #0
+ 1119 0486 06D1     		bne	.L105
+ 1120              	.LVL189:
+ 1121              		.loc 1 249 0
+ 1122 0488 FFF78AFF 		bl	pbuf_pool_is_empty
+ 1123              	.LVL190:
+ 1124              		.loc 1 251 0
+ 1125 048c 281C     		mov	r0, r5
+ 1126 048e FFF7FEFF 		bl	pbuf_free
+ 1127 0492 0025     		mov	r5, #0
+ 1128 0494 45E0     		b	.L102
+ 1129              	.LVL191:
+ 1130              	.L105:
+ 1131              		.loc 1 255 0
+ 1132 0496 5346     		mov	r3, sl
+ 1133 0498 0373     		strb	r3, [r0, #12]
+ 1134              		.loc 1 256 0
+ 1135 049a 4773     		strb	r7, [r0, #13]
+ 1136              		.loc 1 257 0
+ 1137 049c 0760     		str	r7, [r0]
+ 1138              		.loc 1 259 0
+ 1139 049e 3060     		str	r0, [r6]
+ 1140              		.loc 1 262 0
+ 1141 04a0 2304     		lsl	r3, r4, #16
+ 1142 04a2 1B0C     		lsr	r3, r3, #16
+ 1143 04a4 0381     		strh	r3, [r0, #8]
+ 1144              		.loc 1 264 0
+ 1145 04a6 C72B     		cmp	r3, #199
+ 1146 04a8 01D9     		bls	.L106
+ 1147 04aa 4B46     		mov	r3, r9
+ 1148 04ac 01E0     		b	.L107
+ 1149              	.L106:
+ 1150 04ae 2304     		lsl	r3, r4, #16
+ 1151 04b0 1B0C     		lsr	r3, r3, #16
+ 1152              	.L107:
+ 1153 04b2 4381     		strh	r3, [r0, #10]
+ 1154              		.loc 1 265 0
+ 1155 04b4 031C     		mov	r3, r0
+ 1156 04b6 1033     		add	r3, r3, #16
+ 1157 04b8 4360     		str	r3, [r0, #4]
+ 1158              		.loc 1 271 0
+ 1159 04ba 4346     		mov	r3, r8
+ 1160 04bc C381     		strh	r3, [r0, #14]
+ 1161              		.loc 1 273 0
+ 1162 04be 4389     		ldrh	r3, [r0, #10]
+ 1163 04c0 E41A     		sub	r4, r4, r3
+ 1164              		.loc 1 246 0
+ 1165 04c2 002C     		cmp	r4, #0
+ 1166 04c4 27DD     		ble	.L104
+ 1167 04c6 061C     		mov	r6, r0
+ 1168 04c8 D9E7     		b	.L108
+ 1169              	.LVL192:
+ 1170              	.L111:
+ 1171              		.loc 1 283 0
+ 1172 04ca 381C     		mov	r0, r7
+ 1173              	.LVL193:
+ 1174 04cc 1330     		add	r0, r0, #19
+ 1175 04ce 0322     		mov	r2, #3
+ 1176 04d0 F31C     		add	r3, r6, #3
+ 1177 04d2 9043     		bic	r0, r0, r2
+ 1178 04d4 9343     		bic	r3, r3, r2
+ 1179 04d6 C018     		add	r0, r0, r3
+ 1180 04d8 0004     		lsl	r0, r0, #16
+ 1181 04da 000C     		lsr	r0, r0, #16
+ 1182 04dc FFF7FEFF 		bl	mem_malloc
+ 1183 04e0 051C     		mov	r5, r0
+ 1184              	.LVL194:
+ 1185              		.loc 1 284 0
+ 1186 04e2 0028     		cmp	r0, #0
+ 1187 04e4 1DD0     		beq	.L102
+ 1188              	.LVL195:
+ 1189              		.loc 1 288 0
+ 1190 04e6 3B1C     		mov	r3, r7
+ 1191 04e8 1333     		add	r3, r3, #19
+ 1192 04ea C318     		add	r3, r0, r3
+ 1193 04ec 0322     		mov	r2, #3
+ 1194 04ee 9343     		bic	r3, r3, r2
+ 1195 04f0 4360     		str	r3, [r0, #4]
+ 1196              		.loc 1 289 0
+ 1197 04f2 0681     		strh	r6, [r0, #8]
+ 1198 04f4 4681     		strh	r6, [r0, #10]
+ 1199              		.loc 1 290 0
+ 1200 04f6 0023     		mov	r3, #0
+ 1201 04f8 0360     		str	r3, [r0]
+ 1202              		.loc 1 291 0
+ 1203 04fa 0373     		strb	r3, [r0, #12]
+ 1204 04fc 0BE0     		b	.L104
+ 1205              	.LVL196:
+ 1206              	.L98:
+ 1207              		.loc 1 301 0
+ 1208 04fe 0C20     		mov	r0, #12
+ 1209              	.LVL197:
+ 1210 0500 FFF7FEFF 		bl	memp_malloc
+ 1211 0504 051C     		mov	r5, r0
+ 1212              	.LVL198:
+ 1213              		.loc 1 302 0
+ 1214 0506 0028     		cmp	r0, #0
+ 1215 0508 0BD0     		beq	.L102
+ 1216              	.LVL199:
+ 1217              		.loc 1 309 0
+ 1218 050a 0023     		mov	r3, #0
+ 1219 050c 4360     		str	r3, [r0, #4]
+ 1220              		.loc 1 310 0
+ 1221 050e 0681     		strh	r6, [r0, #8]
+ 1222 0510 4681     		strh	r6, [r0, #10]
+ 1223              		.loc 1 311 0
+ 1224 0512 0360     		str	r3, [r0]
+ 1225              		.loc 1 312 0
+ 1226 0514 0473     		strb	r4, [r0, #12]
+ 1227              	.LVL200:
+ 1228              	.L104:
+ 1229              		.loc 1 319 0
+ 1230 0516 0123     		mov	r3, #1
+ 1231 0518 EB81     		strh	r3, [r5, #14]
+ 1232              		.loc 1 321 0
+ 1233 051a 0023     		mov	r3, #0
+ 1234 051c 6B73     		strb	r3, [r5, #13]
+ 1235 051e 00E0     		b	.L102
+ 1236              	.LVL201:
+ 1237              	.L89:
+ 1238              		.loc 1 323 0
+ 1239 0520 0025     		mov	r5, #0
+ 1240              	.LVL202:
+ 1241              	.L102:
+ 1242              		.loc 1 324 0
+ 1243 0522 281C     		mov	r0, r5
+ 1244              	.LVL203:
+ 1245              		@ sp needed for prologue
+ 1246              	.LVL204:
+ 1247              	.LVL205:
+ 1248              	.LVL206:
+ 1249              	.LVL207:
+ 1250 0524 1CBC     		pop	{r2, r3, r4}
+ 1251 0526 9046     		mov	r8, r2
+ 1252 0528 9946     		mov	r9, r3
+ 1253 052a A246     		mov	sl, r4
+ 1254 052c F0BC     		pop	{r4, r5, r6, r7}
+ 1255 052e 02BC     		pop	{r1}
+ 1256 0530 0847     		bx	r1
+ 1257              	.LFE292:
+ 1259 0532 C046     		.align	2
+ 1260              		.global	pbuf_coalesce
+ 1261              		.code	16
+ 1262              		.thumb_func
+ 1264              	pbuf_coalesce:
+ 1265              	.LFB304:
+ 899:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** 
+ 900:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** /**
+ 901:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * Creates a single pbuf out of a queue of pbufs.
+ 902:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 903:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @remark: The source pbuf 'p' is not freed by this function because that can
+ 904:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *          be illegal in some places!
+ 905:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 906:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param p the source pbuf
+ 907:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @param layer pbuf_layer of the new pbuf
+ 908:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *
+ 909:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  * @return a new, single pbuf (p->next is NULL)
+ 910:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  *         or the old pbuf if allocation fails
+ 911:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****  */
+ 912:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** struct pbuf*
+ 913:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** pbuf_coalesce(struct pbuf *p, pbuf_layer layer)
+ 914:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** {
+ 1266              		.loc 1 914 0
+ 1267 0534 30B5     		push	{r4, r5, lr}
+ 1268              	.LCFI15:
+ 1269              	.LVL208:
+ 1270 0536 051C     		mov	r5, r0
+ 1271 0538 081C     		mov	r0, r1
+ 1272              	.LVL209:
+ 915:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   struct pbuf *q;
+ 916:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   err_t err;
+ 917:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (p->next == NULL) {
+ 1273              		.loc 1 917 0
+ 1274 053a 2B68     		ldr	r3, [r5]
+ 1275 053c 002B     		cmp	r3, #0
+ 1276 053e 0DD0     		beq	.L113
+ 1277              	.LVL210:
+ 918:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return p;
+ 919:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 920:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   q = pbuf_alloc(layer, p->tot_len, PBUF_RAM);
+ 1278              		.loc 1 920 0
+ 1279 0540 2989     		ldrh	r1, [r5, #8]
+ 1280 0542 0022     		mov	r2, #0
+ 1281 0544 FFF7FEFF 		bl	pbuf_alloc
+ 1282              	.LVL211:
+ 1283 0548 041C     		mov	r4, r0
+ 1284              	.LVL212:
+ 921:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   if (q == NULL) {
+ 1285              		.loc 1 921 0
+ 1286 054a 0028     		cmp	r0, #0
+ 1287 054c 06D0     		beq	.L113
+ 1288              	.LVL213:
+ 922:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     /* @todo: what do we do now? */
+ 923:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****     return p;
+ 924:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   }
+ 925:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   err = pbuf_copy(q, p);
+ 1289              		.loc 1 925 0
+ 1290 054e 291C     		mov	r1, r5
+ 1291 0550 FFF7FEFF 		bl	pbuf_copy
+ 1292              	.LVL214:
+ 926:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   LWIP_ASSERT("pbuf_copy failed", err == ERR_OK);
+ 927:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   pbuf_free(p);
+ 1293              		.loc 1 927 0
+ 1294 0554 281C     		mov	r0, r5
+ 1295 0556 FFF7FEFF 		bl	pbuf_free
+ 1296 055a 251C     		mov	r5, r4
+ 1297              	.LVL215:
+ 1298              	.L113:
+ 928:rtos/common/ethernet/lwIP_132/src/core/pbuf.c ****   return q;
+ 929:rtos/common/ethernet/lwIP_132/src/core/pbuf.c **** }
+ 1299              		.loc 1 929 0
+ 1300 055c 281C     		mov	r0, r5
+ 1301              	.LVL216:
+ 1302              		@ sp needed for prologue
+ 1303              	.LVL217:
+ 1304              	.LVL218:
+ 1305 055e 30BC     		pop	{r4, r5}
+ 1306 0560 02BC     		pop	{r1}
+ 1307 0562 0847     		bx	r1
+ 1308              	.LFE304:
+ 1310              		.align	2
+ 1311              		.code	16
+ 1312              		.thumb_func
+ 1314              	pbuf_free_ooseq:
+ 1315              	.LFB290:
+ 1316              		.loc 1 106 0
+ 1317 0564 10B5     		push	{r4, lr}
+ 1318              	.LCFI16:
+ 1319              	.LVL219:
+ 1320              		.loc 1 111 0
+ 1321 0566 FFF7FEFF 		bl	sys_arch_protect
+ 1322              	.LVL220:
+ 1323              		.loc 1 112 0
+ 1324 056a 0F4A     		ldr	r2, .L124
+ 1325 056c 0023     		mov	r3, #0
+ 1326 056e 1370     		strb	r3, [r2]
+ 1327              		.loc 1 113 0
+ 1328 0570 FFF7FEFF 		bl	sys_arch_unprotect
+ 1329              		.loc 1 115 0
+ 1330 0574 0D4B     		ldr	r3, .L124+4
+ 1331 0576 1C68     		ldr	r4, [r3]
+ 1332              	.LVL221:
+ 1333 0578 002C     		cmp	r4, #0
+ 1334 057a 11D0     		beq	.L120
+ 1335              		.loc 1 116 0
+ 1336 057c 8023     		mov	r3, #128
+ 1337 057e E058     		ldr	r0, [r4, r3]
+ 1338 0580 0028     		cmp	r0, #0
+ 1339 0582 09D0     		beq	.L123
+ 1340 0584 02E0     		b	.L117
+ 1341              	.L119:
+ 1342 0586 E058     		ldr	r0, [r4, r3]
+ 1343 0588 0028     		cmp	r0, #0
+ 1344 058a 06D0     		beq	.L121
+ 1345              	.L117:
+ 1346              		.loc 1 119 0
+ 1347 058c FFF7FEFF 		bl	tcp_segs_free
+ 1348              		.loc 1 120 0
+ 1349 0590 0022     		mov	r2, #0
+ 1350 0592 8023     		mov	r3, #128
+ 1351 0594 E250     		str	r2, [r4, r3]
+ 1352 0596 03E0     		b	.L120
+ 1353              	.L123:
+ 1354              		.loc 1 116 0
+ 1355 0598 8023     		mov	r3, #128
+ 1356              	.L121:
+ 1357              		.loc 1 115 0
+ 1358 059a E468     		ldr	r4, [r4, #12]
+ 1359 059c 002C     		cmp	r4, #0
+ 1360 059e F2D1     		bne	.L119
+ 1361              	.L120:
+ 1362              		.loc 1 124 0
+ 1363              		@ sp needed for prologue
+ 1364              	.LVL222:
+ 1365 05a0 10BC     		pop	{r4}
+ 1366 05a2 01BC     		pop	{r0}
+ 1367 05a4 0047     		bx	r0
+ 1368              	.L125:
+ 1369 05a6 C046     		.align	2
+ 1370              	.L124:
+ 1371 05a8 00000000 		.word	pbuf_free_ooseq_queued
+ 1372 05ac 00000000 		.word	tcp_active_pcbs
+ 1373              	.LFE290:
+ 1375              		.bss
+ 1376              	pbuf_free_ooseq_queued:
+ 1377 0000 00       		.space	1
+ 1684              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 pbuf.c
+     /tmp/ccJzxeyt.s:1      .text:00000000 $t
+     /tmp/ccJzxeyt.s:16     .text:00000000 pbuf_header
+     /tmp/ccJzxeyt.s:137    .text:0000007c pbuf_clen
+     /tmp/ccJzxeyt.s:177    .text:00000098 pbuf_cat
+     /tmp/ccJzxeyt.s:223    .text:000000c4 pbuf_take
+     /tmp/ccJzxeyt.s:329    .text:00000130 pbuf_copy_partial
+     /tmp/ccJzxeyt.s:468    .text:000001c4 pbuf_copy
+     /tmp/ccJzxeyt.s:619    .text:00000278 pbuf_ref
+     /tmp/ccJzxeyt.s:653    .text:00000294 pbuf_chain
+     /tmp/ccJzxeyt.s:679    .text:000002a8 pbuf_free
+     /tmp/ccJzxeyt.s:773    .text:0000030c pbuf_dechain
+     /tmp/ccJzxeyt.s:821    .text:00000338 pbuf_realloc
+     /tmp/ccJzxeyt.s:924    .text:000003a0 pbuf_pool_is_empty
+     /tmp/ccJzxeyt.s:969    .text:000003dc $d
+     /tmp/ccJzxeyt.s:1376   .bss:00000000 pbuf_free_ooseq_queued
+     /tmp/ccJzxeyt.s:1314   .text:00000564 pbuf_free_ooseq
+     /tmp/ccJzxeyt.s:978    .text:000003e4 pbuf_alloc
+     /tmp/ccJzxeyt.s:975    .text:000003e4 $t
+     /tmp/ccJzxeyt.s:1264   .text:00000534 pbuf_coalesce
+     /tmp/ccJzxeyt.s:1371   .text:000005a8 $d
+
+UNDEFINED SYMBOLS
+memcpy
+sys_arch_protect
+sys_arch_unprotect
+memp_free
+mem_free
+mem_realloc
+tcpip_callback_with_block
+memp_malloc
+mem_malloc
+tcp_segs_free
+tcp_active_pcbs

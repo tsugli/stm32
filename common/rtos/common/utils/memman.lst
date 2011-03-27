@@ -1,0 +1,525 @@
+   1              		.code	16
+   2              		.file	"memman.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	CopyDataBytes
+  13              		.code	16
+  14              		.thumb_func
+  16              	CopyDataBytes:
+  17              	.LFB291:
+  18              		.file 1 "rtos/common/utils/memman.c"
+   1:rtos/common/utils/memman.c **** //********************************************************
+   2:rtos/common/utils/memman.c **** //    Проект      :
+   3:rtos/common/utils/memman.c **** //    Версия      : 1.0.
+   4:rtos/common/utils/memman.c **** //    Дата        : 29.03.2009
+   5:rtos/common/utils/memman.c **** //    Автор       : Копачевский Юрий Иванович.
+   6:rtos/common/utils/memman.c **** //    Компания    : БЭМН
+   7:rtos/common/utils/memman.c **** //    Файл        :
+   8:rtos/common/utils/memman.c **** //    Комментарии :
+   9:rtos/common/utils/memman.c **** //    Среда разработки : IAR
+  10:rtos/common/utils/memman.c **** //*********************************************************
+  11:rtos/common/utils/memman.c **** //    Процессор           :
+  12:rtos/common/utils/memman.c **** //    Частота процессора  :
+  13:rtos/common/utils/memman.c **** //    Тип программы       : Приложение
+  14:rtos/common/utils/memman.c **** //    Модель памяти       :
+  15:rtos/common/utils/memman.c **** //*********************************************************
+  16:rtos/common/utils/memman.c **** #include "error.h"
+  17:rtos/common/utils/memman.c **** #include "memman.h"
+  18:rtos/common/utils/memman.c **** 
+  19:rtos/common/utils/memman.c **** ErrorHandle MemManReadAccessError;
+  20:rtos/common/utils/memman.c **** ErrorHandle MemManWriteAccessError;
+  21:rtos/common/utils/memman.c **** 
+  22:rtos/common/utils/memman.c **** 
+  23:rtos/common/utils/memman.c **** MEMUNIT memunit[MEMUNITS_NUM];
+  24:rtos/common/utils/memman.c **** int GetDefaultHandler( uint16, uint16*, uint16) ;
+  25:rtos/common/utils/memman.c **** int SetDefaultHandler( uint16, uint16*, uint16);
+  26:rtos/common/utils/memman.c **** 
+  27:rtos/common/utils/memman.c **** bool MemManInit()
+  28:rtos/common/utils/memman.c ****   {
+  29:rtos/common/utils/memman.c ****     int i = MEMUNITS_NUM;
+  30:rtos/common/utils/memman.c ****     bool rezult = false;
+  31:rtos/common/utils/memman.c ****     MEMUNIT *pxMemunit = &memunit[0];
+  32:rtos/common/utils/memman.c ****     while (i--)
+  33:rtos/common/utils/memman.c ****       {
+  34:rtos/common/utils/memman.c ****         pxMemunit->startaddr = 0x0;
+  35:rtos/common/utils/memman.c ****         pxMemunit->endaddr = 0x0;
+  36:rtos/common/utils/memman.c ****         pxMemunit->GetMem = GetDefaultHandler;
+  37:rtos/common/utils/memman.c ****         pxMemunit->SetMem = SetDefaultHandler;
+  38:rtos/common/utils/memman.c ****         pxMemunit->xMutex = xSemaphoreCreateMutex() ;
+  39:rtos/common/utils/memman.c ****         pxMemunit++;
+  40:rtos/common/utils/memman.c ****       }
+  41:rtos/common/utils/memman.c ****     rezult = true;
+  42:rtos/common/utils/memman.c ****     MemManReadAccessError = ErrorCreate("MM_ReadAccess");
+  43:rtos/common/utils/memman.c ****     MemManWriteAccessError = ErrorCreate("MM_WriteAccess");
+  44:rtos/common/utils/memman.c ****     return rezult;
+  45:rtos/common/utils/memman.c **** 
+  46:rtos/common/utils/memman.c ****   }
+  47:rtos/common/utils/memman.c **** void CopyDataBytes(uint8 *pxSRC, uint8 *pxDSN, uint16 BytesNum)
+  48:rtos/common/utils/memman.c ****   {
+  19              		.loc 1 48 0
+  20 0000 10B5     		push	{r4, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 041C     		mov	r4, r0
+  24 0004 081C     		mov	r0, r1
+  25              	.LVL1:
+  26 0006 1204     		lsl	r2, r2, #16
+  27              	.LVL2:
+  28 0008 120C     		lsr	r2, r2, #16
+  29              	.LVL3:
+  49:rtos/common/utils/memman.c ****     while (BytesNum--)
+  30              		.loc 1 49 0
+  31 000a 002A     		cmp	r2, #0
+  32 000c 09D0     		beq	.L4
+  33              	.LVL4:
+  34 000e 531E     		sub	r3, r2, #1
+  35 0010 1B04     		lsl	r3, r3, #16
+  36 0012 1B0C     		lsr	r3, r3, #16
+  37              	.LVL5:
+  38 0014 0022     		mov	r2, #0
+  39 0016 591C     		add	r1, r3, #1
+  40              	.L3:
+  50:rtos/common/utils/memman.c ****       {
+  51:rtos/common/utils/memman.c ****         *pxDSN++ = *pxSRC++;
+  41              		.loc 1 51 0
+  42 0018 A35C     		ldrb	r3, [r4, r2]
+  43              	.LVL6:
+  44 001a 8354     		strb	r3, [r0, r2]
+  45 001c 0132     		add	r2, r2, #1
+  46              		.loc 1 49 0
+  47 001e 8A42     		cmp	r2, r1
+  48 0020 FAD1     		bne	.L3
+  49              	.LVL7:
+  50              	.L4:
+  52:rtos/common/utils/memman.c ****       }
+  53:rtos/common/utils/memman.c ****   }
+  51              		.loc 1 53 0
+  52              		@ sp needed for prologue
+  53              	.LVL8:
+  54 0022 10BC     		pop	{r4}
+  55 0024 01BC     		pop	{r0}
+  56 0026 0047     		bx	r0
+  57              	.LFE291:
+  59              		.align	2
+  60              		.global	GetDefaultHandler
+  61              		.code	16
+  62              		.thumb_func
+  64              	GetDefaultHandler:
+  65              	.LFB292:
+  54:rtos/common/utils/memman.c **** //==============================================================================
+  55:rtos/common/utils/memman.c **** int GetDefaultHandler(uint16 addr, uint16* pxDsn, uint16 len)
+  56:rtos/common/utils/memman.c ****   {
+  66              		.loc 1 56 0
+  67              	.LVL9:
+  57:rtos/common/utils/memman.c ****     return false;
+  58:rtos/common/utils/memman.c ****   }
+  68              		.loc 1 58 0
+  69 0028 0020     		mov	r0, #0
+  70              	.LVL10:
+  71              		@ sp needed for prologue
+  72 002a 7047     		bx	lr
+  73              	.LFE292:
+  75              		.align	2
+  76              		.global	SetDefaultHandler
+  77              		.code	16
+  78              		.thumb_func
+  80              	SetDefaultHandler:
+  81              	.LFB293:
+  59:rtos/common/utils/memman.c **** int SetDefaultHandler(uint16 addr, uint16* pxDsn, uint16 len)
+  60:rtos/common/utils/memman.c ****   {
+  82              		.loc 1 60 0
+  83              	.LVL11:
+  61:rtos/common/utils/memman.c ****     return false;
+  62:rtos/common/utils/memman.c ****   }
+  84              		.loc 1 62 0
+  85 002c 0020     		mov	r0, #0
+  86              	.LVL12:
+  87              		@ sp needed for prologue
+  88 002e 7047     		bx	lr
+  89              	.LFE293:
+  91              		.align	2
+  92              		.global	MemSetWords
+  93              		.code	16
+  94              		.thumb_func
+  96              	MemSetWords:
+  97              	.LFB295:
+  63:rtos/common/utils/memman.c **** 
+  64:rtos/common/utils/memman.c **** bool MemGetWords(uint16 addr, uint16* pxDsn, uint16 len)
+  65:rtos/common/utils/memman.c ****   {
+  66:rtos/common/utils/memman.c ****     int i = MEMUNITS_NUM;
+  67:rtos/common/utils/memman.c ****     bool rezult = false;
+  68:rtos/common/utils/memman.c ****     MEMUNIT *pxMemunit = &memunit[0];
+  69:rtos/common/utils/memman.c ****     while (i--)
+  70:rtos/common/utils/memman.c ****       {
+  71:rtos/common/utils/memman.c ****         if ((addr >= pxMemunit->startaddr) && ((addr + len)
+  72:rtos/common/utils/memman.c ****             < pxMemunit->endaddr))
+  73:rtos/common/utils/memman.c ****           {
+  74:rtos/common/utils/memman.c ****             if (pxMemunit->xMutex != NULL)
+  75:rtos/common/utils/memman.c ****               {
+  76:rtos/common/utils/memman.c ****                 if (xSemaphoreTake(pxMemunit->xMutex, (portTickType) 2000)
+  77:rtos/common/utils/memman.c ****                     == pdTRUE)
+  78:rtos/common/utils/memman.c ****                   {
+  79:rtos/common/utils/memman.c ****                     rezult = pxMemunit->GetMem(addr - pxMemunit->startaddr, pxDsn, len);
+  80:rtos/common/utils/memman.c ****                     xSemaphoreGive(pxMemunit->xMutex);
+  81:rtos/common/utils/memman.c ****                   }
+  82:rtos/common/utils/memman.c ****               }
+  83:rtos/common/utils/memman.c ****           }
+  84:rtos/common/utils/memman.c ****         pxMemunit++;
+  85:rtos/common/utils/memman.c ****       }
+  86:rtos/common/utils/memman.c ****     return rezult;
+  87:rtos/common/utils/memman.c ****   }
+  88:rtos/common/utils/memman.c **** //==============================================================================
+  89:rtos/common/utils/memman.c **** bool MemSetWords(uint16 addr, uint16 *pxSrc, uint16 len)
+  90:rtos/common/utils/memman.c ****   {
+  98              		.loc 1 90 0
+  99 0030 F0B5     		push	{r4, r5, r6, r7, lr}
+ 100              	.LCFI1:
+ 101 0032 5F46     		mov	r7, fp
+ 102 0034 5646     		mov	r6, sl
+ 103 0036 4D46     		mov	r5, r9
+ 104 0038 4446     		mov	r4, r8
+ 105 003a F0B4     		push	{r4, r5, r6, r7}
+ 106              	.LCFI2:
+ 107              	.LVL13:
+ 108 003c 8B46     		mov	fp, r1
+ 109 003e 0004     		lsl	r0, r0, #16
+ 110              	.LVL14:
+ 111 0040 050C     		lsr	r5, r0, #16
+ 112              	.LVL15:
+ 113 0042 1204     		lsl	r2, r2, #16
+ 114              	.LVL16:
+ 115 0044 120C     		lsr	r2, r2, #16
+ 116              	.LVL17:
+ 117              		.loc 1 90 0
+ 118 0046 0023     		mov	r3, #0
+ 119 0048 9A46     		mov	sl, r3
+ 120              	.LVL18:
+ 121 004a 1A4C     		ldr	r4, .L15
+ 122              	.LVL19:
+  91:rtos/common/utils/memman.c ****     int i = MEMUNITS_NUM;
+  92:rtos/common/utils/memman.c ****     bool rezult = false;
+  93:rtos/common/utils/memman.c ****     MEMUNIT *pxMemunit = &memunit[0];
+  94:rtos/common/utils/memman.c ****     while (i--)
+  95:rtos/common/utils/memman.c ****       {
+  96:rtos/common/utils/memman.c ****         if ((addr >= pxMemunit->startaddr) && ((addr + len)
+ 123              		.loc 1 96 0
+ 124 004c 9146     		mov	r9, r2
+ 125 004e 5219     		add	r2, r2, r5
+ 126              	.LVL20:
+ 127 0050 9046     		mov	r8, r2
+  97:rtos/common/utils/memman.c ****             < pxMemunit->endaddr))
+  98:rtos/common/utils/memman.c ****           {
+  99:rtos/common/utils/memman.c ****             if (pxMemunit->xMutex != NULL)
+ 100:rtos/common/utils/memman.c ****               {
+ 101:rtos/common/utils/memman.c ****                 if (xSemaphoreTake(pxMemunit->xMutex, (portTickType) 2000)
+ 128              		.loc 1 101 0
+ 129 0052 FA26     		mov	r6, #250
+ 130 0054 F600     		lsl	r6, r6, #3
+ 131              		.loc 1 94 0
+ 132 0056 184F     		ldr	r7, .L15+4
+ 133              	.LVL21:
+ 134              	.L13:
+ 135              		.loc 1 96 0
+ 136 0058 2368     		ldr	r3, [r4]
+ 137 005a 9D42     		cmp	r5, r3
+ 138 005c 1CD3     		bcc	.L11
+ 139 005e 6368     		ldr	r3, [r4, #4]
+ 140 0060 9845     		cmp	r8, r3
+ 141 0062 19D2     		bcs	.L11
+ 142              		.loc 1 99 0
+ 143 0064 A068     		ldr	r0, [r4, #8]
+ 144 0066 0028     		cmp	r0, #0
+ 145 0068 16D0     		beq	.L11
+ 146              		.loc 1 101 0
+ 147 006a 0021     		mov	r1, #0
+ 148 006c 321C     		mov	r2, r6
+ 149              	.LVL22:
+ 150 006e 0023     		mov	r3, #0
+ 151 0070 FFF7FEFF 		bl	xQueueGenericReceive
+ 152 0074 0128     		cmp	r0, #1
+ 153 0076 0FD1     		bne	.L11
+ 102:rtos/common/utils/memman.c ****                     == pdTRUE)
+ 103:rtos/common/utils/memman.c ****                   {
+ 104:rtos/common/utils/memman.c ****                     rezult = pxMemunit->SetMem(addr - pxMemunit->startaddr, pxSrc, len);
+ 154              		.loc 1 104 0
+ 155 0078 2088     		ldrh	r0, [r4]
+ 156 007a 281A     		sub	r0, r5, r0
+ 157 007c 0004     		lsl	r0, r0, #16
+ 158 007e 000C     		lsr	r0, r0, #16
+ 159 0080 2369     		ldr	r3, [r4, #16]
+ 160 0082 5946     		mov	r1, fp
+ 161 0084 4A46     		mov	r2, r9
+ 162 0086 00F095F8 		bl	.L17
+ 163 008a 8246     		mov	sl, r0
+ 105:rtos/common/utils/memman.c ****                     xSemaphoreGive(pxMemunit->xMutex);
+ 164              		.loc 1 105 0
+ 165 008c A068     		ldr	r0, [r4, #8]
+ 166 008e 0021     		mov	r1, #0
+ 167 0090 0022     		mov	r2, #0
+ 168 0092 0023     		mov	r3, #0
+ 169 0094 FFF7FEFF 		bl	xQueueGenericSend
+ 170              	.LVL23:
+ 171              	.L11:
+ 172              		.loc 1 94 0
+ 173 0098 BC42     		cmp	r4, r7
+ 174 009a 01D0     		beq	.L12
+ 106:rtos/common/utils/memman.c ****                   }
+ 107:rtos/common/utils/memman.c ****               }
+ 108:rtos/common/utils/memman.c ****           }
+ 109:rtos/common/utils/memman.c ****         pxMemunit++;
+ 175              		.loc 1 109 0
+ 176 009c 1434     		add	r4, r4, #20
+ 177 009e DBE7     		b	.L13
+ 178              	.L12:
+ 110:rtos/common/utils/memman.c ****       }
+ 111:rtos/common/utils/memman.c ****     return rezult;
+ 112:rtos/common/utils/memman.c ****   }
+ 179              		.loc 1 112 0
+ 180 00a0 5046     		mov	r0, sl
+ 181              		@ sp needed for prologue
+ 182              	.LVL24:
+ 183              	.LVL25:
+ 184              	.LVL26:
+ 185              	.LVL27:
+ 186 00a2 3CBC     		pop	{r2, r3, r4, r5}
+ 187 00a4 9046     		mov	r8, r2
+ 188 00a6 9946     		mov	r9, r3
+ 189 00a8 A246     		mov	sl, r4
+ 190 00aa AB46     		mov	fp, r5
+ 191 00ac F0BC     		pop	{r4, r5, r6, r7}
+ 192 00ae 02BC     		pop	{r1}
+ 193 00b0 0847     		bx	r1
+ 194              	.L16:
+ 195 00b2 C046     		.align	2
+ 196              	.L15:
+ 197 00b4 00000000 		.word	memunit
+ 198 00b8 64000000 		.word	memunit+100
+ 199              	.LFE295:
+ 201              		.align	2
+ 202              		.global	MemGetWords
+ 203              		.code	16
+ 204              		.thumb_func
+ 206              	MemGetWords:
+ 207              	.LFB294:
+ 208              		.loc 1 65 0
+ 209 00bc F0B5     		push	{r4, r5, r6, r7, lr}
+ 210              	.LCFI3:
+ 211 00be 5F46     		mov	r7, fp
+ 212 00c0 5646     		mov	r6, sl
+ 213 00c2 4D46     		mov	r5, r9
+ 214 00c4 4446     		mov	r4, r8
+ 215 00c6 F0B4     		push	{r4, r5, r6, r7}
+ 216              	.LCFI4:
+ 217              	.LVL28:
+ 218 00c8 8B46     		mov	fp, r1
+ 219 00ca 0004     		lsl	r0, r0, #16
+ 220              	.LVL29:
+ 221 00cc 050C     		lsr	r5, r0, #16
+ 222              	.LVL30:
+ 223 00ce 1204     		lsl	r2, r2, #16
+ 224              	.LVL31:
+ 225 00d0 120C     		lsr	r2, r2, #16
+ 226              	.LVL32:
+ 227              		.loc 1 65 0
+ 228 00d2 0023     		mov	r3, #0
+ 229 00d4 9A46     		mov	sl, r3
+ 230              	.LVL33:
+ 231 00d6 1A4C     		ldr	r4, .L23
+ 232              	.LVL34:
+ 233              		.loc 1 71 0
+ 234 00d8 9146     		mov	r9, r2
+ 235 00da 5219     		add	r2, r2, r5
+ 236              	.LVL35:
+ 237 00dc 9046     		mov	r8, r2
+ 238              		.loc 1 76 0
+ 239 00de FA26     		mov	r6, #250
+ 240 00e0 F600     		lsl	r6, r6, #3
+ 241              		.loc 1 69 0
+ 242 00e2 184F     		ldr	r7, .L23+4
+ 243              	.LVL36:
+ 244              	.L21:
+ 245              		.loc 1 71 0
+ 246 00e4 2368     		ldr	r3, [r4]
+ 247 00e6 9D42     		cmp	r5, r3
+ 248 00e8 1CD3     		bcc	.L19
+ 249 00ea 6368     		ldr	r3, [r4, #4]
+ 250 00ec 9845     		cmp	r8, r3
+ 251 00ee 19D2     		bcs	.L19
+ 252              		.loc 1 74 0
+ 253 00f0 A068     		ldr	r0, [r4, #8]
+ 254 00f2 0028     		cmp	r0, #0
+ 255 00f4 16D0     		beq	.L19
+ 256              		.loc 1 76 0
+ 257 00f6 0021     		mov	r1, #0
+ 258 00f8 321C     		mov	r2, r6
+ 259              	.LVL37:
+ 260 00fa 0023     		mov	r3, #0
+ 261 00fc FFF7FEFF 		bl	xQueueGenericReceive
+ 262 0100 0128     		cmp	r0, #1
+ 263 0102 0FD1     		bne	.L19
+ 264              		.loc 1 79 0
+ 265 0104 2088     		ldrh	r0, [r4]
+ 266 0106 281A     		sub	r0, r5, r0
+ 267 0108 0004     		lsl	r0, r0, #16
+ 268 010a 000C     		lsr	r0, r0, #16
+ 269 010c E368     		ldr	r3, [r4, #12]
+ 270 010e 5946     		mov	r1, fp
+ 271 0110 4A46     		mov	r2, r9
+ 272 0112 00F04FF8 		bl	.L17
+ 273 0116 8246     		mov	sl, r0
+ 274              		.loc 1 80 0
+ 275 0118 A068     		ldr	r0, [r4, #8]
+ 276 011a 0021     		mov	r1, #0
+ 277 011c 0022     		mov	r2, #0
+ 278 011e 0023     		mov	r3, #0
+ 279 0120 FFF7FEFF 		bl	xQueueGenericSend
+ 280              	.LVL38:
+ 281              	.L19:
+ 282              		.loc 1 69 0
+ 283 0124 BC42     		cmp	r4, r7
+ 284 0126 01D0     		beq	.L20
+ 285              		.loc 1 84 0
+ 286 0128 1434     		add	r4, r4, #20
+ 287 012a DBE7     		b	.L21
+ 288              	.L20:
+ 289              		.loc 1 87 0
+ 290 012c 5046     		mov	r0, sl
+ 291              		@ sp needed for prologue
+ 292              	.LVL39:
+ 293              	.LVL40:
+ 294              	.LVL41:
+ 295              	.LVL42:
+ 296 012e 3CBC     		pop	{r2, r3, r4, r5}
+ 297 0130 9046     		mov	r8, r2
+ 298 0132 9946     		mov	r9, r3
+ 299 0134 A246     		mov	sl, r4
+ 300 0136 AB46     		mov	fp, r5
+ 301 0138 F0BC     		pop	{r4, r5, r6, r7}
+ 302 013a 02BC     		pop	{r1}
+ 303 013c 0847     		bx	r1
+ 304              	.L24:
+ 305 013e C046     		.align	2
+ 306              	.L23:
+ 307 0140 00000000 		.word	memunit
+ 308 0144 64000000 		.word	memunit+100
+ 309              	.LFE294:
+ 311              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 312              		.align	2
+ 313              	.LC12:
+ 314 0000 4D4D5F52 		.ascii	"MM_ReadAccess\000"
+ 314      65616441 
+ 314      63636573 
+ 314      7300
+ 315 000e 0000     		.align	2
+ 316              	.LC15:
+ 317 0010 4D4D5F57 		.ascii	"MM_WriteAccess\000"
+ 317      72697465 
+ 317      41636365 
+ 317      737300
+ 318 001f 00       		.text
+ 319              		.align	2
+ 320              		.global	MemManInit
+ 321              		.code	16
+ 322              		.thumb_func
+ 324              	MemManInit:
+ 325              	.LFB290:
+ 326              		.loc 1 28 0
+ 327 0148 F0B5     		push	{r4, r5, r6, r7, lr}
+ 328              	.LCFI5:
+ 329 014a 4746     		mov	r7, r8
+ 330 014c 80B4     		push	{r7}
+ 331              	.LCFI6:
+ 332              		.loc 1 28 0
+ 333 014e 114C     		ldr	r4, .L29
+ 334              	.LVL43:
+ 335              		.loc 1 34 0
+ 336 0150 0025     		mov	r5, #0
+ 337              		.loc 1 36 0
+ 338 0152 114B     		ldr	r3, .L29+4
+ 339 0154 9846     		mov	r8, r3
+ 340              		.loc 1 37 0
+ 341 0156 114F     		ldr	r7, .L29+8
+ 342              		.loc 1 32 0
+ 343 0158 114E     		ldr	r6, .L29+12
+ 344              	.L26:
+ 345              		.loc 1 34 0
+ 346 015a 2560     		str	r5, [r4]
+ 347              		.loc 1 35 0
+ 348 015c 6560     		str	r5, [r4, #4]
+ 349              		.loc 1 36 0
+ 350 015e 4346     		mov	r3, r8
+ 351 0160 E360     		str	r3, [r4, #12]
+ 352              		.loc 1 37 0
+ 353 0162 2761     		str	r7, [r4, #16]
+ 354              		.loc 1 38 0
+ 355 0164 FFF7FEFF 		bl	xQueueCreateMutex
+ 356 0168 A060     		str	r0, [r4, #8]
+ 357              		.loc 1 39 0
+ 358 016a 1434     		add	r4, r4, #20
+ 359              		.loc 1 32 0
+ 360 016c B442     		cmp	r4, r6
+ 361 016e F4D1     		bne	.L26
+ 362              		.loc 1 42 0
+ 363 0170 0C48     		ldr	r0, .L29+16
+ 364 0172 FFF7FEFF 		bl	ErrorCreate
+ 365 0176 0C4B     		ldr	r3, .L29+20
+ 366 0178 1880     		strh	r0, [r3]
+ 367              		.loc 1 43 0
+ 368 017a 0C48     		ldr	r0, .L29+24
+ 369 017c FFF7FEFF 		bl	ErrorCreate
+ 370 0180 0B4B     		ldr	r3, .L29+28
+ 371 0182 1880     		strh	r0, [r3]
+ 372 0184 0120     		mov	r0, #1
+ 373 0186 4042     		neg	r0, r0
+ 374              		.loc 1 46 0
+ 375              		@ sp needed for prologue
+ 376              	.LVL44:
+ 377 0188 04BC     		pop	{r2}
+ 378 018a 9046     		mov	r8, r2
+ 379 018c F0BC     		pop	{r4, r5, r6, r7}
+ 380 018e 02BC     		pop	{r1}
+ 381 0190 0847     		bx	r1
+ 382              	.L30:
+ 383 0192 C046     		.align	2
+ 384              	.L29:
+ 385 0194 00000000 		.word	memunit
+ 386 0198 00000000 		.word	GetDefaultHandler
+ 387 019c 00000000 		.word	SetDefaultHandler
+ 388 01a0 78000000 		.word	memunit+120
+ 389 01a4 00000000 		.word	.LC12
+ 390 01a8 00000000 		.word	MemManReadAccessError
+ 391 01ac 10000000 		.word	.LC15
+ 392 01b0 00000000 		.word	MemManWriteAccessError
+ 393              	.LFE290:
+ 395              		.comm	memunit,120,4
+ 396              		.comm	MemManReadAccessError,2,2
+ 397              		.comm	MemManWriteAccessError,2,2
+ 542              	.Letext0:
+ 1691              		.code 16
+ 1692              		.align	1
+ 1693              	.L17:
+ 1694 01b4 1847C046 		bx	r3
+DEFINED SYMBOLS
+                            *ABS*:00000000 memman.c
+     /tmp/ccTniu3g.s:1      .text:00000000 $t
+     /tmp/ccTniu3g.s:16     .text:00000000 CopyDataBytes
+     /tmp/ccTniu3g.s:64     .text:00000028 GetDefaultHandler
+     /tmp/ccTniu3g.s:80     .text:0000002c SetDefaultHandler
+     /tmp/ccTniu3g.s:96     .text:00000030 MemSetWords
+     /tmp/ccTniu3g.s:197    .text:000000b4 $d
+                            *COM*:00000078 memunit
+     /tmp/ccTniu3g.s:206    .text:000000bc MemGetWords
+     /tmp/ccTniu3g.s:203    .text:000000bc $t
+     /tmp/ccTniu3g.s:307    .text:00000140 $d
+     /tmp/ccTniu3g.s:324    .text:00000148 MemManInit
+     /tmp/ccTniu3g.s:321    .text:00000148 $t
+     /tmp/ccTniu3g.s:385    .text:00000194 $d
+                            *COM*:00000002 MemManReadAccessError
+                            *COM*:00000002 MemManWriteAccessError
+     /tmp/ccTniu3g.s:1691   .text:000001b4 $t
+
+UNDEFINED SYMBOLS
+xQueueGenericReceive
+xQueueGenericSend
+xQueueCreateMutex
+ErrorCreate

@@ -1,0 +1,335 @@
+   1              		.code	16
+   2              		.file	"error.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	ErrorCheckStatus
+  13              		.code	16
+  14              		.thumb_func
+  16              	ErrorCheckStatus:
+  17              	.LFB2:
+  18              		.file 1 "rtos/common/utils/error.c"
+   1:rtos/common/utils/error.c **** // Error File
+   2:rtos/common/utils/error.c **** #include "error.h"
+   3:rtos/common/utils/error.c **** 
+   4:rtos/common/utils/error.c **** uint16 ErrorsAmount    = 1;
+   5:rtos/common/utils/error.c **** uint16 ErrorsMaxAmount = 1;
+   6:rtos/common/utils/error.c **** bool   IsErrorInitialized = false;
+   7:rtos/common/utils/error.c **** ErrorDescriptor *Errors = null;
+   8:rtos/common/utils/error.c **** ErrorHandle ErrorStatus = 0;
+   9:rtos/common/utils/error.c **** 
+  10:rtos/common/utils/error.c **** ErrorHandle ErrorCheckStatus()
+  11:rtos/common/utils/error.c **** {
+  19              		.loc 1 11 0
+  12:rtos/common/utils/error.c ****   ErrorHandle tmp = ErrorStatus;
+  20              		.loc 1 12 0
+  21 0000 024B     		ldr	r3, .L3
+  22 0002 1888     		ldrh	r0, [r3]
+  23              	.LVL0:
+  13:rtos/common/utils/error.c ****   ErrorStatus = 0;
+  24              		.loc 1 13 0
+  25 0004 0022     		mov	r2, #0
+  26 0006 1A80     		strh	r2, [r3]
+  27              	.LVL1:
+  14:rtos/common/utils/error.c ****   return tmp;
+  15:rtos/common/utils/error.c **** }
+  28              		.loc 1 15 0
+  29              		@ sp needed for prologue
+  30 0008 7047     		bx	lr
+  31              	.L4:
+  32 000a C046     		.align	2
+  33              	.L3:
+  34 000c 00000000 		.word	ErrorStatus
+  35              	.LFE2:
+  37              		.section	.rodata.str1.4,"aMS",%progbits,1
+  38              		.align	2
+  39              	.LC3:
+  40 0000 4572726F 		.ascii	"Errors Header\000"
+  40      72732048 
+  40      65616465 
+  40      7200
+  41 000e 0000     		.text
+  42              		.align	2
+  43              		.global	ErrorInit
+  44              		.code	16
+  45              		.thumb_func
+  47              	ErrorInit:
+  48              	.LFB3:
+  16:rtos/common/utils/error.c **** 
+  17:rtos/common/utils/error.c **** 
+  18:rtos/common/utils/error.c **** void ErrorInit(void *pxErrorsBuffer, uint16 ErrorTypesAmount)
+  19:rtos/common/utils/error.c **** {
+  49              		.loc 1 19 0
+  50 0010 30B5     		push	{r4, r5, lr}
+  51              	.LCFI0:
+  52              	.LVL2:
+  20:rtos/common/utils/error.c ****   uint16 i = 0;
+  21:rtos/common/utils/error.c ****   char *eDescription = "Errors Header";
+  22:rtos/common/utils/error.c ****   ErrorsMaxAmount = ErrorTypesAmount;
+  53              		.loc 1 22 0
+  54 0012 0C4B     		ldr	r3, .L9
+  55 0014 1980     		strh	r1, [r3]
+  23:rtos/common/utils/error.c ****   Errors  = (ErrorDescriptor*)pxErrorsBuffer;
+  56              		.loc 1 23 0
+  57 0016 0C4B     		ldr	r3, .L9+4
+  58 0018 1860     		str	r0, [r3]
+  24:rtos/common/utils/error.c ****   IsErrorInitialized = true;
+  59              		.loc 1 24 0
+  60 001a 0C4A     		ldr	r2, .L9+8
+  61 001c 0123     		mov	r3, #1
+  62 001e 5B42     		neg	r3, r3
+  63 0020 1360     		str	r3, [r2]
+  25:rtos/common/utils/error.c ****   Errors[0].EvetsCounter = 0;
+  64              		.loc 1 25 0
+  65 0022 0023     		mov	r3, #0
+  66 0024 0380     		strh	r3, [r0]
+  67 0026 0A49     		ldr	r1, .L9+12
+  68              	.LVL3:
+  69 0028 0020     		mov	r0, #0
+  70              	.LVL4:
+  26:rtos/common/utils/error.c ****   while( i< ERROR_DESCRIPTOR_TEXT_SIZE)
+  27:rtos/common/utils/error.c ****     {
+  28:rtos/common/utils/error.c ****       Errors[0].Description[i] =  *eDescription;
+  71              		.loc 1 28 0
+  72 002a 074D     		ldr	r5, .L9+4
+  73              		.loc 1 26 0
+  74 002c 094C     		ldr	r4, .L9+16
+  75              	.L6:
+  76              		.loc 1 28 0
+  77 002e 2B68     		ldr	r3, [r5]
+  78 0030 1B18     		add	r3, r3, r0
+  79 0032 0A78     		ldrb	r2, [r1]
+  80 0034 9A70     		strb	r2, [r3, #2]
+  29:rtos/common/utils/error.c ****       eDescription++;
+  81              		.loc 1 29 0
+  82 0036 0131     		add	r1, r1, #1
+  83 0038 0130     		add	r0, r0, #1
+  84              		.loc 1 26 0
+  85 003a A142     		cmp	r1, r4
+  86 003c F7D1     		bne	.L6
+  30:rtos/common/utils/error.c ****       i++;
+  31:rtos/common/utils/error.c ****     }
+  32:rtos/common/utils/error.c **** 
+  33:rtos/common/utils/error.c **** }
+  87              		.loc 1 33 0
+  88              		@ sp needed for prologue
+  89 003e 30BC     		pop	{r4, r5}
+  90 0040 01BC     		pop	{r0}
+  91 0042 0047     		bx	r0
+  92              	.L10:
+  93              		.align	2
+  94              	.L9:
+  95 0044 00000000 		.word	ErrorsMaxAmount
+  96 0048 00000000 		.word	Errors
+  97 004c 00000000 		.word	IsErrorInitialized
+  98 0050 00000000 		.word	.LC3
+  99 0054 10000000 		.word	.LC3+16
+ 100              	.LFE3:
+ 102              		.align	2
+ 103              		.global	ErrorCreate
+ 104              		.code	16
+ 105              		.thumb_func
+ 107              	ErrorCreate:
+ 108              	.LFB4:
+  34:rtos/common/utils/error.c **** ErrorHandle ErrorCreate(char *eDescription)
+  35:rtos/common/utils/error.c **** {
+ 109              		.loc 1 35 0
+ 110 0058 70B5     		push	{r4, r5, r6, lr}
+ 111              	.LCFI1:
+ 112              	.LVL5:
+ 113 005a 061C     		mov	r6, r0
+  36:rtos/common/utils/error.c ****   uint16 i = 0;
+  37:rtos/common/utils/error.c ****   ErrorHandle eHandle ;
+  38:rtos/common/utils/error.c ****   if((ErrorsAmount != ErrorsMaxAmount) && IsErrorInitialized)
+ 114              		.loc 1 38 0
+ 115 005c 154B     		ldr	r3, .L17
+ 116 005e 1C88     		ldrh	r4, [r3]
+ 117              	.LVL6:
+ 118 0060 154B     		ldr	r3, .L17+4
+ 119 0062 1B88     		ldrh	r3, [r3]
+ 120 0064 A342     		cmp	r3, r4
+ 121 0066 1FD0     		beq	.L12
+ 122              	.LVL7:
+ 123 0068 144B     		ldr	r3, .L17+8
+ 124 006a 1B68     		ldr	r3, [r3]
+ 125 006c 002B     		cmp	r3, #0
+ 126 006e 1BD0     		beq	.L12
+  39:rtos/common/utils/error.c ****   {
+  40:rtos/common/utils/error.c ****     eHandle = ErrorsAmount;
+  41:rtos/common/utils/error.c ****     ErrorsAmount++;
+ 127              		.loc 1 41 0
+ 128 0070 104A     		ldr	r2, .L17
+ 129 0072 631C     		add	r3, r4, #1
+ 130 0074 1380     		strh	r3, [r2]
+  42:rtos/common/utils/error.c ****     Errors[eHandle].EvetsCounter = 0;
+ 131              		.loc 1 42 0
+ 132 0076 A300     		lsl	r3, r4, #2
+ 133 0078 1B19     		add	r3, r3, r4
+ 134 007a 9D00     		lsl	r5, r3, #2
+ 135 007c 1049     		ldr	r1, .L17+12
+ 136 007e 0A68     		ldr	r2, [r1]
+ 137 0080 0023     		mov	r3, #0
+ 138 0082 5353     		strh	r3, [r2, r5]
+  43:rtos/common/utils/error.c ****     Errors[0].EvetsCounter++;
+ 139              		.loc 1 43 0
+ 140 0084 0A68     		ldr	r2, [r1]
+ 141 0086 1388     		ldrh	r3, [r2]
+ 142 0088 0133     		add	r3, r3, #1
+ 143 008a 1380     		strh	r3, [r2]
+ 144 008c 0022     		mov	r2, #0
+  44:rtos/common/utils/error.c ****     while( (i<ERROR_DESCRIPTOR_TEXT_SIZE) && (*eDescription))
+  45:rtos/common/utils/error.c ****     {
+  46:rtos/common/utils/error.c ****       Errors[eHandle].Description[i] =  *eDescription;
+ 145              		.loc 1 46 0
+ 146 008e 081C     		mov	r0, r1
+ 147 0090 06E0     		b	.L13
+ 148              	.L15:
+ 149 0092 0368     		ldr	r3, [r0]
+ 150 0094 5B19     		add	r3, r3, r5
+ 151 0096 9B18     		add	r3, r3, r2
+ 152 0098 9970     		strb	r1, [r3, #2]
+ 153 009a 0132     		add	r2, r2, #1
+ 154              		.loc 1 44 0
+ 155 009c 102A     		cmp	r2, #16
+ 156 009e 04D0     		beq	.L14
+ 157              	.L13:
+ 158 00a0 B15C     		ldrb	r1, [r6, r2]
+ 159 00a2 0029     		cmp	r1, #0
+ 160 00a4 F5D1     		bne	.L15
+ 161 00a6 00E0     		b	.L14
+ 162              	.LVL8:
+ 163              	.L12:
+ 164 00a8 0024     		mov	r4, #0
+ 165              	.LVL9:
+ 166              	.L14:
+  47:rtos/common/utils/error.c ****       eDescription++;
+  48:rtos/common/utils/error.c ****       i++;
+  49:rtos/common/utils/error.c ****     }
+  50:rtos/common/utils/error.c ****    return eHandle;
+  51:rtos/common/utils/error.c ****   }
+  52:rtos/common/utils/error.c ****   return 0;
+  53:rtos/common/utils/error.c **** }
+ 167              		.loc 1 53 0
+ 168 00aa 201C     		mov	r0, r4
+ 169              		@ sp needed for prologue
+ 170              	.LVL10:
+ 171              	.LVL11:
+ 172 00ac 70BC     		pop	{r4, r5, r6}
+ 173 00ae 02BC     		pop	{r1}
+ 174 00b0 0847     		bx	r1
+ 175              	.L18:
+ 176 00b2 C046     		.align	2
+ 177              	.L17:
+ 178 00b4 00000000 		.word	ErrorsAmount
+ 179 00b8 00000000 		.word	ErrorsMaxAmount
+ 180 00bc 00000000 		.word	IsErrorInitialized
+ 181 00c0 00000000 		.word	Errors
+ 182              	.LFE4:
+ 184              		.align	2
+ 185              		.global	SYSTEM_ERROR
+ 186              		.code	16
+ 187              		.thumb_func
+ 189              	SYSTEM_ERROR:
+ 190              	.LFB5:
+  54:rtos/common/utils/error.c **** bool SYSTEM_ERROR(ErrorHandle eHandle)
+  55:rtos/common/utils/error.c **** {
+ 191              		.loc 1 55 0
+ 192              	.LVL12:
+ 193 00c4 0004     		lsl	r0, r0, #16
+ 194              	.LVL13:
+ 195 00c6 000C     		lsr	r0, r0, #16
+ 196              	.LVL14:
+  56:rtos/common/utils/error.c ****   if( eHandle < ErrorsMaxAmount && eHandle > 0)
+ 197              		.loc 1 56 0
+ 198 00c8 0A4B     		ldr	r3, .L25
+ 199 00ca 1B88     		ldrh	r3, [r3]
+ 200 00cc 8342     		cmp	r3, r0
+ 201 00ce 01D9     		bls	.L24
+ 202 00d0 0028     		cmp	r0, #0
+ 203 00d2 01D1     		bne	.L20
+ 204              	.L24:
+ 205 00d4 0020     		mov	r0, #0
+ 206              	.LVL15:
+ 207 00d6 0CE0     		b	.L22
+ 208              	.LVL16:
+ 209              	.L20:
+  57:rtos/common/utils/error.c ****   {
+  58:rtos/common/utils/error.c ****     Errors[eHandle].EvetsCounter++;
+ 210              		.loc 1 58 0
+ 211 00d8 074A     		ldr	r2, .L25+4
+ 212 00da 8300     		lsl	r3, r0, #2
+ 213 00dc 1B18     		add	r3, r3, r0
+ 214 00de 9B00     		lsl	r3, r3, #2
+ 215 00e0 1268     		ldr	r2, [r2]
+ 216 00e2 D218     		add	r2, r2, r3
+ 217 00e4 1388     		ldrh	r3, [r2]
+ 218 00e6 0133     		add	r3, r3, #1
+ 219 00e8 1380     		strh	r3, [r2]
+  59:rtos/common/utils/error.c ****     ErrorStatus = eHandle;
+ 220              		.loc 1 59 0
+ 221 00ea 044B     		ldr	r3, .L25+8
+ 222 00ec 1880     		strh	r0, [r3]
+ 223 00ee 0120     		mov	r0, #1
+ 224              	.LVL17:
+ 225 00f0 4042     		neg	r0, r0
+ 226              	.L22:
+  60:rtos/common/utils/error.c ****     return true;
+  61:rtos/common/utils/error.c ****   }
+  62:rtos/common/utils/error.c ****   return false;
+  63:rtos/common/utils/error.c **** 
+  64:rtos/common/utils/error.c **** };
+ 227              		.loc 1 64 0
+ 228              		@ sp needed for prologue
+ 229 00f2 7047     		bx	lr
+ 230              	.L26:
+ 231              		.align	2
+ 232              	.L25:
+ 233 00f4 00000000 		.word	ErrorsMaxAmount
+ 234 00f8 00000000 		.word	Errors
+ 235 00fc 00000000 		.word	ErrorStatus
+ 236              	.LFE5:
+ 238              		.global	ErrorsAmount
+ 239              		.data
+ 240              		.align	1
+ 243              	ErrorsAmount:
+ 244 0000 0100     		.short	1
+ 245              		.global	ErrorsMaxAmount
+ 246              		.align	1
+ 249              	ErrorsMaxAmount:
+ 250 0002 0100     		.short	1
+ 251              		.global	IsErrorInitialized
+ 252              		.bss
+ 253              		.align	2
+ 256              	IsErrorInitialized:
+ 257 0000 00000000 		.space	4
+ 258              		.global	Errors
+ 259              		.align	2
+ 262              	Errors:
+ 263 0004 00000000 		.space	4
+ 264              		.global	ErrorStatus
+ 265              		.align	1
+ 268              	ErrorStatus:
+ 269 0008 0000     		.space	2
+ 340              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 error.c
+     /tmp/cckGpDUX.s:1      .text:00000000 $t
+     /tmp/cckGpDUX.s:16     .text:00000000 ErrorCheckStatus
+     /tmp/cckGpDUX.s:34     .text:0000000c $d
+     /tmp/cckGpDUX.s:268    .bss:00000008 ErrorStatus
+     /tmp/cckGpDUX.s:39     .rodata.str1.4:00000000 .LC3
+     /tmp/cckGpDUX.s:47     .text:00000010 ErrorInit
+     /tmp/cckGpDUX.s:44     .text:00000010 $t
+     /tmp/cckGpDUX.s:95     .text:00000044 $d
+     /tmp/cckGpDUX.s:249    .data:00000002 ErrorsMaxAmount
+     /tmp/cckGpDUX.s:262    .bss:00000004 Errors
+     /tmp/cckGpDUX.s:256    .bss:00000000 IsErrorInitialized
+     /tmp/cckGpDUX.s:107    .text:00000058 ErrorCreate
+     /tmp/cckGpDUX.s:104    .text:00000058 $t
+     /tmp/cckGpDUX.s:178    .text:000000b4 $d
+     /tmp/cckGpDUX.s:243    .data:00000000 ErrorsAmount
+     /tmp/cckGpDUX.s:189    .text:000000c4 SYSTEM_ERROR
+     /tmp/cckGpDUX.s:186    .text:000000c4 $t
+     /tmp/cckGpDUX.s:233    .text:000000f4 $d
+     /tmp/cckGpDUX.s:244    .data:00000000 $d
+
+NO UNDEFINED SYMBOLS

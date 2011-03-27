@@ -1,0 +1,470 @@
+   1              		.code	16
+   2              		.file	"port.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	pxPortInitialiseStack
+  13              		.code	16
+  14              		.thumb_func
+  16              	pxPortInitialiseStack:
+  17              	.LFB290:
+  18              		.file 1 "rtos/portable/GCC/AT91SAM7S256/port.c"
+   1:rtos/portable/GCC/AT91SAM7S256/port.c **** /*
+   2:rtos/portable/GCC/AT91SAM7S256/port.c **** 	FreeRTOS.org V5.2.0 - Copyright (C) 2003-2009 Richard Barry.
+   3:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+   4:rtos/portable/GCC/AT91SAM7S256/port.c **** 	This file is part of the FreeRTOS.org distribution.
+   5:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+   6:rtos/portable/GCC/AT91SAM7S256/port.c **** 	FreeRTOS.org is free software; you can redistribute it and/or modify it
+   7:rtos/portable/GCC/AT91SAM7S256/port.c **** 	under the terms of the GNU General Public License (version 2) as published
+   8:rtos/portable/GCC/AT91SAM7S256/port.c **** 	by the Free Software Foundation and modified by the FreeRTOS exception.
+   9:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  10:rtos/portable/GCC/AT91SAM7S256/port.c **** 	FreeRTOS.org is distributed in the hope that it will be useful,	but WITHOUT
+  11:rtos/portable/GCC/AT91SAM7S256/port.c **** 	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  12:rtos/portable/GCC/AT91SAM7S256/port.c **** 	FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  13:rtos/portable/GCC/AT91SAM7S256/port.c **** 	more details.
+  14:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  15:rtos/portable/GCC/AT91SAM7S256/port.c **** 	You should have received a copy of the GNU General Public License along
+  16:rtos/portable/GCC/AT91SAM7S256/port.c **** 	with FreeRTOS.org; if not, write to the Free Software Foundation, Inc., 59
+  17:rtos/portable/GCC/AT91SAM7S256/port.c **** 	Temple Place, Suite 330, Boston, MA  02111-1307  USA.
+  18:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  19:rtos/portable/GCC/AT91SAM7S256/port.c **** 	A special exception to the GPL is included to allow you to distribute a
+  20:rtos/portable/GCC/AT91SAM7S256/port.c **** 	combined work that includes FreeRTOS.org without being obliged to provide
+  21:rtos/portable/GCC/AT91SAM7S256/port.c **** 	the source code for any proprietary components.  See the licensing section
+  22:rtos/portable/GCC/AT91SAM7S256/port.c **** 	of http://www.FreeRTOS.org for full details.
+  23:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  24:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  25:rtos/portable/GCC/AT91SAM7S256/port.c **** 	***************************************************************************
+  26:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*                                                                         *
+  27:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* Get the FreeRTOS eBook!  See http://www.FreeRTOS.org/Documentation      *
+  28:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*                                                                         *
+  29:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* This is a concise, step by step, 'hands on' guide that describes both   *
+  30:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* general multitasking concepts and FreeRTOS specifics. It presents and   *
+  31:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* explains numerous examples that are written using the FreeRTOS API.     *
+  32:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* Full source code for all the examples is provided in an accompanying    *
+  33:rtos/portable/GCC/AT91SAM7S256/port.c **** 	* .zip file.                                                              *
+  34:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*                                                                         *
+  35:rtos/portable/GCC/AT91SAM7S256/port.c **** 	***************************************************************************
+  36:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  37:rtos/portable/GCC/AT91SAM7S256/port.c **** 	1 tab == 4 spaces!
+  38:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  39:rtos/portable/GCC/AT91SAM7S256/port.c **** 	Please ensure to read the configuration and relevant port sections of the
+  40:rtos/portable/GCC/AT91SAM7S256/port.c **** 	online documentation.
+  41:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  42:rtos/portable/GCC/AT91SAM7S256/port.c **** 	http://www.FreeRTOS.org - Documentation, latest information, license and
+  43:rtos/portable/GCC/AT91SAM7S256/port.c **** 	contact details.
+  44:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  45:rtos/portable/GCC/AT91SAM7S256/port.c **** 	http://www.SafeRTOS.com - A version that is certified for use in safety
+  46:rtos/portable/GCC/AT91SAM7S256/port.c **** 	critical systems.
+  47:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  48:rtos/portable/GCC/AT91SAM7S256/port.c **** 	http://www.OpenRTOS.com - Commercial support, development, porting,
+  49:rtos/portable/GCC/AT91SAM7S256/port.c **** 	licensing and training services.
+  50:rtos/portable/GCC/AT91SAM7S256/port.c **** */
+  51:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  52:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  53:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------
+  54:rtos/portable/GCC/AT91SAM7S256/port.c ****  * Implementation of functions defined in portable.h for the ARM7 port.
+  55:rtos/portable/GCC/AT91SAM7S256/port.c ****  *
+  56:rtos/portable/GCC/AT91SAM7S256/port.c ****  * Components that can be compiled to either ARM or THUMB mode are
+  57:rtos/portable/GCC/AT91SAM7S256/port.c ****  * contained in this file.  The ISR routines, which can only be compiled
+  58:rtos/portable/GCC/AT91SAM7S256/port.c ****  * to ARM mode are contained in portISR.c.
+  59:rtos/portable/GCC/AT91SAM7S256/port.c ****  *----------------------------------------------------------*/
+  60:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  61:rtos/portable/GCC/AT91SAM7S256/port.c **** /*
+  62:rtos/portable/GCC/AT91SAM7S256/port.c **** 	Changes from V2.5.2
+  63:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  64:rtos/portable/GCC/AT91SAM7S256/port.c **** 	+ ulCriticalNesting is now saved as part of the task context, as is
+  65:rtos/portable/GCC/AT91SAM7S256/port.c **** 	  therefore added to the initial task stack during pxPortInitialiseStack.
+  66:rtos/portable/GCC/AT91SAM7S256/port.c **** */
+  67:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  68:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  69:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Standard includes. */
+  70:rtos/portable/GCC/AT91SAM7S256/port.c **** #include <stdlib.h>
+  71:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  72:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Scheduler includes. */
+  73:rtos/portable/GCC/AT91SAM7S256/port.c **** #include "FreeRTOS.h"
+  74:rtos/portable/GCC/AT91SAM7S256/port.c **** #include "task.h"
+  75:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  76:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Processor constants. */
+  77:rtos/portable/GCC/AT91SAM7S256/port.c **** #include "AT91SAM7S256.h"
+  78:rtos/portable/GCC/AT91SAM7S256/port.c **** #define AT91F_AIC_ConfigureIt( irq_id, priority, src_type, newHandler )         \
+  79:rtos/portable/GCC/AT91SAM7S256/port.c **** {                                                                                                  
+  80:rtos/portable/GCC/AT91SAM7S256/port.c ****     unsigned int mask ;                                                                            
+  81:rtos/portable/GCC/AT91SAM7S256/port.c ****                                                                                                    
+  82:rtos/portable/GCC/AT91SAM7S256/port.c ****     mask = 0x1 << irq_id;                                                                          
+  83:rtos/portable/GCC/AT91SAM7S256/port.c ****     /* Disable the interrupt on the interrupt controller */                                     \
+  84:rtos/portable/GCC/AT91SAM7S256/port.c ****     AT91C_BASE_AIC->AIC_IDCR = mask ;                                                              
+  85:rtos/portable/GCC/AT91SAM7S256/port.c ****     /* Save the interrupt handler routine pointer and the interrupt priority */ \
+  86:rtos/portable/GCC/AT91SAM7S256/port.c ****     AT91C_BASE_AIC->AIC_SVR[irq_id] = (unsigned int) newHandler ;                       \
+  87:rtos/portable/GCC/AT91SAM7S256/port.c ****     /* Store the Source Mode Register */                                                           
+  88:rtos/portable/GCC/AT91SAM7S256/port.c ****     AT91C_BASE_AIC->AIC_SMR[irq_id] = src_type | priority  ;                            \
+  89:rtos/portable/GCC/AT91SAM7S256/port.c ****     /* Clear the interrupt on the interrupt controller */                                       \
+  90:rtos/portable/GCC/AT91SAM7S256/port.c ****     AT91C_BASE_AIC->AIC_ICCR = mask ;                                                              
+  91:rtos/portable/GCC/AT91SAM7S256/port.c **** }
+  92:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  93:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Constants required to setup the task context. */
+  94:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portINITIAL_SPSR				( ( portSTACK_TYPE ) 0x1f ) /* System mode, ARM mode, interrupts enable
+  95:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portTHUMB_MODE_BIT				( ( portSTACK_TYPE ) 0x20 )
+  96:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portINSTRUCTION_SIZE			( ( portSTACK_TYPE ) 4 )
+  97:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portNO_CRITICAL_SECTION_NESTING	( ( portSTACK_TYPE ) 0 )
+  98:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+  99:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Constants required to setup the tick ISR. */
+ 100:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portENABLE_TIMER			( ( unsigned portCHAR ) 0x01 )
+ 101:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portPRESCALE_VALUE			0x00
+ 102:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portINTERRUPT_ON_MATCH		( ( unsigned portLONG ) 0x01 )
+ 103:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portRESET_COUNT_ON_MATCH	( ( unsigned portLONG ) 0x02 )
+ 104:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 105:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Constants required to setup the PIT. */
+ 106:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portPIT_CLOCK_DIVISOR			( ( unsigned portLONG ) 16 )
+ 107:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portPIT_COUNTER_VALUE			( ( ( configCPU_CLOCK_HZ / portPIT_CLOCK_DIVISOR ) / 1000UL ) * por
+ 108:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 109:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portINT_LEVEL_SENSITIVE  0
+ 110:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portPIT_ENABLE      	( ( unsigned portSHORT ) 0x1 << 24 )
+ 111:rtos/portable/GCC/AT91SAM7S256/port.c **** #define portPIT_INT_ENABLE     	( ( unsigned portSHORT ) 0x1 << 25 )
+ 112:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------*/
+ 113:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 114:rtos/portable/GCC/AT91SAM7S256/port.c **** /* Setup the timer to generate the tick interrupts. */
+ 115:rtos/portable/GCC/AT91SAM7S256/port.c **** static void prvSetupTimerInterrupt( void );
+ 116:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 117:rtos/portable/GCC/AT91SAM7S256/port.c **** /*
+ 118:rtos/portable/GCC/AT91SAM7S256/port.c ****  * The scheduler can only be started from ARM mode, so
+ 119:rtos/portable/GCC/AT91SAM7S256/port.c ****  * vPortISRStartFirstSTask() is defined in portISR.c.
+ 120:rtos/portable/GCC/AT91SAM7S256/port.c ****  */
+ 121:rtos/portable/GCC/AT91SAM7S256/port.c **** extern void vPortISRStartFirstTask( void );
+ 122:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 123:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------*/
+ 124:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 125:rtos/portable/GCC/AT91SAM7S256/port.c **** /*
+ 126:rtos/portable/GCC/AT91SAM7S256/port.c ****  * Initialise the stack of a task to look exactly as if a call to
+ 127:rtos/portable/GCC/AT91SAM7S256/port.c ****  * portSAVE_CONTEXT had been called.
+ 128:rtos/portable/GCC/AT91SAM7S256/port.c ****  *
+ 129:rtos/portable/GCC/AT91SAM7S256/port.c ****  * See header file for description.
+ 130:rtos/portable/GCC/AT91SAM7S256/port.c ****  */
+ 131:rtos/portable/GCC/AT91SAM7S256/port.c **** portSTACK_TYPE *pxPortInitialiseStack( portSTACK_TYPE *pxTopOfStack, pdTASK_CODE pxCode, void *pvPa
+ 132:rtos/portable/GCC/AT91SAM7S256/port.c **** {
+  19              		.loc 1 132 0
+  20 0000 10B5     		push	{r4, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+ 133:rtos/portable/GCC/AT91SAM7S256/port.c **** portSTACK_TYPE *pxOriginalTOS;
+ 134:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 135:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxOriginalTOS = pxTopOfStack;
+ 136:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 137:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Setup the initial stack of the task.  The stack is set exactly as
+ 138:rtos/portable/GCC/AT91SAM7S256/port.c **** 	expected by the portRESTORE_CONTEXT() macro. */
+ 139:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 140:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* First on the stack is the return address - which in this case is the
+ 141:rtos/portable/GCC/AT91SAM7S256/port.c **** 	start of the task.  The offset is added to make the return address appear
+ 142:rtos/portable/GCC/AT91SAM7S256/port.c **** 	as it would within an IRQ ISR. */
+ 143:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) pxCode + portINSTRUCTION_SIZE;
+  23              		.loc 1 143 0
+  24 0002 0431     		add	r1, r1, #4
+  25              	.LVL1:
+  26 0004 0160     		str	r1, [r0]
+ 144:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  27              		.loc 1 144 0
+  28 0006 031F     		sub	r3, r0, #4
+  29              	.LVL2:
+ 145:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 146:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x00000000;	/* R14 */
+  30              		.loc 1 146 0
+  31 0008 0024     		mov	r4, #0
+  32 000a 1C60     		str	r4, [r3]
+ 147:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  33              		.loc 1 147 0
+  34 000c 043B     		sub	r3, r3, #4
+  35              	.LVL3:
+ 148:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) pxOriginalTOS; /* Stack used when task starts goes in R13. */
+  36              		.loc 1 148 0
+  37 000e 1860     		str	r0, [r3]
+ 149:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  38              		.loc 1 149 0
+  39 0010 011C     		mov	r1, r0
+  40 0012 0C39     		sub	r1, r1, #12
+  41              	.LVL4:
+ 150:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x12121212;	/* R12 */
+  42              		.loc 1 150 0
+  43 0014 174B     		ldr	r3, .L3
+  44 0016 0B60     		str	r3, [r1]
+ 151:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  45              		.loc 1 151 0
+  46 0018 0439     		sub	r1, r1, #4
+  47              	.LVL5:
+ 152:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x11111111;	/* R11 */
+  48              		.loc 1 152 0
+  49 001a 174B     		ldr	r3, .L3+4
+  50 001c 0B60     		str	r3, [r1]
+ 153:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  51              		.loc 1 153 0
+  52 001e 0439     		sub	r1, r1, #4
+  53              	.LVL6:
+ 154:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x10101010;	/* R10 */
+  54              		.loc 1 154 0
+  55 0020 164B     		ldr	r3, .L3+8
+  56 0022 0B60     		str	r3, [r1]
+ 155:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  57              		.loc 1 155 0
+  58 0024 0439     		sub	r1, r1, #4
+  59              	.LVL7:
+ 156:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x09090909;	/* R9 */
+  60              		.loc 1 156 0
+  61 0026 164B     		ldr	r3, .L3+12
+  62 0028 0B60     		str	r3, [r1]
+ 157:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  63              		.loc 1 157 0
+  64 002a 0439     		sub	r1, r1, #4
+  65              	.LVL8:
+ 158:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x08080808;	/* R8 */
+  66              		.loc 1 158 0
+  67 002c 154B     		ldr	r3, .L3+16
+  68 002e 0B60     		str	r3, [r1]
+ 159:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  69              		.loc 1 159 0
+  70 0030 0439     		sub	r1, r1, #4
+  71              	.LVL9:
+ 160:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x07070707;	/* R7 */
+  72              		.loc 1 160 0
+  73 0032 154B     		ldr	r3, .L3+20
+  74 0034 0B60     		str	r3, [r1]
+ 161:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  75              		.loc 1 161 0
+  76 0036 0439     		sub	r1, r1, #4
+  77              	.LVL10:
+ 162:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x06060606;	/* R6 */
+  78              		.loc 1 162 0
+  79 0038 144B     		ldr	r3, .L3+24
+  80 003a 0B60     		str	r3, [r1]
+ 163:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  81              		.loc 1 163 0
+  82 003c 0439     		sub	r1, r1, #4
+  83              	.LVL11:
+ 164:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x05050505;	/* R5 */
+  84              		.loc 1 164 0
+  85 003e 144B     		ldr	r3, .L3+28
+  86 0040 0B60     		str	r3, [r1]
+ 165:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  87              		.loc 1 165 0
+  88 0042 0439     		sub	r1, r1, #4
+  89              	.LVL12:
+ 166:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x04040404;	/* R4 */
+  90              		.loc 1 166 0
+  91 0044 134B     		ldr	r3, .L3+32
+  92 0046 0B60     		str	r3, [r1]
+ 167:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  93              		.loc 1 167 0
+  94 0048 0439     		sub	r1, r1, #4
+  95              	.LVL13:
+ 168:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x03030303;	/* R3 */
+  96              		.loc 1 168 0
+  97 004a 134B     		ldr	r3, .L3+36
+  98 004c 0B60     		str	r3, [r1]
+ 169:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+  99              		.loc 1 169 0
+ 100 004e 0439     		sub	r1, r1, #4
+ 101              	.LVL14:
+ 170:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x02020202;	/* R2 */
+ 102              		.loc 1 170 0
+ 103 0050 124B     		ldr	r3, .L3+40
+ 104 0052 0B60     		str	r3, [r1]
+ 171:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+ 105              		.loc 1 171 0
+ 106 0054 0439     		sub	r1, r1, #4
+ 107              	.LVL15:
+ 172:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) 0x01010101;	/* R1 */
+ 108              		.loc 1 172 0
+ 109 0056 124B     		ldr	r3, .L3+44
+ 110 0058 0B60     		str	r3, [r1]
+ 173:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+ 111              		.loc 1 173 0
+ 112 005a 031C     		mov	r3, r0
+ 113 005c 3C3B     		sub	r3, r3, #60
+ 114              	.LVL16:
+ 174:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 175:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* When the task starts is will expect to find the function parameter in
+ 176:rtos/portable/GCC/AT91SAM7S256/port.c **** 	R0. */
+ 177:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) pvParameters; /* R0 */
+ 115              		.loc 1 177 0
+ 116 005e 1A60     		str	r2, [r3]
+ 178:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+ 117              		.loc 1 178 0
+ 118 0060 021C     		mov	r2, r0
+ 119              	.LVL17:
+ 120 0062 403A     		sub	r2, r2, #64
+ 121              	.LVL18:
+ 179:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 180:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* The last thing onto the stack is the status register, which is set for
+ 181:rtos/portable/GCC/AT91SAM7S256/port.c **** 	system mode, with interrupts enabled. */
+ 182:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = ( portSTACK_TYPE ) portINITIAL_SPSR;
+ 183:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 184:rtos/portable/GCC/AT91SAM7S256/port.c **** 	#ifdef THUMB_INTERWORK
+ 185:rtos/portable/GCC/AT91SAM7S256/port.c **** 	{
+ 186:rtos/portable/GCC/AT91SAM7S256/port.c **** 		/* We want the task to start in thumb mode. */
+ 187:rtos/portable/GCC/AT91SAM7S256/port.c **** 		*pxTopOfStack |= portTHUMB_MODE_BIT;
+ 122              		.loc 1 187 0
+ 123 0064 3F23     		mov	r3, #63
+ 124 0066 1360     		str	r3, [r2]
+ 188:rtos/portable/GCC/AT91SAM7S256/port.c **** 	}
+ 189:rtos/portable/GCC/AT91SAM7S256/port.c **** 	#endif
+ 190:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 191:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxTopOfStack--;
+ 125              		.loc 1 191 0
+ 126 0068 4438     		sub	r0, r0, #68
+ 127              	.LVL19:
+ 192:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 193:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Some optimisation levels use the stack differently to others.  This
+ 194:rtos/portable/GCC/AT91SAM7S256/port.c **** 	means the interrupt flags cannot always be stored on the stack and will
+ 195:rtos/portable/GCC/AT91SAM7S256/port.c **** 	instead be stored in a variable, which is then saved as part of the
+ 196:rtos/portable/GCC/AT91SAM7S256/port.c **** 	tasks context. */
+ 197:rtos/portable/GCC/AT91SAM7S256/port.c **** 	*pxTopOfStack = portNO_CRITICAL_SECTION_NESTING;
+ 128              		.loc 1 197 0
+ 129 006a 0460     		str	r4, [r0]
+ 130              	.LVL20:
+ 198:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 199:rtos/portable/GCC/AT91SAM7S256/port.c **** 	return pxTopOfStack;
+ 200:rtos/portable/GCC/AT91SAM7S256/port.c **** }
+ 131              		.loc 1 200 0
+ 132              		@ sp needed for prologue
+ 133 006c 10BC     		pop	{r4}
+ 134 006e 02BC     		pop	{r1}
+ 135 0070 0847     		bx	r1
+ 136              	.L4:
+ 137 0072 C046     		.align	2
+ 138              	.L3:
+ 139 0074 12121212 		.word	303174162
+ 140 0078 11111111 		.word	286331153
+ 141 007c 10101010 		.word	269488144
+ 142 0080 09090909 		.word	151587081
+ 143 0084 08080808 		.word	134744072
+ 144 0088 07070707 		.word	117901063
+ 145 008c 06060606 		.word	101058054
+ 146 0090 05050505 		.word	84215045
+ 147 0094 04040404 		.word	67372036
+ 148 0098 03030303 		.word	50529027
+ 149 009c 02020202 		.word	33686018
+ 150 00a0 01010101 		.word	16843009
+ 151              	.LFE290:
+ 153              		.align	2
+ 154              		.global	vPortEndScheduler
+ 155              		.code	16
+ 156              		.thumb_func
+ 158              	vPortEndScheduler:
+ 159              	.LFB292:
+ 201:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------*/
+ 202:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 203:rtos/portable/GCC/AT91SAM7S256/port.c **** portBASE_TYPE xPortStartScheduler( void )
+ 204:rtos/portable/GCC/AT91SAM7S256/port.c **** {
+ 205:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Start the timer that generates the tick ISR.  Interrupts are disabled
+ 206:rtos/portable/GCC/AT91SAM7S256/port.c **** 	here already. */
+ 207:rtos/portable/GCC/AT91SAM7S256/port.c **** 	prvSetupTimerInterrupt();
+ 208:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 209:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Start the first task. */
+ 210:rtos/portable/GCC/AT91SAM7S256/port.c **** 	vPortISRStartFirstTask();
+ 211:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 212:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Should not get here! */
+ 213:rtos/portable/GCC/AT91SAM7S256/port.c **** 	return 0;
+ 214:rtos/portable/GCC/AT91SAM7S256/port.c **** }
+ 215:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------*/
+ 216:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 217:rtos/portable/GCC/AT91SAM7S256/port.c **** void vPortEndScheduler( void )
+ 218:rtos/portable/GCC/AT91SAM7S256/port.c **** {
+ 160              		.loc 1 218 0
+ 219:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* It is unlikely that the ARM port will require this function as there
+ 220:rtos/portable/GCC/AT91SAM7S256/port.c **** 	is nothing to return to.  */
+ 221:rtos/portable/GCC/AT91SAM7S256/port.c **** }
+ 161              		.loc 1 221 0
+ 162              		@ sp needed for prologue
+ 163 00a4 7047     		bx	lr
+ 164              	.LFE292:
+ 166 00a6 C046     		.align	2
+ 167              		.global	xPortStartScheduler
+ 168              		.code	16
+ 169              		.thumb_func
+ 171              	xPortStartScheduler:
+ 172              	.LFB291:
+ 173              		.loc 1 204 0
+ 174 00a8 00B5     		push	{lr}
+ 175              	.LCFI1:
+ 176              	.LBB5:
+ 177              	.LBB6:
+ 178              	.LBB7:
+ 222:rtos/portable/GCC/AT91SAM7S256/port.c **** /*-----------------------------------------------------------*/
+ 223:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 224:rtos/portable/GCC/AT91SAM7S256/port.c **** /*
+ 225:rtos/portable/GCC/AT91SAM7S256/port.c ****  * Setup the timer 0 to generate the tick interrupts at the required frequency.
+ 226:rtos/portable/GCC/AT91SAM7S256/port.c ****  */
+ 227:rtos/portable/GCC/AT91SAM7S256/port.c **** static void prvSetupTimerInterrupt( void )
+ 228:rtos/portable/GCC/AT91SAM7S256/port.c **** {
+ 229:rtos/portable/GCC/AT91SAM7S256/port.c **** AT91PS_PITC pxPIT = AT91C_BASE_PITC;
+ 230:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 231:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Setup the AIC for PIT interrupts.  The interrupt routine chosen depends
+ 232:rtos/portable/GCC/AT91SAM7S256/port.c **** 	on whether the preemptive or cooperative scheduler is being used. */
+ 233:rtos/portable/GCC/AT91SAM7S256/port.c **** 	#if configUSE_PREEMPTION == 0
+ 234:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 235:rtos/portable/GCC/AT91SAM7S256/port.c **** 		extern void ( vNonPreemptiveTick ) ( void );
+ 236:rtos/portable/GCC/AT91SAM7S256/port.c **** 		AT91F_AIC_ConfigureIt( AT91C_ID_SYS, AT91C_AIC_PRIOR_HIGHEST, portINT_LEVEL_SENSITIVE, ( void (*)
+ 237:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 238:rtos/portable/GCC/AT91SAM7S256/port.c **** 	#else
+ 239:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 240:rtos/portable/GCC/AT91SAM7S256/port.c **** 		extern void ( vPreemptiveTick )( void );
+ 241:rtos/portable/GCC/AT91SAM7S256/port.c **** 		AT91F_AIC_ConfigureIt( AT91C_ID_SYS, AT91C_AIC_PRIOR_HIGHEST, portINT_LEVEL_SENSITIVE, ( void (*)
+ 179              		.loc 1 241 0
+ 180 00aa 0C49     		ldr	r1, .L9
+ 181 00ac 9223     		mov	r3, #146
+ 182 00ae 5B00     		lsl	r3, r3, #1
+ 183 00b0 0220     		mov	r0, #2
+ 184 00b2 C850     		str	r0, [r1, r3]
+ 185 00b4 0A4A     		ldr	r2, .L9+4
+ 186 00b6 8423     		mov	r3, #132
+ 187 00b8 CA50     		str	r2, [r1, r3]
+ 188 00ba 0723     		mov	r3, #7
+ 189 00bc 4B60     		str	r3, [r1, #4]
+ 190 00be 9423     		mov	r3, #148
+ 191 00c0 5B00     		lsl	r3, r3, #1
+ 192 00c2 C850     		str	r0, [r1, r3]
+ 193              	.LBE7:
+ 242:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 243:rtos/portable/GCC/AT91SAM7S256/port.c **** 	#endif
+ 244:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 245:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Configure the PIT period. */
+ 246:rtos/portable/GCC/AT91SAM7S256/port.c **** 	pxPIT->PITC_PIMR = portPIT_ENABLE | portPIT_INT_ENABLE | portPIT_COUNTER_VALUE;
+ 194              		.loc 1 246 0
+ 195 00c4 074A     		ldr	r2, .L9+8
+ 196 00c6 084B     		ldr	r3, .L9+12
+ 197 00c8 1A60     		str	r2, [r3]
+ 247:rtos/portable/GCC/AT91SAM7S256/port.c **** 
+ 248:rtos/portable/GCC/AT91SAM7S256/port.c **** 	/* Enable the interrupt.  Global interrupts are disables at this point so
+ 249:rtos/portable/GCC/AT91SAM7S256/port.c **** 	this is safe. */
+ 250:rtos/portable/GCC/AT91SAM7S256/port.c ****     AT91C_BASE_AIC->AIC_IECR = 0x1 << AT91C_ID_SYS;
+ 198              		.loc 1 250 0
+ 199 00ca 9023     		mov	r3, #144
+ 200 00cc 5B00     		lsl	r3, r3, #1
+ 201 00ce C850     		str	r0, [r1, r3]
+ 202              	.LBE6:
+ 203              	.LBE5:
+ 204              		.loc 1 210 0
+ 205 00d0 FFF7FEFF 		bl	vPortISRStartFirstTask
+ 206              		.loc 1 214 0
+ 207 00d4 0020     		mov	r0, #0
+ 208              		@ sp needed for prologue
+ 209 00d6 02BC     		pop	{r1}
+ 210 00d8 0847     		bx	r1
+ 211              	.L10:
+ 212 00da C046     		.align	2
+ 213              	.L9:
+ 214 00dc 00F0FFFF 		.word	-4096
+ 215 00e0 00000000 		.word	vPreemptiveTick
+ 216 00e4 B30B0003 		.word	50334643
+ 217 00e8 30FDFFFF 		.word	-720
+ 218              	.LFE291:
+ 274              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 port.c
+     /tmp/ccH2Rapd.s:1      .text:00000000 $t
+     /tmp/ccH2Rapd.s:16     .text:00000000 pxPortInitialiseStack
+     /tmp/ccH2Rapd.s:139    .text:00000074 $d
+     /tmp/ccH2Rapd.s:158    .text:000000a4 vPortEndScheduler
+     /tmp/ccH2Rapd.s:155    .text:000000a4 $t
+     /tmp/ccH2Rapd.s:171    .text:000000a8 xPortStartScheduler
+     /tmp/ccH2Rapd.s:214    .text:000000dc $d
+
+UNDEFINED SYMBOLS
+vPortISRStartFirstTask
+vPreemptiveTick

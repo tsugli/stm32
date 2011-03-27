@@ -1,0 +1,1002 @@
+   1              		.code	16
+   2              		.file	"netif.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	netif_find
+  13              		.code	16
+  14              		.thumb_func
+  16              	netif_find:
+  17              	.LFB293:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/netif.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * lwIP network interface abstraction
+   4:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/opt.h"
+  40:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/def.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/ip_addr.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/netif.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/tcp.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/snmp.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/igmp.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "netif/etharp.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if ENABLE_LOOPBACK
+  49:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/sys.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_LOOPBACK_MULTITHREADING
+  51:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/tcpip.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_LOOPBACK_MULTITHREADING */
+  53:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* ENABLE_LOOPBACK */
+  54:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  55:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_AUTOIP
+  56:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/autoip.h"
+  57:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_AUTOIP */
+  58:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_DHCP
+  59:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #include "lwip/dhcp.h"
+  60:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_DHCP */
+  61:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  62:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_STATUS_CALLBACK
+  63:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #define NETIF_STATUS_CALLBACK(n) { if (n->status_callback) (n->status_callback)(n); }
+  64:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #else
+  65:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #define NETIF_STATUS_CALLBACK(n) { /* NOP */ }
+  66:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_STATUS_CALLBACK */ 
+  67:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  68:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_LINK_CALLBACK
+  69:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #define NETIF_LINK_CALLBACK(n) { if (n->link_callback) (n->link_callback)(n); }
+  70:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #else
+  71:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #define NETIF_LINK_CALLBACK(n) { /* NOP */ }
+  72:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_LINK_CALLBACK */ 
+  73:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  74:rtos/common/ethernet/lwIP_132/src/core/netif.c **** struct netif *netif_list;
+  75:rtos/common/ethernet/lwIP_132/src/core/netif.c **** struct netif *netif_default;
+  76:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+  77:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+  78:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Add a network interface to the list of lwIP netifs.
+  79:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  80:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif a pre-allocated netif structure
+  81:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param ipaddr IP address for the new netif
+  82:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netmask network mask for the new netif
+  83:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param gw default gateway IP address for the new netif
+  84:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param state opaque data passed to the new netif
+  85:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param init callback function that initializes the interface
+  86:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param input callback function that is called to pass
+  87:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * ingress packets up in the protocol layer stack.
+  88:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+  89:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @return netif, or NULL if failed.
+  90:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+  91:rtos/common/ethernet/lwIP_132/src/core/netif.c **** struct netif *
+  92:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_add(struct netif *netif, struct ip_addr *ipaddr, struct ip_addr *netmask,
+  93:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   struct ip_addr *gw,
+  94:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   void *state,
+  95:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   err_t (* init)(struct netif *netif),
+  96:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   err_t (* input)(struct pbuf *p, struct netif *netif))
+  97:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+  98:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   static u8_t netifnum = 0;
+  99:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 100:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* reset new interface configuration state */
+ 101:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->ip_addr.addr = 0;
+ 102:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->netmask.addr = 0;
+ 103:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->gw.addr = 0;
+ 104:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->flags = 0;
+ 105:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_DHCP
+ 106:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* netif not under DHCP control by default */
+ 107:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->dhcp = NULL;
+ 108:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_DHCP */
+ 109:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_AUTOIP
+ 110:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* netif not under AutoIP control by default */
+ 111:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->autoip = NULL;
+ 112:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_AUTOIP */
+ 113:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_STATUS_CALLBACK
+ 114:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->status_callback = NULL;
+ 115:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_STATUS_CALLBACK */
+ 116:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_LINK_CALLBACK
+ 117:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->link_callback = NULL;
+ 118:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_LINK_CALLBACK */
+ 119:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_IGMP
+ 120:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->igmp_mac_filter = NULL;
+ 121:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_IGMP */
+ 122:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if ENABLE_LOOPBACK
+ 123:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->loop_first = NULL;
+ 124:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->loop_last = NULL;
+ 125:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* ENABLE_LOOPBACK */
+ 126:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 127:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* remember netif specific state information data */
+ 128:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->state = state;
+ 129:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->num = netifnum++;
+ 130:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->input = input;
+ 131:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_NETIF_HWADDRHINT
+ 132:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->addr_hint = NULL;
+ 133:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 134:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if ENABLE_LOOPBACK && LWIP_LOOPBACK_MAX_PBUFS
+ 135:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->loop_cnt_current = 0;
+ 136:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* ENABLE_LOOPBACK && LWIP_LOOPBACK_MAX_PBUFS */
+ 137:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_set_addr(netif, ipaddr, netmask, gw);
+ 139:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 140:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* call user specified initialization function for netif */
+ 141:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (init(netif) != ERR_OK) {
+ 142:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     return NULL;
+ 143:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 144:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 145:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* add this netif to the list */
+ 146:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif->next = netif_list;
+ 147:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_list = netif;
+ 148:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_inc_iflist();
+ 149:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 150:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_IGMP
+ 151:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* start IGMP processing */
+ 152:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (netif->flags & NETIF_FLAG_IGMP) {
+ 153:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     igmp_start( netif);
+ 154:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 155:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_IGMP */
+ 156:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 157:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, ("netif: added interface %c%c IP addr ",
+ 158:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif->name[0], netif->name[1]));
+ 159:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_debug_print(NETIF_DEBUG, ipaddr);
+ 160:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, (" netmask "));
+ 161:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_debug_print(NETIF_DEBUG, netmask);
+ 162:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, (" gw "));
+ 163:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_debug_print(NETIF_DEBUG, gw);
+ 164:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, ("\n"));
+ 165:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   return netif;
+ 166:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 167:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 168:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 169:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Change IP address configuration for a network interface (including netmask
+ 170:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * and default gateway).
+ 171:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 172:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the network interface to change
+ 173:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param ipaddr the new IP address
+ 174:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netmask the new netmask
+ 175:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param gw the new default gateway
+ 176:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 177:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void
+ 178:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_set_addr(struct netif *netif, struct ip_addr *ipaddr, struct ip_addr *netmask,
+ 179:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     struct ip_addr *gw)
+ 180:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 181:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_set_ipaddr(netif, ipaddr);
+ 182:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_set_netmask(netif, netmask);
+ 183:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_set_gw(netif, gw);
+ 184:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 185:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 186:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 187:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Remove a network interface from the list of lwIP netifs.
+ 188:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 189:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the network interface to remove
+ 190:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 191:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void netif_remove(struct netif * netif)
+ 192:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 193:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if ( netif == NULL ) return;
+ 194:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 195:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_IGMP
+ 196:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* stop IGMP processing */
+ 197:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (netif->flags & NETIF_FLAG_IGMP) {
+ 198:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     igmp_stop( netif);
+ 199:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 200:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_IGMP */
+ 201:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 202:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_delete_ipaddridx_tree(netif);
+ 203:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 204:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /*  is it the first netif? */
+ 205:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (netif_list == netif) {
+ 206:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif_list = netif->next;
+ 207:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     snmp_dec_iflist();
+ 208:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 209:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   else {
+ 210:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /*  look for netif further down the list */
+ 211:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     struct netif * tmpNetif;
+ 212:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     for (tmpNetif = netif_list; tmpNetif != NULL; tmpNetif = tmpNetif->next) {
+ 213:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       if (tmpNetif->next == netif) {
+ 214:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         tmpNetif->next = netif->next;
+ 215:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         snmp_dec_iflist();
+ 216:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         break;
+ 217:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       }
+ 218:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 219:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     if (tmpNetif == NULL)
+ 220:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       return; /*  we didn't find any netif today */
+ 221:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 222:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* this netif is default? */
+ 223:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (netif_default == netif)
+ 224:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* reset default netif */
+ 225:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif_set_default(NULL);
+ 226:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF( NETIF_DEBUG, ("netif_remove: removed netif\n") );
+ 227:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 228:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 229:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 230:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Find a network interface by searching for its name
+ 231:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 232:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param name the name of the netif (like netif->name) plus concatenated number
+ 233:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * in ascii representation (e.g. 'en0')
+ 234:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 235:rtos/common/ethernet/lwIP_132/src/core/netif.c **** struct netif *
+ 236:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_find(char *name)
+ 237:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+  19              		.loc 1 237 0
+  20 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 011C     		mov	r1, r0
+ 238:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   struct netif *netif;
+ 239:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   u8_t num;
+ 240:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 241:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (name == NULL) {
+  24              		.loc 1 241 0
+  25 0004 0028     		cmp	r0, #0
+  26 0006 01D1     		bne	.L2
+  27 0008 0020     		mov	r0, #0
+  28              	.LVL1:
+  29 000a 18E0     		b	.L3
+  30              	.LVL2:
+  31              	.L2:
+ 242:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     return NULL;
+ 243:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 244:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 245:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   num = name[2] - '0';
+  32              		.loc 1 245 0
+  33 000c 8378     		ldrb	r3, [r0, #2]
+  34 000e 303B     		sub	r3, r3, #48
+  35 0010 1B06     		lsl	r3, r3, #24
+  36 0012 1C0E     		lsr	r4, r3, #24
+  37              	.LVL3:
+ 246:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 247:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   for(netif = netif_list; netif != NULL; netif = netif->next) {
+  38              		.loc 1 247 0
+  39 0014 0B4B     		ldr	r3, .L9
+  40 0016 1868     		ldr	r0, [r3]
+  41              	.LVL4:
+  42 0018 0028     		cmp	r0, #0
+  43 001a 10D0     		beq	.L3
+ 248:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     if (num == netif->num &&
+  44              		.loc 1 248 0
+  45 001c 3025     		mov	r5, #48
+  46 001e 2E26     		mov	r6, #46
+  47 0020 2F27     		mov	r7, #47
+  48              	.L7:
+  49 0022 435D     		ldrb	r3, [r0, r5]
+  50 0024 A342     		cmp	r3, r4
+  51 0026 07D1     		bne	.L4
+  52 0028 0A78     		ldrb	r2, [r1]
+  53 002a 835D     		ldrb	r3, [r0, r6]
+  54 002c 9A42     		cmp	r2, r3
+  55 002e 03D1     		bne	.L4
+  56 0030 4A78     		ldrb	r2, [r1, #1]
+  57 0032 C35D     		ldrb	r3, [r0, r7]
+  58 0034 9A42     		cmp	r2, r3
+  59 0036 02D0     		beq	.L3
+  60              	.L4:
+  61              		.loc 1 247 0
+  62 0038 0068     		ldr	r0, [r0]
+  63 003a 0028     		cmp	r0, #0
+  64 003c F1D1     		bne	.L7
+  65              	.L3:
+  66              	.LVL5:
+ 249:rtos/common/ethernet/lwIP_132/src/core/netif.c ****        name[0] == netif->name[0] &&
+ 250:rtos/common/ethernet/lwIP_132/src/core/netif.c ****        name[1] == netif->name[1]) {
+ 251:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       LWIP_DEBUGF(NETIF_DEBUG, ("netif_find: found %c%c\n", name[0], name[1]));
+ 252:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       return netif;
+ 253:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 254:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 255:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, ("netif_find: didn't find %c%c\n", name[0], name[1]));
+ 256:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   return NULL;
+ 257:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+  67              		.loc 1 257 0
+  68              		@ sp needed for prologue
+  69              	.LVL6:
+  70 003e F0BC     		pop	{r4, r5, r6, r7}
+  71 0040 02BC     		pop	{r1}
+  72 0042 0847     		bx	r1
+  73              	.L10:
+  74              		.align	2
+  75              	.L9:
+  76 0044 00000000 		.word	netif_list
+  77              	.LFE293:
+  79              		.align	2
+  80              		.global	netif_set_gw
+  81              		.code	16
+  82              		.thumb_func
+  84              	netif_set_gw:
+  85              	.LFB295:
+ 258:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 259:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 260:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Change the IP address of a network interface
+ 261:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 262:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the network interface to change
+ 263:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param ipaddr the new IP address
+ 264:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 265:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @note call netif_set_addr() if you also want to change netmask and
+ 266:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * default gateway
+ 267:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 268:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void
+ 269:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_set_ipaddr(struct netif *netif, struct ip_addr *ipaddr)
+ 270:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 271:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* TODO: Handling of obsolete pcbs */
+ 272:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* See:  http://mail.gnu.org/archive/html/lwip-users/2003-03/msg00118.html */
+ 273:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_TCP
+ 274:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   struct tcp_pcb *pcb;
+ 275:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   struct tcp_pcb_listen *lpcb;
+ 276:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 277:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* address is actually being changed? */
+ 278:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if ((ip_addr_cmp(ipaddr, &(netif->ip_addr))) == 0)
+ 279:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   {
+ 280:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* extern struct tcp_pcb *tcp_active_pcbs; defined by tcp.h */
+ 281:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_STATE, ("netif_set_ipaddr: netif address being changed\n"));
+ 282:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     pcb = tcp_active_pcbs;
+ 283:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     while (pcb != NULL) {
+ 284:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       /* PCB bound to current local interface address? */
+ 285:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       if (ip_addr_cmp(&(pcb->local_ip), &(netif->ip_addr))) {
+ 286:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         /* this connection must be aborted */
+ 287:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         struct tcp_pcb *next = pcb->next;
+ 288:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_STATE, ("netif_set_ipaddr: aborting TCP pcb %p\n", (void
+ 289:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         tcp_abort(pcb);
+ 290:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         pcb = next;
+ 291:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       } else {
+ 292:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         pcb = pcb->next;
+ 293:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       }
+ 294:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 295:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     for (lpcb = tcp_listen_pcbs.listen_pcbs; lpcb != NULL; lpcb = lpcb->next) {
+ 296:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       /* PCB bound to current local interface address? */
+ 297:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       if ((!(ip_addr_isany(&(lpcb->local_ip)))) &&
+ 298:rtos/common/ethernet/lwIP_132/src/core/netif.c ****           (ip_addr_cmp(&(lpcb->local_ip), &(netif->ip_addr)))) {
+ 299:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         /* The PCB is listening to the old ipaddr and
+ 300:rtos/common/ethernet/lwIP_132/src/core/netif.c ****          * is set to listen to the new one instead */
+ 301:rtos/common/ethernet/lwIP_132/src/core/netif.c ****         ip_addr_set(&(lpcb->local_ip), ipaddr);
+ 302:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       }
+ 303:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 304:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 305:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif
+ 306:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_delete_ipaddridx_tree(netif);
+ 307:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_delete_iprteidx_tree(0,netif);
+ 308:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* set new IP address to netif */
+ 309:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_set(&(netif->ip_addr), ipaddr);
+ 310:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_insert_ipaddridx_tree(netif);
+ 311:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_insert_iprteidx_tree(0,netif);
+ 312:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 313:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("netif: IP address of interface %c%c 
+ 314:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif->name[0], netif->name[1],
+ 315:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr1(&netif->ip_addr),
+ 316:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr2(&netif->ip_addr),
+ 317:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr3(&netif->ip_addr),
+ 318:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr4(&netif->ip_addr)));
+ 319:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 320:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 321:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 322:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Change the default gateway for a network interface
+ 323:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 324:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the network interface to change
+ 325:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param gw the new default gateway
+ 326:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 327:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @note call netif_set_addr() if you also want to change ip address and netmask
+ 328:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 329:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void
+ 330:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_set_gw(struct netif *netif, struct ip_addr *gw)
+ 331:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+  86              		.loc 1 331 0
+  87              	.LVL7:
+ 332:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_set(&(netif->gw), gw);
+  88              		.loc 1 332 0
+  89 0048 0029     		cmp	r1, #0
+  90 004a 00D0     		beq	.L13
+  91 004c 0968     		ldr	r1, [r1]
+  92              	.LVL8:
+  93              	.L13:
+  94 004e C160     		str	r1, [r0, #12]
+  95              	.LVL9:
+ 333:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("netif: GW address of interface %c%c 
+ 334:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif->name[0], netif->name[1],
+ 335:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr1(&netif->gw),
+ 336:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr2(&netif->gw),
+ 337:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr3(&netif->gw),
+ 338:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr4(&netif->gw)));
+ 339:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+  96              		.loc 1 339 0
+  97              		@ sp needed for prologue
+  98 0050 7047     		bx	lr
+  99              	.LFE295:
+ 101 0052 C046     		.align	2
+ 102              		.global	netif_set_netmask
+ 103              		.code	16
+ 104              		.thumb_func
+ 106              	netif_set_netmask:
+ 107              	.LFB296:
+ 340:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 341:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 342:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Change the netmask of a network interface
+ 343:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 344:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the network interface to change
+ 345:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netmask the new netmask
+ 346:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 347:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @note call netif_set_addr() if you also want to change ip address and
+ 348:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * default gateway
+ 349:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 350:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void
+ 351:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_set_netmask(struct netif *netif, struct ip_addr *netmask)
+ 352:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 108              		.loc 1 352 0
+ 109              	.LVL10:
+ 353:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_delete_iprteidx_tree(0, netif);
+ 354:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   /* set new netmask to netif */
+ 355:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   ip_addr_set(&(netif->netmask), netmask);
+ 110              		.loc 1 355 0
+ 111 0054 0029     		cmp	r1, #0
+ 112 0056 00D0     		beq	.L17
+ 113 0058 0968     		ldr	r1, [r1]
+ 114              	.LVL11:
+ 115              	.L17:
+ 116 005a 8160     		str	r1, [r0, #8]
+ 117              	.LVL12:
+ 356:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   snmp_insert_iprteidx_tree(0, netif);
+ 357:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("netif: netmask of interface %c%c set
+ 358:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif->name[0], netif->name[1],
+ 359:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr1(&netif->netmask),
+ 360:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr2(&netif->netmask),
+ 361:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr3(&netif->netmask),
+ 362:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     ip4_addr4(&netif->netmask)));
+ 363:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 118              		.loc 1 363 0
+ 119              		@ sp needed for prologue
+ 120 005c 7047     		bx	lr
+ 121              	.LFE296:
+ 123 005e C046     		.align	2
+ 124              		.global	netif_set_default
+ 125              		.code	16
+ 126              		.thumb_func
+ 128              	netif_set_default:
+ 129              	.LFB297:
+ 364:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 365:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 366:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Set a network interface as the default network interface
+ 367:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * (used to output all packets for which no specific route is found)
+ 368:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 369:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @param netif the default network interface
+ 370:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */
+ 371:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void
+ 372:rtos/common/ethernet/lwIP_132/src/core/netif.c **** netif_set_default(struct netif *netif)
+ 373:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 130              		.loc 1 373 0
+ 131              	.LVL13:
+ 374:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if (netif == NULL)
+ 375:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   {
+ 376:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* remove default route */
+ 377:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     snmp_delete_iprteidx_tree(1, netif);
+ 378:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 379:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   else
+ 380:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   {
+ 381:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* install default route */
+ 382:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     snmp_insert_iprteidx_tree(1, netif);
+ 383:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 384:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   netif_default = netif;
+ 132              		.loc 1 384 0
+ 133 0060 014B     		ldr	r3, .L21
+ 134 0062 1860     		str	r0, [r3]
+ 385:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   LWIP_DEBUGF(NETIF_DEBUG, ("netif: setting default interface %c%c\n",
+ 386:rtos/common/ethernet/lwIP_132/src/core/netif.c ****            netif ? netif->name[0] : '\'', netif ? netif->name[1] : '\''));
+ 387:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 135              		.loc 1 387 0
+ 136              		@ sp needed for prologue
+ 137 0064 7047     		bx	lr
+ 138              	.L22:
+ 139 0066 C046     		.align	2
+ 140              	.L21:
+ 141 0068 00000000 		.word	netif_default
+ 142              	.LFE297:
+ 144              		.align	2
+ 145              		.global	netif_remove
+ 146              		.code	16
+ 147              		.thumb_func
+ 149              	netif_remove:
+ 150              	.LFB292:
+ 151              		.loc 1 192 0
+ 152 006c 00B5     		push	{lr}
+ 153              	.LCFI1:
+ 154              	.LVL14:
+ 155              		.loc 1 193 0
+ 156 006e 0028     		cmp	r0, #0
+ 157 0070 1FD0     		beq	.L30
+ 158              		.loc 1 205 0
+ 159 0072 114B     		ldr	r3, .L31
+ 160 0074 1968     		ldr	r1, [r3]
+ 161              	.LVL15:
+ 162 0076 8142     		cmp	r1, r0
+ 163 0078 0DD1     		bne	.L25
+ 164              		.loc 1 206 0
+ 165 007a 1A1C     		mov	r2, r3
+ 166 007c 0B68     		ldr	r3, [r1]
+ 167 007e 1360     		str	r3, [r2]
+ 168 0080 10E0     		b	.L26
+ 169              	.LVL16:
+ 170              	.L28:
+ 171              	.LBB2:
+ 172              		.loc 1 213 0
+ 173 0082 0B68     		ldr	r3, [r1]
+ 174              	.LVL17:
+ 175 0084 8342     		cmp	r3, r0
+ 176 0086 03D0     		beq	.L27
+ 177 0088 191C     		mov	r1, r3
+ 178              	.LVL18:
+ 179              	.L29:
+ 180              		.loc 1 212 0
+ 181 008a 0029     		cmp	r1, #0
+ 182 008c F9D1     		bne	.L28
+ 183 008e 10E0     		b	.L30
+ 184              	.LVL19:
+ 185              	.L27:
+ 186              		.loc 1 214 0
+ 187 0090 0368     		ldr	r3, [r0]
+ 188              	.LVL20:
+ 189 0092 0B60     		str	r3, [r1]
+ 190              	.LVL21:
+ 191 0094 06E0     		b	.L26
+ 192              	.L25:
+ 193              		.loc 1 212 0
+ 194 0096 0029     		cmp	r1, #0
+ 195 0098 0BD0     		beq	.L30
+ 196              		.loc 1 213 0
+ 197 009a 0B68     		ldr	r3, [r1]
+ 198              	.LVL22:
+ 199 009c 8342     		cmp	r3, r0
+ 200 009e F7D0     		beq	.L27
+ 201 00a0 191C     		mov	r1, r3
+ 202 00a2 F2E7     		b	.L29
+ 203              	.LVL23:
+ 204              	.L26:
+ 205              	.LBE2:
+ 206              		.loc 1 223 0
+ 207 00a4 054B     		ldr	r3, .L31+4
+ 208 00a6 1B68     		ldr	r3, [r3]
+ 209 00a8 8342     		cmp	r3, r0
+ 210 00aa 02D1     		bne	.L30
+ 211              		.loc 1 225 0
+ 212 00ac 0020     		mov	r0, #0
+ 213              	.LVL24:
+ 214 00ae FFF7FEFF 		bl	netif_set_default
+ 215              	.LVL25:
+ 216              	.L30:
+ 217              		.loc 1 227 0
+ 218              		@ sp needed for prologue
+ 219 00b2 01BC     		pop	{r0}
+ 220 00b4 0047     		bx	r0
+ 221              	.L32:
+ 222 00b6 C046     		.align	2
+ 223              	.L31:
+ 224 00b8 00000000 		.word	netif_list
+ 225 00bc 00000000 		.word	netif_default
+ 226              	.LFE292:
+ 228              		.align	2
+ 229              		.global	netif_set_down
+ 230              		.code	16
+ 231              		.thumb_func
+ 233              	netif_set_down:
+ 234              	.LFB299:
+ 388:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 389:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 390:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Bring an interface up, available for processing
+ 391:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * traffic.
+ 392:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 
+ 393:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @note: Enabling DHCP on a down interface will make it come
+ 394:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * up once configured.
+ 395:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 
+ 396:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @see dhcp_start()
+ 397:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */ 
+ 398:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void netif_set_up(struct netif *netif)
+ 399:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 400:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if ( !(netif->flags & NETIF_FLAG_UP )) {
+ 401:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     netif->flags |= NETIF_FLAG_UP;
+ 402:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     
+ 403:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_SNMP
+ 404:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     snmp_get_sysuptime(&netif->ts);
+ 405:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_SNMP */
+ 406:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 407:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     NETIF_LINK_CALLBACK(netif);
+ 408:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     NETIF_STATUS_CALLBACK(netif);
+ 409:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 410:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_ARP
+ 411:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* For Ethernet network interfaces, we would like to send a "gratuitous ARP" */ 
+ 412:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     if (netif->flags & NETIF_FLAG_ETHARP) {
+ 413:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       etharp_gratuitous(netif);
+ 414:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 415:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_ARP */
+ 416:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 417:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_IGMP
+ 418:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     /* resend IGMP memberships */
+ 419:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     if (netif->flags & NETIF_FLAG_IGMP) {
+ 420:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       igmp_report_groups( netif);
+ 421:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 422:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif /* LWIP_IGMP */
+ 423:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   }
+ 424:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 425:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 426:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 427:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Bring an interface down, disabling any traffic processing.
+ 428:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  *
+ 429:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @note: Enabling DHCP on a down interface will make it come
+ 430:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * up once configured.
+ 431:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * 
+ 432:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * @see dhcp_start()
+ 433:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */ 
+ 434:rtos/common/ethernet/lwIP_132/src/core/netif.c **** void netif_set_down(struct netif *netif)
+ 435:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 235              		.loc 1 435 0
+ 236              	.LVL26:
+ 436:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   if ( netif->flags & NETIF_FLAG_UP )
+ 237              		.loc 1 436 0
+ 238 00c0 2D23     		mov	r3, #45
+ 239 00c2 C25C     		ldrb	r2, [r0, r3]
+ 240 00c4 D307     		lsl	r3, r2, #31
+ 241 00c6 03D5     		bpl	.L35
+ 437:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     {
+ 438:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       netif->flags &= ~NETIF_FLAG_UP;
+ 242              		.loc 1 438 0
+ 243 00c8 0123     		mov	r3, #1
+ 244 00ca 9A43     		bic	r2, r2, r3
+ 245 00cc 2D23     		mov	r3, #45
+ 246 00ce C254     		strb	r2, [r0, r3]
+ 247              	.L35:
+ 439:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #if LWIP_SNMP
+ 440:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       snmp_get_sysuptime(&netif->ts);
+ 441:rtos/common/ethernet/lwIP_132/src/core/netif.c **** #endif
+ 442:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       
+ 443:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       NETIF_LINK_CALLBACK(netif);
+ 444:rtos/common/ethernet/lwIP_132/src/core/netif.c ****       NETIF_STATUS_CALLBACK(netif);
+ 445:rtos/common/ethernet/lwIP_132/src/core/netif.c ****     }
+ 446:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 248              		.loc 1 446 0
+ 249              		@ sp needed for prologue
+ 250 00d0 7047     		bx	lr
+ 251              	.LFE299:
+ 253 00d2 C046     		.align	2
+ 254              		.global	netif_is_up
+ 255              		.code	16
+ 256              		.thumb_func
+ 258              	netif_is_up:
+ 259              	.LFB300:
+ 447:rtos/common/ethernet/lwIP_132/src/core/netif.c **** 
+ 448:rtos/common/ethernet/lwIP_132/src/core/netif.c **** /**
+ 449:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  * Ask if an interface is up
+ 450:rtos/common/ethernet/lwIP_132/src/core/netif.c ****  */ 
+ 451:rtos/common/ethernet/lwIP_132/src/core/netif.c **** u8_t netif_is_up(struct netif *netif)
+ 452:rtos/common/ethernet/lwIP_132/src/core/netif.c **** {
+ 260              		.loc 1 452 0
+ 261              	.LVL27:
+ 262              		.loc 1 452 0
+ 263 00d4 2D23     		mov	r3, #45
+ 264 00d6 C35C     		ldrb	r3, [r0, r3]
+ 265 00d8 0120     		mov	r0, #1
+ 266              	.LVL28:
+ 267 00da 1840     		and	r0, r0, r3
+ 453:rtos/common/ethernet/lwIP_132/src/core/netif.c ****   return (netif->flags & NETIF_FLAG_UP)?1:0;
+ 454:rtos/common/ethernet/lwIP_132/src/core/netif.c **** }
+ 268              		.loc 1 454 0
+ 269              		@ sp needed for prologue
+ 270 00dc 7047     		bx	lr
+ 271              	.LFE300:
+ 273 00de C046     		.align	2
+ 274              		.global	netif_set_up
+ 275              		.code	16
+ 276              		.thumb_func
+ 278              	netif_set_up:
+ 279              	.LFB298:
+ 280              		.loc 1 399 0
+ 281 00e0 00B5     		push	{lr}
+ 282              	.LCFI2:
+ 283              	.LVL29:
+ 284              		.loc 1 400 0
+ 285 00e2 2D23     		mov	r3, #45
+ 286 00e4 C25C     		ldrb	r2, [r0, r3]
+ 287 00e6 D307     		lsl	r3, r2, #31
+ 288 00e8 0AD4     		bmi	.L40
+ 289              		.loc 1 401 0
+ 290 00ea 0123     		mov	r3, #1
+ 291 00ec 1343     		orr	r3, r3, r2
+ 292 00ee 1B06     		lsl	r3, r3, #24
+ 293 00f0 1B0E     		lsr	r3, r3, #24
+ 294 00f2 2D22     		mov	r2, #45
+ 295 00f4 8354     		strb	r3, [r0, r2]
+ 296              		.loc 1 412 0
+ 297 00f6 9A06     		lsl	r2, r3, #26
+ 298 00f8 02D5     		bpl	.L40
+ 299              		.loc 1 413 0
+ 300 00fa 011D     		add	r1, r0, #4
+ 301 00fc FFF7FEFF 		bl	etharp_request
+ 302              	.LVL30:
+ 303              	.L40:
+ 304              		.loc 1 424 0
+ 305              		@ sp needed for prologue
+ 306 0100 01BC     		pop	{r0}
+ 307 0102 0047     		bx	r0
+ 308              	.LFE298:
+ 310              		.align	2
+ 311              		.global	netif_set_ipaddr
+ 312              		.code	16
+ 313              		.thumb_func
+ 315              	netif_set_ipaddr:
+ 316              	.LFB294:
+ 317              		.loc 1 270 0
+ 318 0104 70B5     		push	{r4, r5, r6, lr}
+ 319              	.LCFI3:
+ 320              	.LVL31:
+ 321 0106 051C     		mov	r5, r0
+ 322 0108 0E1C     		mov	r6, r1
+ 323              		.loc 1 278 0
+ 324 010a 0A68     		ldr	r2, [r1]
+ 325 010c 4368     		ldr	r3, [r0, #4]
+ 326 010e 9A42     		cmp	r2, r3
+ 327 0110 26D0     		beq	.L42
+ 328              		.loc 1 282 0
+ 329 0112 184B     		ldr	r3, .L58
+ 330 0114 1868     		ldr	r0, [r3]
+ 331              	.LVL32:
+ 332              		.loc 1 283 0
+ 333 0116 0028     		cmp	r0, #0
+ 334 0118 0CD0     		beq	.L43
+ 335              	.LVL33:
+ 336              	.L55:
+ 337              		.loc 1 285 0
+ 338 011a 0268     		ldr	r2, [r0]
+ 339 011c 6B68     		ldr	r3, [r5, #4]
+ 340 011e 9A42     		cmp	r2, r3
+ 341 0120 05D1     		bne	.L44
+ 342              	.LBB3:
+ 343              		.loc 1 287 0
+ 344 0122 C468     		ldr	r4, [r0, #12]
+ 345              		.loc 1 289 0
+ 346 0124 0121     		mov	r1, #1
+ 347              	.LVL34:
+ 348 0126 FFF7FEFF 		bl	tcp_abandon
+ 349              	.LVL35:
+ 350 012a 201C     		mov	r0, r4
+ 351              	.LVL36:
+ 352 012c 00E0     		b	.L45
+ 353              	.LVL37:
+ 354              	.L44:
+ 355              	.LBE3:
+ 356              		.loc 1 292 0
+ 357 012e C068     		ldr	r0, [r0, #12]
+ 358              	.LVL38:
+ 359              	.L45:
+ 360              		.loc 1 283 0
+ 361 0130 0028     		cmp	r0, #0
+ 362 0132 F2D1     		bne	.L55
+ 363              	.L43:
+ 364              		.loc 1 295 0
+ 365 0134 104B     		ldr	r3, .L58+4
+ 366 0136 1A68     		ldr	r2, [r3]
+ 367              	.LVL39:
+ 368 0138 002A     		cmp	r2, #0
+ 369 013a 11D0     		beq	.L42
+ 370              		.loc 1 301 0
+ 371 013c 0020     		mov	r0, #0
+ 372              	.LVL40:
+ 373              	.L54:
+ 374              		.loc 1 297 0
+ 375 013e 002A     		cmp	r2, #0
+ 376 0140 0BD0     		beq	.L47
+ 377 0142 1168     		ldr	r1, [r2]
+ 378 0144 0029     		cmp	r1, #0
+ 379 0146 08D0     		beq	.L47
+ 380 0148 6B68     		ldr	r3, [r5, #4]
+ 381 014a 9942     		cmp	r1, r3
+ 382 014c 05D1     		bne	.L47
+ 383              		.loc 1 301 0
+ 384 014e 002E     		cmp	r6, #0
+ 385 0150 01D1     		bne	.L48
+ 386 0152 031C     		mov	r3, r0
+ 387 0154 00E0     		b	.L49
+ 388              	.L48:
+ 389 0156 3368     		ldr	r3, [r6]
+ 390              	.L49:
+ 391 0158 1360     		str	r3, [r2]
+ 392              	.LVL41:
+ 393              	.L47:
+ 394              		.loc 1 295 0
+ 395 015a D268     		ldr	r2, [r2, #12]
+ 396 015c 002A     		cmp	r2, #0
+ 397 015e EED1     		bne	.L54
+ 398              	.LVL42:
+ 399              	.L42:
+ 400              		.loc 1 309 0
+ 401 0160 002E     		cmp	r6, #0
+ 402 0162 01D1     		bne	.L51
+ 403              	.LVL43:
+ 404 0164 0021     		mov	r1, #0
+ 405 0166 00E0     		b	.L52
+ 406              	.LVL44:
+ 407              	.L51:
+ 408 0168 3168     		ldr	r1, [r6]
+ 409              	.L52:
+ 410 016a 6960     		str	r1, [r5, #4]
+ 411              		.loc 1 319 0
+ 412              		@ sp needed for prologue
+ 413              	.LVL45:
+ 414              	.LVL46:
+ 415              	.LVL47:
+ 416 016c 70BC     		pop	{r4, r5, r6}
+ 417 016e 01BC     		pop	{r0}
+ 418 0170 0047     		bx	r0
+ 419              	.L59:
+ 420 0172 C046     		.align	2
+ 421              	.L58:
+ 422 0174 00000000 		.word	tcp_active_pcbs
+ 423 0178 00000000 		.word	tcp_listen_pcbs
+ 424              	.LFE294:
+ 426              		.align	2
+ 427              		.global	netif_set_addr
+ 428              		.code	16
+ 429              		.thumb_func
+ 431              	netif_set_addr:
+ 432              	.LFB291:
+ 433              		.loc 1 180 0
+ 434 017c 70B5     		push	{r4, r5, r6, lr}
+ 435              	.LCFI4:
+ 436              	.LVL48:
+ 437 017e 041C     		mov	r4, r0
+ 438 0180 151C     		mov	r5, r2
+ 439 0182 1E1C     		mov	r6, r3
+ 440              		.loc 1 181 0
+ 441 0184 FFF7FEFF 		bl	netif_set_ipaddr
+ 442              	.LVL49:
+ 443              		.loc 1 182 0
+ 444 0188 201C     		mov	r0, r4
+ 445 018a 291C     		mov	r1, r5
+ 446 018c FFF7FEFF 		bl	netif_set_netmask
+ 447              		.loc 1 183 0
+ 448 0190 201C     		mov	r0, r4
+ 449 0192 311C     		mov	r1, r6
+ 450 0194 FFF7FEFF 		bl	netif_set_gw
+ 451              		.loc 1 184 0
+ 452              		@ sp needed for prologue
+ 453              	.LVL50:
+ 454              	.LVL51:
+ 455              	.LVL52:
+ 456 0198 70BC     		pop	{r4, r5, r6}
+ 457 019a 01BC     		pop	{r0}
+ 458 019c 0047     		bx	r0
+ 459              	.LFE291:
+ 461 019e C046     		.align	2
+ 462              		.global	netif_add
+ 463              		.code	16
+ 464              		.thumb_func
+ 466              	netif_add:
+ 467              	.LFB290:
+ 468              		.loc 1 97 0
+ 469 01a0 70B5     		push	{r4, r5, r6, lr}
+ 470              	.LCFI5:
+ 471              	.LVL53:
+ 472 01a2 061C     		mov	r6, r0
+ 473              		.loc 1 101 0
+ 474 01a4 0020     		mov	r0, #0
+ 475              	.LVL54:
+ 476 01a6 7060     		str	r0, [r6, #4]
+ 477              		.loc 1 102 0
+ 478 01a8 B060     		str	r0, [r6, #8]
+ 479              		.loc 1 103 0
+ 480 01aa F060     		str	r0, [r6, #12]
+ 481              		.loc 1 104 0
+ 482 01ac 2D24     		mov	r4, #45
+ 483 01ae 3055     		strb	r0, [r6, r4]
+ 484              		.loc 1 107 0
+ 485 01b0 3062     		str	r0, [r6, #32]
+ 486              		.loc 1 128 0
+ 487 01b2 0498     		ldr	r0, [sp, #16]
+ 488 01b4 F061     		str	r0, [r6, #28]
+ 489              		.loc 1 129 0
+ 490 01b6 0E4D     		ldr	r5, .L66
+ 491 01b8 2878     		ldrb	r0, [r5]
+ 492 01ba 3024     		mov	r4, #48
+ 493 01bc 3055     		strb	r0, [r6, r4]
+ 494 01be 0130     		add	r0, r0, #1
+ 495 01c0 2870     		strb	r0, [r5]
+ 496              		.loc 1 130 0
+ 497 01c2 0698     		ldr	r0, [sp, #24]
+ 498 01c4 3061     		str	r0, [r6, #16]
+ 499              		.loc 1 138 0
+ 500 01c6 301C     		mov	r0, r6
+ 501 01c8 FFF7FEFF 		bl	netif_set_addr
+ 502              	.LVL55:
+ 503              		.loc 1 141 0
+ 504 01cc 301C     		mov	r0, r6
+ 505 01ce 059B     		ldr	r3, [sp, #20]
+ 506 01d0 00F012F8 		bl	.L68
+ 507 01d4 0006     		lsl	r0, r0, #24
+ 508 01d6 0028     		cmp	r0, #0
+ 509 01d8 01D0     		beq	.L63
+ 510              	.LVL56:
+ 511 01da 0026     		mov	r6, #0
+ 512 01dc 03E0     		b	.L64
+ 513              	.L63:
+ 514              		.loc 1 146 0
+ 515 01de 054A     		ldr	r2, .L66+4
+ 516 01e0 1368     		ldr	r3, [r2]
+ 517 01e2 3360     		str	r3, [r6]
+ 518              		.loc 1 147 0
+ 519 01e4 1660     		str	r6, [r2]
+ 520              	.L64:
+ 521              		.loc 1 166 0
+ 522 01e6 301C     		mov	r0, r6
+ 523              		@ sp needed for prologue
+ 524              	.LVL57:
+ 525 01e8 70BC     		pop	{r4, r5, r6}
+ 526 01ea 02BC     		pop	{r1}
+ 527 01ec 0847     		bx	r1
+ 528              	.L67:
+ 529 01ee C046     		.align	2
+ 530              	.L66:
+ 531 01f0 00000000 		.word	netifnum.5403
+ 532 01f4 00000000 		.word	netif_list
+ 533              	.LFE290:
+ 535              		.bss
+ 536              	netifnum.5403:
+ 537 0000 00       		.space	1
+ 538              		.comm	netif_list,4,4
+ 539              		.comm	netif_default,4,4
+ 706              	.Letext0:
+ 4068              		.code 16
+ 4069              		.align	1
+ 4070              	.L68:
+ 4071 01f8 1847C046 		bx	r3
+DEFINED SYMBOLS
+                            *ABS*:00000000 netif.c
+     /tmp/cceOj9rg.s:1      .text:00000000 $t
+     /tmp/cceOj9rg.s:16     .text:00000000 netif_find
+     /tmp/cceOj9rg.s:76     .text:00000044 $d
+                            *COM*:00000004 netif_list
+     /tmp/cceOj9rg.s:84     .text:00000048 netif_set_gw
+     /tmp/cceOj9rg.s:81     .text:00000048 $t
+     /tmp/cceOj9rg.s:106    .text:00000054 netif_set_netmask
+     /tmp/cceOj9rg.s:128    .text:00000060 netif_set_default
+     /tmp/cceOj9rg.s:141    .text:00000068 $d
+                            *COM*:00000004 netif_default
+     /tmp/cceOj9rg.s:149    .text:0000006c netif_remove
+     /tmp/cceOj9rg.s:146    .text:0000006c $t
+     /tmp/cceOj9rg.s:224    .text:000000b8 $d
+     /tmp/cceOj9rg.s:233    .text:000000c0 netif_set_down
+     /tmp/cceOj9rg.s:230    .text:000000c0 $t
+     /tmp/cceOj9rg.s:258    .text:000000d4 netif_is_up
+     /tmp/cceOj9rg.s:278    .text:000000e0 netif_set_up
+     /tmp/cceOj9rg.s:315    .text:00000104 netif_set_ipaddr
+     /tmp/cceOj9rg.s:422    .text:00000174 $d
+     /tmp/cceOj9rg.s:431    .text:0000017c netif_set_addr
+     /tmp/cceOj9rg.s:428    .text:0000017c $t
+     /tmp/cceOj9rg.s:466    .text:000001a0 netif_add
+     /tmp/cceOj9rg.s:531    .text:000001f0 $d
+     /tmp/cceOj9rg.s:536    .bss:00000000 netifnum.5403
+     /tmp/cceOj9rg.s:4068   .text:000001f8 $t
+
+UNDEFINED SYMBOLS
+etharp_request
+tcp_abandon
+tcp_active_pcbs
+tcp_listen_pcbs

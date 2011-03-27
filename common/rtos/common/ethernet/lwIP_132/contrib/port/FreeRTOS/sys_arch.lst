@@ -1,0 +1,1464 @@
+   1              		.code	16
+   2              		.file	"sys_arch.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	sys_init
+  13              		.code	16
+  14              		.thumb_func
+  16              	sys_init:
+  17              	.LFB300:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c"
+   1:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+   2:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * Copyright (c) 2001-2003 Swedish Institute of Computer Science.
+   3:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * All rights reserved.
+   4:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+   5:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * Redistribution and use in source and binary forms, with or without modification,
+   6:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * are permitted provided that the following conditions are met:
+   7:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+   8:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+   9:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *    this list of conditions and the following disclaimer.
+  10:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  11:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *    this list of conditions and the following disclaimer in the documentation
+  12:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *    and/or other materials provided with the distribution.
+  13:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * 3. The name of the author may not be used to endorse or promote products
+  14:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *    derived from this software without specific prior written permission.
+  15:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+  16:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  17:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  18:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  19:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  20:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  21:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  22:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  23:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  24:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  25:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * OF SUCH DAMAGE.
+  26:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+  27:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * This file is part of the lwIP TCP/IP stack.
+  28:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+  29:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * Author: Adam Dunkels <adam@sics.se>
+  30:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  *
+  31:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  */
+  32:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  33:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /* lwIP includes. */
+  34:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "lwip/debug.h"
+  35:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "lwip/def.h"
+  36:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "lwip/sys.h"
+  37:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "lwip/mem.h"
+  38:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "lwip/stats.h"
+  39:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  40:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #include "dbg.h"
+  41:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  42:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** struct timeoutlist
+  43:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+  44:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	struct sys_timeouts timeouts;
+  45:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	xTaskHandle pid;
+  46:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** };
+  47:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  48:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /* This is the number of threads that can be started with sys_thread_new() */
+  49:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #define SYS_THREAD_MAX 8
+  50:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  51:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** static struct timeoutlist s_timeoutlist[SYS_THREAD_MAX];
+  52:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** static u16_t s_nextthread = 0;
+  53:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  54:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  55:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+  56:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** //  Creates an empty mailbox.
+  57:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** sys_mbox_t sys_mbox_new(int size)
+  58:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+  59:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	xQueueHandle mbox;
+  60:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  61:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	( void ) size;
+  62:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  63:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	mbox = xQueueCreate( archMESG_QUEUE_LENGTH, sizeof( void * ) );
+  64:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  65:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+  66:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       ++lwip_stats.sys.mbox.used;
+  67:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       if (lwip_stats.sys.mbox.max < lwip_stats.sys.mbox.used) {
+  68:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****          lwip_stats.sys.mbox.max = lwip_stats.sys.mbox.used;
+  69:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	  }
+  70:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+  71:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  72:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	return mbox;
+  73:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+  74:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  75:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+  76:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+  77:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Deallocates a mailbox. If there are messages still present in the
+  78:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   mailbox when the mailbox is deallocated, it is an indication of a
+  79:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   programming error in lwIP and the developer should be notified.
+  80:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+  81:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_mbox_free(sys_mbox_t mbox)
+  82:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+  83:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if( uxQueueMessagesWaiting( mbox ) )
+  84:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+  85:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		/* Line for breakpoint.  Should never break here! */
+  86:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		portNOP();
+  87:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+  88:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	    lwip_stats.sys.mbox.err++;
+  89:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+  90:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  91:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		// TODO notify the user of failure.
+  92:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+  93:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  94:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	vQueueDelete( mbox );
+  95:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+  96:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+  97:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****      --lwip_stats.sys.mbox.used;
+  98:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+  99:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 100:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 101:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 102:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** //   Posts the "msg" to the mailbox.
+ 103:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_mbox_post(sys_mbox_t mbox, void *data)
+ 104:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 105:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	while ( xQueueSendToBack(mbox, &data, portMAX_DELAY ) != pdTRUE ){}
+ 106:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 107:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 108:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 109:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 110:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** //   Try to post the "msg" to the mailbox.
+ 111:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** err_t sys_mbox_trypost(sys_mbox_t mbox, void *msg)
+ 112:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 113:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** err_t result;
+ 114:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 115:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    if ( xQueueSend( mbox, &msg, 0 ) == pdPASS )
+ 116:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    {
+ 117:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       result = ERR_OK;
+ 118:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 119:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    else {
+ 120:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       // could not post, queue must be full
+ 121:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       result = ERR_MEM;
+ 122:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 123:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+ 124:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       lwip_stats.sys.mbox.err++;
+ 125:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+ 126:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 127:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 128:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 129:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    return result;
+ 130:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 131:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 132:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 133:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 134:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Blocks the thread until a message arrives in the mailbox, but does
+ 135:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   not block the thread longer than "timeout" milliseconds (similar to
+ 136:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   the sys_arch_sem_wait() function). The "msg" argument is a result
+ 137:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   parameter that is set by the function (i.e., by doing "*msg =
+ 138:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   ptr"). The "msg" parameter maybe NULL to indicate that the message
+ 139:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   should be dropped.
+ 140:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 141:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   The return values are the same as for the sys_arch_sem_wait() function:
+ 142:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Number of milliseconds spent waiting or SYS_ARCH_TIMEOUT if there was a
+ 143:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   timeout.
+ 144:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 145:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Note that a function with a similar name, sys_mbox_fetch(), is
+ 146:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   implemented by lwIP.
+ 147:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 148:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** u32_t sys_arch_mbox_fetch(sys_mbox_t mbox, void **msg, u32_t timeout)
+ 149:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 150:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void *dummyptr;
+ 151:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** portTickType StartTime, EndTime, Elapsed;
+ 152:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 153:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	StartTime = xTaskGetTickCount();
+ 154:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 155:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if ( msg == NULL )
+ 156:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 157:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		msg = &dummyptr;
+ 158:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 159:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 160:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if ( timeout != 0 )
+ 161:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 162:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		if ( pdTRUE == xQueueReceive( mbox, &(*msg), timeout / portTICK_RATE_MS ) )
+ 163:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 164:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			EndTime = xTaskGetTickCount();
+ 165:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			Elapsed = (EndTime - StartTime) * portTICK_RATE_MS;
+ 166:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 167:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			return ( Elapsed );
+ 168:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 169:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		else // timed out blocking for message
+ 170:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 171:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			*msg = NULL;
+ 172:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 173:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			return SYS_ARCH_TIMEOUT;
+ 174:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 175:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 176:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	else // block forever for a message.
+ 177:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 178:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		while( pdTRUE != xQueueReceive( mbox, &(*msg), portMAX_DELAY ) )
+ 179:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		  {
+ 180:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		    dbgmessage(">MESSAGE BLOCK!!! ... \r\n");
+ 181:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 182:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		  } // time is arbitrary
+ 183:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		EndTime = xTaskGetTickCount();
+ 184:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		Elapsed = (EndTime - StartTime) * portTICK_RATE_MS;
+ 185:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 186:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		return ( Elapsed ); // return time blocked TODO test
+ 187:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 188:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 189:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 190:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 191:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 192:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Similar to sys_arch_mbox_fetch, but if message is not ready immediately, we'll
+ 193:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   return with SYS_MBOX_EMPTY.  On success, 0 is returned.
+ 194:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 195:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** u32_t sys_arch_mbox_tryfetch(sys_mbox_t mbox, void **msg)
+ 196:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 197:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void *dummyptr;
+ 198:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 199:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if ( msg == NULL )
+ 200:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 201:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		msg = &dummyptr;
+ 202:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 203:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 204:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    if ( pdTRUE == xQueueReceive( mbox, &(*msg), 0 ) )
+ 205:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    {
+ 206:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       return ERR_OK;
+ 207:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 208:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    else
+ 209:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    {
+ 210:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       return SYS_MBOX_EMPTY;
+ 211:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 212:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 213:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 214:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 215:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** //  Creates and returns a new semaphore. The "count" argument specifies
+ 216:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** //  the initial state of the semaphore.
+ 217:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** sys_sem_t sys_sem_new(u8_t count)
+ 218:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 219:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	xSemaphoreHandle  xSemaphore;
+ 220:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 221:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	vSemaphoreCreateBinary( xSemaphore );
+ 222:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 223:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if( xSemaphore == NULL )
+ 224:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 225:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 226:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+ 227:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       ++lwip_stats.sys.sem.err;
+ 228:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+ 229:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       dbgmessage("Sem creating fail");
+ 230:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		return SYS_SEM_NULL;	// TODO need assert
+ 231:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 232:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 233:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if(count == 0)	// Means it can't be taken
+ 234:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 235:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		xSemaphoreTake(xSemaphore,1);
+ 236:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 237:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 238:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+ 239:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	++lwip_stats.sys.sem.used;
+ 240:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  	if (lwip_stats.sys.sem.max < lwip_stats.sys.sem.used) {
+ 241:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		lwip_stats.sys.sem.max = lwip_stats.sys.sem.used;
+ 242:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 243:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+ 244:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 245:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	return xSemaphore;
+ 246:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 247:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 248:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 249:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 250:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Blocks the thread while waiting for the semaphore to be
+ 251:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   signaled. If the "timeout" argument is non-zero, the thread should
+ 252:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   only be blocked for the specified time (measured in
+ 253:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   milliseconds).
+ 254:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 255:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   If the timeout argument is non-zero, the return value is the number of
+ 256:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   milliseconds spent waiting for the semaphore to be signaled. If the
+ 257:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   semaphore wasn't signaled within the specified time, the return value is
+ 258:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   SYS_ARCH_TIMEOUT. If the thread didn't have to wait for the semaphore
+ 259:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   (i.e., it was already signaled), the function may return zero.
+ 260:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 261:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Notice that lwIP implements a function with a similar name,
+ 262:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   sys_sem_wait(), that uses the sys_arch_sem_wait() function.
+ 263:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 264:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** u32_t sys_arch_sem_wait(sys_sem_t sem, u32_t timeout)
+ 265:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 266:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** portTickType StartTime, EndTime, Elapsed;
+ 267:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 268:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	StartTime = xTaskGetTickCount();
+ 269:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 270:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	if(	timeout != 0)
+ 271:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 272:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		if( xSemaphoreTake( sem, timeout / portTICK_RATE_MS ) == pdTRUE )
+ 273:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 274:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			EndTime = xTaskGetTickCount();
+ 275:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			Elapsed = (EndTime - StartTime) * portTICK_RATE_MS;
+ 276:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 277:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			return (Elapsed); // return time blocked TODO test
+ 278:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 279:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		else
+ 280:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 281:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			return SYS_ARCH_TIMEOUT;
+ 282:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 283:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 284:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	else // must block without a timeout
+ 285:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 286:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		while( xSemaphoreTake( sem, portMAX_DELAY ) != pdTRUE ){}
+ 287:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		EndTime = xTaskGetTickCount();
+ 288:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		Elapsed = (EndTime - StartTime) * portTICK_RATE_MS;
+ 289:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 290:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		return ( Elapsed ); // return time blocked
+ 291:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 292:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 293:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 294:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 295:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 296:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** // Signals a semaphore
+ 297:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_sem_signal(sys_sem_t sem)
+ 298:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 299:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	xSemaphoreGive( sem );
+ 300:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 301:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 302:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 303:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** // Deallocates a semaphore
+ 304:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_sem_free(sys_sem_t sem)
+ 305:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 306:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #if SYS_STATS
+ 307:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****       --lwip_stats.sys.sem.used;
+ 308:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** #endif /* SYS_STATS */
+ 309:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 310:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	vQueueDelete( sem );
+ 311:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 312:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 313:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 314:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** // Initialize sys arch
+ 315:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_init(void)
+ 316:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+  19              		.loc 1 316 0
+  20              		.loc 1 316 0
+  21 0000 054B     		ldr	r3, .L5
+ 317:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	int i;
+ 318:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 319:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	// Initialize the the per-thread sys_timeouts structures
+ 320:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	// make sure there are no valid pids in the list
+ 321:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	for(i = 0; i < SYS_THREAD_MAX; i++)
+ 322:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 323:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		s_timeoutlist[i].pid = 0;
+  22              		.loc 1 323 0
+  23 0002 0022     		mov	r2, #0
+  24              		.loc 1 321 0
+  25 0004 0549     		ldr	r1, .L5+4
+  26              	.L2:
+  27              		.loc 1 323 0
+  28 0006 5A60     		str	r2, [r3, #4]
+ 324:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		s_timeoutlist[i].timeouts.next = NULL;
+  29              		.loc 1 324 0
+  30 0008 1A60     		str	r2, [r3]
+  31 000a 0833     		add	r3, r3, #8
+  32              		.loc 1 321 0
+  33 000c 8B42     		cmp	r3, r1
+  34 000e FAD1     		bne	.L2
+ 325:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 326:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 327:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	// keep track of how many threads have been created
+ 328:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	s_nextthread = 0;
+  35              		.loc 1 328 0
+  36 0010 034A     		ldr	r2, .L5+8
+  37 0012 0023     		mov	r3, #0
+  38 0014 1380     		strh	r3, [r2]
+ 329:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+  39              		.loc 1 329 0
+  40              		@ sp needed for prologue
+  41 0016 7047     		bx	lr
+  42              	.L6:
+  43              		.align	2
+  44              	.L5:
+  45 0018 04000000 		.word	s_timeoutlist
+  46 001c 44000000 		.word	s_timeoutlist+64
+  47 0020 00000000 		.word	s_nextthread
+  48              	.LFE300:
+  50              		.section	.rodata.str1.4,"aMS",%progbits,1
+  51              		.align	2
+  52              	.LC5:
+  53 0000 0A0D2053 		.ascii	"\012\015 SYS_ASSERT CALLED !!! execution trminated "
+  53      59535F41 
+  53      53534552 
+  53      54204341 
+  53      4C4C4544 
+  54 002d 21212100 		.ascii	"!!!\000"
+  55              		.text
+  56              		.align	2
+  57              		.global	sys_assert
+  58              		.code	16
+  59              		.thumb_func
+  61              	sys_assert:
+  62              	.LFB306:
+ 330:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 331:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 332:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 333:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Returns a pointer to the per-thread sys_timeouts structure. In lwIP,
+ 334:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   each thread has a list of timeouts which is represented as a linked
+ 335:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   list of sys_timeout structures. The sys_timeouts structure holds a
+ 336:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   pointer to a linked list of timeouts. This function is called by
+ 337:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   the lwIP timeout scheduler and must not return a NULL value.
+ 338:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 339:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   In a single threaded sys_arch implementation, this function will
+ 340:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   simply return a pointer to a global sys_timeouts variable stored in
+ 341:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   the sys_arch module.
+ 342:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 343:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** struct sys_timeouts *sys_arch_timeouts(void)
+ 344:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 345:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** int i;
+ 346:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** xTaskHandle pid;
+ 347:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** struct timeoutlist *tl;
+ 348:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 349:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	pid = xTaskGetCurrentTaskHandle( );
+ 350:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 351:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	for(i = 0; i < s_nextthread; i++)
+ 352:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 353:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		tl = &(s_timeoutlist[i]);
+ 354:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		if(tl->pid == pid)
+ 355:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 356:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			return &(tl->timeouts);
+ 357:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 358:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 359:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 360:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	// Error
+ 361:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	return NULL;
+ 362:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 363:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 364:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 365:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 366:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** // TODO
+ 367:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*-----------------------------------------------------------------------------------*/
+ 368:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 369:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   Starts a new thread with priority "prio" that will begin its execution in the
+ 370:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   function "thread()". The "arg" argument will be passed as an argument to the
+ 371:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   thread() function. The id of the new thread is returned. Both the id and
+ 372:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   the priority are system dependent.
+ 373:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 374:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** sys_thread_t sys_thread_new(char *name, void (* thread)(void *arg), void *arg, int stacksize, int p
+ 375:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 376:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** xTaskHandle CreatedTask;
+ 377:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** int result;
+ 378:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 379:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    if ( s_nextthread < SYS_THREAD_MAX )
+ 380:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    {
+ 381:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****      result = xTaskCreate( thread, ( signed portCHAR * ) name, stacksize, arg, prio, &CreatedTask )
+ 382:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 383:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	   // For each task created, store the task handle (pid) in the timers array.
+ 384:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	   // This scheme doesn't allow for threads to be deleted
+ 385:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	   s_timeoutlist[s_nextthread++].pid = CreatedTask;
+ 386:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 387:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	   switch(result)
+ 388:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	     {
+ 389:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	       case pdPASS:return CreatedTask;
+ 390:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	       case errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY: dbgmessage("sys_thread_new:COULD_NOT_ALLOCATE_R
+ 391:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	     }
+ 392:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	     return NULL;
+ 393:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 394:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    else
+ 395:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    {
+ 396:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****          dbgmessage("sys_thread_new:cannot create thread SYS_THREAD_MAX limited \n\r");
+ 397:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****           return NULL;
+ 398:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****    }
+ 399:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 400:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_thread_suicid()
+ 401:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 402:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** int i;
+ 403:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** xTaskHandle pid;
+ 404:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** struct timeoutlist *tl;
+ 405:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 406:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	pid = xTaskGetCurrentTaskHandle( );
+ 407:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 408:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	for(i = 0; i < s_nextthread; i++)
+ 409:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	{
+ 410:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		tl = &(s_timeoutlist[i]);
+ 411:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		if(tl->pid == pid)
+ 412:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		{
+ 413:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		    while(i < (s_nextthread-1))
+ 414:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			{
+ 415:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			 s_timeoutlist[i] = s_timeoutlist[i+1];
+ 416:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			 s_nextthread--;
+ 417:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			 /* Kill ourselves. */
+ 418:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 419:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 			}
+ 420:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		    vTaskDelete( NULL );
+ 421:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 		}
+ 422:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	}
+ 423:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	// Error
+ 424:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	return;
+ 425:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 426:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 427:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 428:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 429:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 430:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   This optional function does a "fast" critical region protection and returns
+ 431:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   the previous protection level. This function is only called during very short
+ 432:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   critical regions. An embedded system which supports ISR-based drivers might
+ 433:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   want to implement this function by disabling interrupts. Task-based systems
+ 434:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   might want to implement this by using a mutex or disabling tasking. This
+ 435:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   function should support recursive calls from the same task or interrupt. In
+ 436:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   other words, sys_arch_protect() could be called while already protected. In
+ 437:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   that case the return value indicates that it is already protected.
+ 438:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 439:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   sys_arch_protect() is only required if your port is supporting an operating
+ 440:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   system.
+ 441:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 442:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** sys_prot_t sys_arch_protect(void)
+ 443:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 444:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	vPortEnterCritical();
+ 445:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	return 1;
+ 446:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 447:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 448:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 449:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   This optional function does a "fast" set of critical region protection to the
+ 450:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   value specified by pval. See the documentation for sys_arch_protect() for
+ 451:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   more information. This function is only required if your port is supporting
+ 452:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****   an operating system.
+ 453:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** */
+ 454:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_arch_unprotect(sys_prot_t pval)
+ 455:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+ 456:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	( void ) pval;
+ 457:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	vPortExitCritical();
+ 458:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** }
+ 459:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 
+ 460:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** /*
+ 461:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  * Prints an assertion messages and aborts execution.
+ 462:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****  */
+ 463:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** void sys_assert( const char *msg )
+ 464:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** {
+  63              		.loc 1 464 0
+  64 0024 00B5     		push	{lr}
+  65              	.LCFI0:
+  66              	.LVL0:
+ 465:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	( void ) msg;
+ 466:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	/*FSL:only needed for debugging
+ 467:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	printf(msg);
+ 468:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	printf("\n\r");
+ 469:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	*/
+ 470:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c **** 	dbgmessage("\n\r SYS_ASSERT CALLED !!! execution trminated !!!");
+  67              		.loc 1 470 0
+  68 0026 0348     		ldr	r0, .L10
+  69              	.LVL1:
+  70 0028 FFF7FEFF 		bl	dbgmessage
+ 471:rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c ****     vPortEnterCritical(  );
+  71              		.loc 1 471 0
+  72 002c FFF7FEFF 		bl	vPortEnterCritical
+  73              	.L8:
+  74 0030 FEE7     		b	.L8
+  75              	.L11:
+  76 0032 C046     		.align	2
+  77              	.L10:
+  78 0034 00000000 		.word	.LC5
+  79              	.LFE306:
+  81              		.align	2
+  82              		.global	sys_arch_protect
+  83              		.code	16
+  84              		.thumb_func
+  86              	sys_arch_protect:
+  87              	.LFB304:
+  88              		.loc 1 443 0
+  89 0038 00B5     		push	{lr}
+  90              	.LCFI1:
+  91              		.loc 1 444 0
+  92 003a FFF7FEFF 		bl	vPortEnterCritical
+  93              		.loc 1 446 0
+  94 003e 0120     		mov	r0, #1
+  95              		@ sp needed for prologue
+  96 0040 02BC     		pop	{r1}
+  97 0042 0847     		bx	r1
+  98              	.LFE304:
+ 100              		.align	2
+ 101              		.global	sys_arch_unprotect
+ 102              		.code	16
+ 103              		.thumb_func
+ 105              	sys_arch_unprotect:
+ 106              	.LFB305:
+ 107              		.loc 1 455 0
+ 108 0044 00B5     		push	{lr}
+ 109              	.LCFI2:
+ 110              	.LVL2:
+ 111              		.loc 1 457 0
+ 112 0046 FFF7FEFF 		bl	vPortExitCritical
+ 113              	.LVL3:
+ 114              		.loc 1 458 0
+ 115              		@ sp needed for prologue
+ 116 004a 01BC     		pop	{r0}
+ 117 004c 0047     		bx	r0
+ 118              	.LFE305:
+ 120 004e C046     		.align	2
+ 121              		.global	sys_arch_timeouts
+ 122              		.code	16
+ 123              		.thumb_func
+ 125              	sys_arch_timeouts:
+ 126              	.LFB301:
+ 127              		.loc 1 344 0
+ 128 0050 30B5     		push	{r4, r5, lr}
+ 129              	.LCFI3:
+ 130              		.loc 1 349 0
+ 131 0052 FFF7FEFF 		bl	xTaskGetCurrentTaskHandle
+ 132 0056 051C     		mov	r5, r0
+ 133              	.LVL4:
+ 134              		.loc 1 351 0
+ 135 0058 0C4B     		ldr	r3, .L25
+ 136 005a 1C88     		ldrh	r4, [r3]
+ 137 005c 002C     		cmp	r4, #0
+ 138 005e 10DD     		ble	.L17
+ 139              		.loc 1 354 0
+ 140 0060 0B4B     		ldr	r3, .L25+4
+ 141 0062 5B68     		ldr	r3, [r3, #4]
+ 142 0064 9842     		cmp	r0, r3
+ 143 0066 07D1     		bne	.L18
+ 144              	.LVL5:
+ 145 0068 0948     		ldr	r0, .L25+4
+ 146              	.LVL6:
+ 147 006a 0BE0     		b	.L21
+ 148              	.LVL7:
+ 149              	.L22:
+ 150 006c 101C     		mov	r0, r2
+ 151 006e 5368     		ldr	r3, [r2, #4]
+ 152 0070 0832     		add	r2, r2, #8
+ 153 0072 9D42     		cmp	r5, r3
+ 154 0074 02D1     		bne	.L20
+ 155 0076 05E0     		b	.L21
+ 156              	.LVL8:
+ 157              	.L18:
+ 158              		.loc 1 356 0
+ 159 0078 064A     		ldr	r2, .L25+8
+ 160 007a 0021     		mov	r1, #0
+ 161              	.LVL9:
+ 162              	.L20:
+ 163              		.loc 1 351 0
+ 164 007c 0131     		add	r1, r1, #1
+ 165 007e A142     		cmp	r1, r4
+ 166 0080 F4DB     		blt	.L22
+ 167              	.L17:
+ 168 0082 0020     		mov	r0, #0
+ 169              	.LVL10:
+ 170              	.L21:
+ 171              	.LVL11:
+ 172              		.loc 1 362 0
+ 173              		@ sp needed for prologue
+ 174              	.LVL12:
+ 175 0084 30BC     		pop	{r4, r5}
+ 176 0086 02BC     		pop	{r1}
+ 177 0088 0847     		bx	r1
+ 178              	.L26:
+ 179 008a C046     		.align	2
+ 180              	.L25:
+ 181 008c 00000000 		.word	s_nextthread
+ 182 0090 04000000 		.word	s_timeoutlist
+ 183 0094 0C000000 		.word	s_timeoutlist+8
+ 184              	.LFE301:
+ 186              		.align	2
+ 187              		.global	sys_thread_suicid
+ 188              		.code	16
+ 189              		.thumb_func
+ 191              	sys_thread_suicid:
+ 192              	.LFB303:
+ 193              		.loc 1 401 0
+ 194 0098 F0B5     		push	{r4, r5, r6, r7, lr}
+ 195              	.LCFI4:
+ 196 009a 5746     		mov	r7, sl
+ 197 009c 4646     		mov	r6, r8
+ 198 009e C0B4     		push	{r6, r7}
+ 199              	.LCFI5:
+ 200              		.loc 1 406 0
+ 201 00a0 FFF7FEFF 		bl	xTaskGetCurrentTaskHandle
+ 202 00a4 071C     		mov	r7, r0
+ 203              	.LVL13:
+ 204              		.loc 1 408 0
+ 205 00a6 174B     		ldr	r3, .L36
+ 206 00a8 1B88     		ldrh	r3, [r3]
+ 207 00aa 002B     		cmp	r3, #0
+ 208 00ac 24DD     		ble	.L34
+ 209 00ae 164C     		ldr	r4, .L36+4
+ 210 00b0 0025     		mov	r5, #0
+ 211              	.LVL14:
+ 212              		.loc 1 413 0
+ 213 00b2 144B     		ldr	r3, .L36
+ 214 00b4 9846     		mov	r8, r3
+ 215 00b6 9A46     		mov	sl, r3
+ 216              		.loc 1 408 0
+ 217 00b8 1E1C     		mov	r6, r3
+ 218              	.L33:
+ 219              		.loc 1 411 0
+ 220 00ba 6368     		ldr	r3, [r4, #4]
+ 221 00bc 9F42     		cmp	r7, r3
+ 222 00be 16D1     		bne	.L29
+ 223              		.loc 1 413 0
+ 224 00c0 4346     		mov	r3, r8
+ 225 00c2 1A88     		ldrh	r2, [r3]
+ 226 00c4 531E     		sub	r3, r2, #1
+ 227 00c6 9D42     		cmp	r5, r3
+ 228 00c8 0EDA     		bge	.L30
+ 229 00ca 1B04     		lsl	r3, r3, #16
+ 230 00cc 190C     		lsr	r1, r3, #16
+ 231              	.L32:
+ 232              		.loc 1 415 0
+ 233 00ce A268     		ldr	r2, [r4, #8]
+ 234 00d0 E368     		ldr	r3, [r4, #12]
+ 235 00d2 6360     		str	r3, [r4, #4]
+ 236 00d4 2260     		str	r2, [r4]
+ 237 00d6 4A1E     		sub	r2, r1, #1
+ 238 00d8 1304     		lsl	r3, r2, #16
+ 239 00da 1B0C     		lsr	r3, r3, #16
+ 240              		.loc 1 413 0
+ 241 00dc AA42     		cmp	r2, r5
+ 242 00de 01DD     		ble	.L31
+ 243 00e0 191C     		mov	r1, r3
+ 244 00e2 F4E7     		b	.L32
+ 245              	.L31:
+ 246 00e4 5346     		mov	r3, sl
+ 247 00e6 1980     		strh	r1, [r3]
+ 248              	.L30:
+ 249              		.loc 1 420 0
+ 250 00e8 0020     		mov	r0, #0
+ 251 00ea FFF7FEFF 		bl	vTaskDelete
+ 252              	.L29:
+ 253              		.loc 1 408 0
+ 254 00ee 0135     		add	r5, r5, #1
+ 255 00f0 0834     		add	r4, r4, #8
+ 256 00f2 3388     		ldrh	r3, [r6]
+ 257 00f4 AB42     		cmp	r3, r5
+ 258 00f6 E0DC     		bgt	.L33
+ 259              	.L34:
+ 260              		.loc 1 425 0
+ 261              		@ sp needed for prologue
+ 262              	.LVL15:
+ 263              	.LVL16:
+ 264 00f8 0CBC     		pop	{r2, r3}
+ 265 00fa 9046     		mov	r8, r2
+ 266 00fc 9A46     		mov	sl, r3
+ 267 00fe F0BC     		pop	{r4, r5, r6, r7}
+ 268 0100 01BC     		pop	{r0}
+ 269 0102 0047     		bx	r0
+ 270              	.L37:
+ 271              		.align	2
+ 272              	.L36:
+ 273 0104 00000000 		.word	s_nextthread
+ 274 0108 04000000 		.word	s_timeoutlist
+ 275              	.LFE303:
+ 277              		.section	.rodata.str1.4
+ 278 0031 000000   		.align	2
+ 279              	.LC14:
+ 280 0034 7379735F 		.ascii	"sys_thread_new:COULD_NOT_ALLOCATE_REQUIRED_MEMORY\012"
+ 280      74687265 
+ 280      61645F6E 
+ 280      65773A43 
+ 280      4F554C44 
+ 281 0066 0D00     		.ascii	"\015\000"
+ 282              		.align	2
+ 283              	.LC16:
+ 284 0068 7379735F 		.ascii	"sys_thread_new:cannot create thread SYS_THREAD_MAX "
+ 284      74687265 
+ 284      61645F6E 
+ 284      65773A63 
+ 284      616E6E6F 
+ 285 009b 6C696D69 		.ascii	"limited \012\015\000"
+ 285      74656420 
+ 285      0A0D00
+ 286              		.text
+ 287              		.align	2
+ 288              		.global	sys_thread_new
+ 289              		.code	16
+ 290              		.thumb_func
+ 292              	sys_thread_new:
+ 293              	.LFB302:
+ 294              		.loc 1 375 0
+ 295 010c 30B5     		push	{r4, r5, lr}
+ 296              	.LCFI6:
+ 297              	.LVL17:
+ 298 010e 85B0     		sub	sp, sp, #20
+ 299              	.LCFI7:
+ 300 0110 041C     		mov	r4, r0
+ 301 0112 081C     		mov	r0, r1
+ 302              	.LVL18:
+ 303 0114 151C     		mov	r5, r2
+ 304 0116 1A1C     		mov	r2, r3
+ 305              	.LVL19:
+ 306              		.loc 1 379 0
+ 307 0118 174B     		ldr	r3, .L44
+ 308              	.LVL20:
+ 309 011a 1B88     		ldrh	r3, [r3]
+ 310 011c 072B     		cmp	r3, #7
+ 311 011e 21D8     		bhi	.L39
+ 312              	.LVL21:
+ 313              		.loc 1 381 0
+ 314 0120 1204     		lsl	r2, r2, #16
+ 315              	.LVL22:
+ 316 0122 120C     		lsr	r2, r2, #16
+ 317 0124 089B     		ldr	r3, [sp, #32]
+ 318 0126 0093     		str	r3, [sp]
+ 319 0128 04AB     		add	r3, sp, #16
+ 320 012a 0193     		str	r3, [sp, #4]
+ 321 012c 0023     		mov	r3, #0
+ 322 012e 0293     		str	r3, [sp, #8]
+ 323 0130 0393     		str	r3, [sp, #12]
+ 324 0132 211C     		mov	r1, r4
+ 325 0134 2B1C     		mov	r3, r5
+ 326 0136 FFF7FEFF 		bl	xTaskGenericCreate
+ 327              	.LVL23:
+ 328 013a 051C     		mov	r5, r0
+ 329              	.LVL24:
+ 330              		.loc 1 385 0
+ 331 013c 0E48     		ldr	r0, .L44
+ 332 013e 0288     		ldrh	r2, [r0]
+ 333 0140 049C     		ldr	r4, [sp, #16]
+ 334              	.LVL25:
+ 335 0142 0E49     		ldr	r1, .L44+4
+ 336 0144 D300     		lsl	r3, r2, #3
+ 337 0146 0433     		add	r3, r3, #4
+ 338 0148 5C50     		str	r4, [r3, r1]
+ 339 014a 0132     		add	r2, r2, #1
+ 340 014c 0280     		strh	r2, [r0]
+ 341              		.loc 1 387 0
+ 342 014e 6B1C     		add	r3, r5, #1
+ 343 0150 03D0     		beq	.L41
+ 344              	.LVL26:
+ 345 0152 012D     		cmp	r5, #1
+ 346 0154 0AD0     		beq	.L42
+ 347 0156 0024     		mov	r4, #0
+ 348 0158 08E0     		b	.L42
+ 349              	.L41:
+ 350              		.loc 1 390 0
+ 351 015a 0948     		ldr	r0, .L44+8
+ 352 015c FFF7FEFF 		bl	dbgmessage
+ 353 0160 0024     		mov	r4, #0
+ 354 0162 03E0     		b	.L42
+ 355              	.LVL27:
+ 356              	.L39:
+ 357              		.loc 1 396 0
+ 358 0164 0748     		ldr	r0, .L44+12
+ 359              	.LVL28:
+ 360 0166 FFF7FEFF 		bl	dbgmessage
+ 361              	.LVL29:
+ 362 016a 0024     		mov	r4, #0
+ 363              	.LVL30:
+ 364              	.L42:
+ 365              		.loc 1 399 0
+ 366 016c 201C     		mov	r0, r4
+ 367 016e 05B0     		add	sp, sp, #20
+ 368              		@ sp needed for prologue
+ 369              	.LVL31:
+ 370 0170 30BC     		pop	{r4, r5}
+ 371 0172 02BC     		pop	{r1}
+ 372 0174 0847     		bx	r1
+ 373              	.L45:
+ 374 0176 C046     		.align	2
+ 375              	.L44:
+ 376 0178 00000000 		.word	s_nextthread
+ 377 017c 04000000 		.word	s_timeoutlist
+ 378 0180 34000000 		.word	.LC14
+ 379 0184 68000000 		.word	.LC16
+ 380              	.LFE302:
+ 382              		.align	2
+ 383              		.global	sys_sem_free
+ 384              		.code	16
+ 385              		.thumb_func
+ 387              	sys_sem_free:
+ 388              	.LFB299:
+ 389              		.loc 1 305 0
+ 390 0188 00B5     		push	{lr}
+ 391              	.LCFI8:
+ 392              	.LVL32:
+ 393              		.loc 1 307 0
+ 394 018a 0549     		ldr	r1, .L48
+ 395 018c AE22     		mov	r2, #174
+ 396 018e 5200     		lsl	r2, r2, #1
+ 397 0190 8B5A     		ldrh	r3, [r1, r2]
+ 398 0192 013B     		sub	r3, r3, #1
+ 399 0194 8B52     		strh	r3, [r1, r2]
+ 400              		.loc 1 310 0
+ 401 0196 FFF7FEFF 		bl	vQueueDelete
+ 402              	.LVL33:
+ 403              		.loc 1 311 0
+ 404              		@ sp needed for prologue
+ 405 019a 01BC     		pop	{r0}
+ 406 019c 0047     		bx	r0
+ 407              	.L49:
+ 408 019e C046     		.align	2
+ 409              	.L48:
+ 410 01a0 00000000 		.word	lwip_stats
+ 411              	.LFE299:
+ 413              		.align	2
+ 414              		.global	sys_sem_signal
+ 415              		.code	16
+ 416              		.thumb_func
+ 418              	sys_sem_signal:
+ 419              	.LFB298:
+ 420              		.loc 1 298 0
+ 421 01a4 00B5     		push	{lr}
+ 422              	.LCFI9:
+ 423              	.LVL34:
+ 424              		.loc 1 299 0
+ 425 01a6 0021     		mov	r1, #0
+ 426 01a8 0022     		mov	r2, #0
+ 427 01aa 0023     		mov	r3, #0
+ 428 01ac FFF7FEFF 		bl	xQueueGenericSend
+ 429              	.LVL35:
+ 430              		.loc 1 300 0
+ 431              		@ sp needed for prologue
+ 432 01b0 01BC     		pop	{r0}
+ 433 01b2 0047     		bx	r0
+ 434              	.LFE298:
+ 436              		.align	2
+ 437              		.global	sys_mbox_trypost
+ 438              		.code	16
+ 439              		.thumb_func
+ 441              	sys_mbox_trypost:
+ 442              	.LFB293:
+ 443              		.loc 1 112 0
+ 444 01b4 00B5     		push	{lr}
+ 445              	.LCFI10:
+ 446              	.LVL36:
+ 447 01b6 81B0     		sub	sp, sp, #4
+ 448              	.LCFI11:
+ 449 01b8 0091     		str	r1, [sp]
+ 450              		.loc 1 115 0
+ 451 01ba 6946     		mov	r1, sp
+ 452              	.LVL37:
+ 453 01bc 0022     		mov	r2, #0
+ 454 01be 0023     		mov	r3, #0
+ 455 01c0 FFF7FEFF 		bl	xQueueGenericSend
+ 456              	.LVL38:
+ 457 01c4 0128     		cmp	r0, #1
+ 458 01c6 01D1     		bne	.L53
+ 459 01c8 0020     		mov	r0, #0
+ 460              	.LVL39:
+ 461 01ca 06E0     		b	.L54
+ 462              	.LVL40:
+ 463              	.L53:
+ 464              		.loc 1 124 0
+ 465 01cc 0549     		ldr	r1, .L56
+ 466 01ce B422     		mov	r2, #180
+ 467 01d0 5200     		lsl	r2, r2, #1
+ 468 01d2 8B5A     		ldrh	r3, [r1, r2]
+ 469 01d4 0133     		add	r3, r3, #1
+ 470 01d6 8B52     		strh	r3, [r1, r2]
+ 471 01d8 FF20     		mov	r0, #255
+ 472              	.LVL41:
+ 473              	.L54:
+ 474 01da 0006     		lsl	r0, r0, #24
+ 475              	.LVL42:
+ 476 01dc 0016     		asr	r0, r0, #24
+ 477              		.loc 1 130 0
+ 478 01de 01B0     		add	sp, sp, #4
+ 479              		@ sp needed for prologue
+ 480 01e0 02BC     		pop	{r1}
+ 481 01e2 0847     		bx	r1
+ 482              	.L57:
+ 483              		.align	2
+ 484              	.L56:
+ 485 01e4 00000000 		.word	lwip_stats
+ 486              	.LFE293:
+ 488              		.align	2
+ 489              		.global	sys_mbox_post
+ 490              		.code	16
+ 491              		.thumb_func
+ 493              	sys_mbox_post:
+ 494              	.LFB292:
+ 495              		.loc 1 104 0
+ 496 01e8 70B5     		push	{r4, r5, r6, lr}
+ 497              	.LCFI12:
+ 498              	.LVL43:
+ 499 01ea 81B0     		sub	sp, sp, #4
+ 500              	.LCFI13:
+ 501 01ec 051C     		mov	r5, r0
+ 502 01ee 0091     		str	r1, [sp]
+ 503              		.loc 1 105 0
+ 504 01f0 0124     		mov	r4, #1
+ 505 01f2 6442     		neg	r4, r4
+ 506              	.LVL44:
+ 507              	.L59:
+ 508 01f4 281C     		mov	r0, r5
+ 509 01f6 6946     		mov	r1, sp
+ 510 01f8 221C     		mov	r2, r4
+ 511 01fa 0023     		mov	r3, #0
+ 512 01fc FFF7FEFF 		bl	xQueueGenericSend
+ 513 0200 0128     		cmp	r0, #1
+ 514 0202 F7D1     		bne	.L59
+ 515              		.loc 1 106 0
+ 516 0204 01B0     		add	sp, sp, #4
+ 517              		@ sp needed for prologue
+ 518              	.LVL45:
+ 519 0206 70BC     		pop	{r4, r5, r6}
+ 520 0208 01BC     		pop	{r0}
+ 521 020a 0047     		bx	r0
+ 522              	.LFE292:
+ 524              		.align	2
+ 525              		.global	sys_arch_sem_wait
+ 526              		.code	16
+ 527              		.thumb_func
+ 529              	sys_arch_sem_wait:
+ 530              	.LFB297:
+ 531              		.loc 1 265 0
+ 532 020c 70B5     		push	{r4, r5, r6, lr}
+ 533              	.LCFI14:
+ 534              	.LVL46:
+ 535 020e 051C     		mov	r5, r0
+ 536 0210 0C1C     		mov	r4, r1
+ 537              		.loc 1 268 0
+ 538 0212 FFF7FEFF 		bl	xTaskGetTickCount
+ 539              	.LVL47:
+ 540 0216 061C     		mov	r6, r0
+ 541              	.LVL48:
+ 542              		.loc 1 270 0
+ 543 0218 002C     		cmp	r4, #0
+ 544 021a 0ED0     		beq	.L63
+ 545              		.loc 1 272 0
+ 546 021c 281C     		mov	r0, r5
+ 547 021e 0021     		mov	r1, #0
+ 548 0220 221C     		mov	r2, r4
+ 549 0222 0023     		mov	r3, #0
+ 550 0224 FFF7FEFF 		bl	xQueueGenericReceive
+ 551 0228 0128     		cmp	r0, #1
+ 552 022a 02D0     		beq	.L64
+ 553 022c 0120     		mov	r0, #1
+ 554              	.LVL49:
+ 555 022e 4042     		neg	r0, r0
+ 556 0230 10E0     		b	.L65
+ 557              	.LVL50:
+ 558              	.L64:
+ 559              		.loc 1 274 0
+ 560 0232 FFF7FEFF 		bl	xTaskGetTickCount
+ 561              		.loc 1 275 0
+ 562 0236 801B     		sub	r0, r0, r6
+ 563              	.LVL51:
+ 564 0238 0CE0     		b	.L65
+ 565              	.LVL52:
+ 566              	.L63:
+ 567              		.loc 1 286 0
+ 568 023a 0124     		mov	r4, #1
+ 569              	.LVL53:
+ 570 023c 6442     		neg	r4, r4
+ 571              	.L67:
+ 572 023e 281C     		mov	r0, r5
+ 573 0240 0021     		mov	r1, #0
+ 574 0242 221C     		mov	r2, r4
+ 575 0244 0023     		mov	r3, #0
+ 576 0246 FFF7FEFF 		bl	xQueueGenericReceive
+ 577 024a 0128     		cmp	r0, #1
+ 578 024c F7D1     		bne	.L67
+ 579              		.loc 1 287 0
+ 580 024e FFF7FEFF 		bl	xTaskGetTickCount
+ 581              		.loc 1 288 0
+ 582 0252 801B     		sub	r0, r0, r6
+ 583              	.LVL54:
+ 584              	.L65:
+ 585              	.LVL55:
+ 586              		.loc 1 293 0
+ 587              		@ sp needed for prologue
+ 588              	.LVL56:
+ 589              	.LVL57:
+ 590              	.LVL58:
+ 591 0254 70BC     		pop	{r4, r5, r6}
+ 592 0256 02BC     		pop	{r1}
+ 593 0258 0847     		bx	r1
+ 594              	.LFE297:
+ 596 025a C046     		.align	2
+ 597              		.global	sys_arch_mbox_tryfetch
+ 598              		.code	16
+ 599              		.thumb_func
+ 601              	sys_arch_mbox_tryfetch:
+ 602              	.LFB295:
+ 603              		.loc 1 196 0
+ 604 025c 00B5     		push	{lr}
+ 605              	.LCFI15:
+ 606              	.LVL59:
+ 607 025e 81B0     		sub	sp, sp, #4
+ 608              	.LCFI16:
+ 609              		.loc 1 199 0
+ 610 0260 0029     		cmp	r1, #0
+ 611 0262 00D1     		bne	.L70
+ 612 0264 6946     		mov	r1, sp
+ 613              	.LVL60:
+ 614              	.L70:
+ 615              		.loc 1 204 0
+ 616 0266 0022     		mov	r2, #0
+ 617 0268 0023     		mov	r3, #0
+ 618 026a FFF7FEFF 		bl	xQueueGenericReceive
+ 619              	.LVL61:
+ 620 026e 0128     		cmp	r0, #1
+ 621 0270 02D0     		beq	.L71
+ 622 0272 0120     		mov	r0, #1
+ 623 0274 4042     		neg	r0, r0
+ 624 0276 00E0     		b	.L72
+ 625              	.L71:
+ 626 0278 0020     		mov	r0, #0
+ 627              	.L72:
+ 628              		.loc 1 212 0
+ 629 027a 01B0     		add	sp, sp, #4
+ 630              		@ sp needed for prologue
+ 631 027c 02BC     		pop	{r1}
+ 632 027e 0847     		bx	r1
+ 633              	.LFE295:
+ 635              		.section	.rodata.str1.4
+ 636 00a6 0000     		.align	2
+ 637              	.LC20:
+ 638 00a8 3E4D4553 		.ascii	">MESSAGE BLOCK!!! ... \015\012\000"
+ 638      53414745 
+ 638      20424C4F 
+ 638      434B2121 
+ 638      21202E2E 
+ 639              		.text
+ 640              		.align	2
+ 641              		.global	sys_arch_mbox_fetch
+ 642              		.code	16
+ 643              		.thumb_func
+ 645              	sys_arch_mbox_fetch:
+ 646              	.LFB294:
+ 647              		.loc 1 149 0
+ 648 0280 F0B5     		push	{r4, r5, r6, r7, lr}
+ 649              	.LCFI17:
+ 650 0282 4746     		mov	r7, r8
+ 651 0284 80B4     		push	{r7}
+ 652              	.LCFI18:
+ 653              	.LVL62:
+ 654 0286 81B0     		sub	sp, sp, #4
+ 655              	.LCFI19:
+ 656 0288 071C     		mov	r7, r0
+ 657 028a 0D1C     		mov	r5, r1
+ 658 028c 141C     		mov	r4, r2
+ 659              		.loc 1 153 0
+ 660 028e FFF7FEFF 		bl	xTaskGetTickCount
+ 661              	.LVL63:
+ 662 0292 8046     		mov	r8, r0
+ 663              	.LVL64:
+ 664              		.loc 1 155 0
+ 665 0294 002D     		cmp	r5, #0
+ 666 0296 00D1     		bne	.L75
+ 667 0298 6D46     		mov	r5, sp
+ 668              	.L75:
+ 669              		.loc 1 160 0
+ 670 029a 002C     		cmp	r4, #0
+ 671 029c 15D0     		beq	.L76
+ 672              		.loc 1 162 0
+ 673 029e 381C     		mov	r0, r7
+ 674 02a0 291C     		mov	r1, r5
+ 675 02a2 221C     		mov	r2, r4
+ 676 02a4 0023     		mov	r3, #0
+ 677 02a6 FFF7FEFF 		bl	xQueueGenericReceive
+ 678 02aa 0128     		cmp	r0, #1
+ 679 02ac 04D1     		bne	.L77
+ 680              		.loc 1 164 0
+ 681 02ae FFF7FEFF 		bl	xTaskGetTickCount
+ 682              		.loc 1 165 0
+ 683 02b2 4346     		mov	r3, r8
+ 684 02b4 C01A     		sub	r0, r0, r3
+ 685              	.LVL65:
+ 686 02b6 17E0     		b	.L78
+ 687              	.LVL66:
+ 688              	.L77:
+ 689              		.loc 1 171 0
+ 690 02b8 0023     		mov	r3, #0
+ 691 02ba 2B60     		str	r3, [r5]
+ 692 02bc 0120     		mov	r0, #1
+ 693              	.LVL67:
+ 694 02be 4042     		neg	r0, r0
+ 695 02c0 12E0     		b	.L78
+ 696              	.LVL68:
+ 697              	.L79:
+ 698              		.loc 1 180 0
+ 699 02c2 301C     		mov	r0, r6
+ 700 02c4 FFF7FEFF 		bl	dbgmessage
+ 701 02c8 02E0     		b	.L81
+ 702              	.LVL69:
+ 703              	.L76:
+ 704              		.loc 1 178 0
+ 705 02ca 0124     		mov	r4, #1
+ 706              	.LVL70:
+ 707 02cc 6442     		neg	r4, r4
+ 708              		.loc 1 180 0
+ 709 02ce 094E     		ldr	r6, .L82
+ 710              	.L81:
+ 711              		.loc 1 178 0
+ 712 02d0 381C     		mov	r0, r7
+ 713 02d2 291C     		mov	r1, r5
+ 714 02d4 221C     		mov	r2, r4
+ 715 02d6 0023     		mov	r3, #0
+ 716 02d8 FFF7FEFF 		bl	xQueueGenericReceive
+ 717 02dc 0128     		cmp	r0, #1
+ 718 02de F0D1     		bne	.L79
+ 719              		.loc 1 183 0
+ 720 02e0 FFF7FEFF 		bl	xTaskGetTickCount
+ 721              		.loc 1 184 0
+ 722 02e4 4346     		mov	r3, r8
+ 723 02e6 C01A     		sub	r0, r0, r3
+ 724              	.LVL71:
+ 725              	.L78:
+ 726              	.LVL72:
+ 727              		.loc 1 188 0
+ 728 02e8 01B0     		add	sp, sp, #4
+ 729              		@ sp needed for prologue
+ 730              	.LVL73:
+ 731              	.LVL74:
+ 732              	.LVL75:
+ 733              	.LVL76:
+ 734 02ea 04BC     		pop	{r2}
+ 735 02ec 9046     		mov	r8, r2
+ 736 02ee F0BC     		pop	{r4, r5, r6, r7}
+ 737 02f0 02BC     		pop	{r1}
+ 738 02f2 0847     		bx	r1
+ 739              	.L83:
+ 740              		.align	2
+ 741              	.L82:
+ 742 02f4 A8000000 		.word	.LC20
+ 743              	.LFE294:
+ 745              		.section	.rodata.str1.4
+ 746 00c1 000000   		.align	2
+ 747              	.LC23:
+ 748 00c4 53656D20 		.ascii	"Sem creating fail\000"
+ 748      63726561 
+ 748      74696E67 
+ 748      20666169 
+ 748      6C00
+ 749 00d6 0000     		.text
+ 750              		.align	2
+ 751              		.global	sys_sem_new
+ 752              		.code	16
+ 753              		.thumb_func
+ 755              	sys_sem_new:
+ 756              	.LFB296:
+ 757              		.loc 1 218 0
+ 758 02f8 30B5     		push	{r4, r5, lr}
+ 759              	.LCFI20:
+ 760              	.LVL77:
+ 761 02fa 0006     		lsl	r0, r0, #24
+ 762              	.LVL78:
+ 763 02fc 050E     		lsr	r5, r0, #24
+ 764              	.LVL79:
+ 765              		.loc 1 221 0
+ 766 02fe 0120     		mov	r0, #1
+ 767 0300 0021     		mov	r1, #0
+ 768 0302 FFF7FEFF 		bl	xQueueCreate
+ 769 0306 041C     		mov	r4, r0
+ 770              	.LVL80:
+ 771 0308 0028     		cmp	r0, #0
+ 772 030a 07D0     		beq	.L85
+ 773              	.LVL81:
+ 774 030c 0021     		mov	r1, #0
+ 775 030e 0022     		mov	r2, #0
+ 776 0310 0023     		mov	r3, #0
+ 777 0312 FFF7FEFF 		bl	xQueueGenericSend
+ 778              	.LVL82:
+ 779              		.loc 1 233 0
+ 780 0316 002D     		cmp	r5, #0
+ 781 0318 10D1     		bne	.L87
+ 782 031a 09E0     		b	.L90
+ 783              	.LVL83:
+ 784              	.L85:
+ 785              		.loc 1 227 0
+ 786 031c 1149     		ldr	r1, .L91
+ 787 031e B022     		mov	r2, #176
+ 788 0320 5200     		lsl	r2, r2, #1
+ 789 0322 8B5A     		ldrh	r3, [r1, r2]
+ 790 0324 0133     		add	r3, r3, #1
+ 791 0326 8B52     		strh	r3, [r1, r2]
+ 792              		.loc 1 229 0
+ 793 0328 0F48     		ldr	r0, .L91+4
+ 794              	.LVL84:
+ 795 032a FFF7FEFF 		bl	dbgmessage
+ 796 032e 15E0     		b	.L88
+ 797              	.L90:
+ 798              		.loc 1 235 0
+ 799 0330 201C     		mov	r0, r4
+ 800 0332 0021     		mov	r1, #0
+ 801 0334 0122     		mov	r2, #1
+ 802 0336 0023     		mov	r3, #0
+ 803 0338 FFF7FEFF 		bl	xQueueGenericReceive
+ 804              	.L87:
+ 805              		.loc 1 239 0
+ 806 033c 0949     		ldr	r1, .L91
+ 807 033e AE22     		mov	r2, #174
+ 808 0340 5200     		lsl	r2, r2, #1
+ 809 0342 8B5A     		ldrh	r3, [r1, r2]
+ 810 0344 0133     		add	r3, r3, #1
+ 811 0346 1B04     		lsl	r3, r3, #16
+ 812 0348 180C     		lsr	r0, r3, #16
+ 813 034a 8852     		strh	r0, [r1, r2]
+ 814              		.loc 1 240 0
+ 815 034c AF23     		mov	r3, #175
+ 816 034e 5B00     		lsl	r3, r3, #1
+ 817 0350 CB5A     		ldrh	r3, [r1, r3]
+ 818 0352 8342     		cmp	r3, r0
+ 819 0354 02D2     		bcs	.L88
+ 820              		.loc 1 241 0
+ 821 0356 AF23     		mov	r3, #175
+ 822 0358 5B00     		lsl	r3, r3, #1
+ 823 035a C852     		strh	r0, [r1, r3]
+ 824              	.L88:
+ 825              		.loc 1 246 0
+ 826 035c 201C     		mov	r0, r4
+ 827              		@ sp needed for prologue
+ 828              	.LVL85:
+ 829              	.LVL86:
+ 830 035e 30BC     		pop	{r4, r5}
+ 831 0360 02BC     		pop	{r1}
+ 832 0362 0847     		bx	r1
+ 833              	.L92:
+ 834              		.align	2
+ 835              	.L91:
+ 836 0364 00000000 		.word	lwip_stats
+ 837 0368 C4000000 		.word	.LC23
+ 838              	.LFE296:
+ 840              		.align	2
+ 841              		.global	sys_mbox_new
+ 842              		.code	16
+ 843              		.thumb_func
+ 845              	sys_mbox_new:
+ 846              	.LFB290:
+ 847              		.loc 1 58 0
+ 848 036c 10B5     		push	{r4, lr}
+ 849              	.LCFI21:
+ 850              	.LVL87:
+ 851              		.loc 1 63 0
+ 852 036e 0620     		mov	r0, #6
+ 853              	.LVL88:
+ 854 0370 0421     		mov	r1, #4
+ 855 0372 FFF7FEFF 		bl	xQueueCreate
+ 856 0376 041C     		mov	r4, r0
+ 857              	.LVL89:
+ 858              		.loc 1 66 0
+ 859 0378 0949     		ldr	r1, .L96
+ 860 037a B222     		mov	r2, #178
+ 861 037c 5200     		lsl	r2, r2, #1
+ 862 037e 8B5A     		ldrh	r3, [r1, r2]
+ 863 0380 0133     		add	r3, r3, #1
+ 864 0382 1B04     		lsl	r3, r3, #16
+ 865 0384 180C     		lsr	r0, r3, #16
+ 866 0386 8852     		strh	r0, [r1, r2]
+ 867              		.loc 1 67 0
+ 868 0388 B323     		mov	r3, #179
+ 869 038a 5B00     		lsl	r3, r3, #1
+ 870 038c CB5A     		ldrh	r3, [r1, r3]
+ 871 038e 8342     		cmp	r3, r0
+ 872 0390 02D2     		bcs	.L94
+ 873              		.loc 1 68 0
+ 874 0392 B323     		mov	r3, #179
+ 875 0394 5B00     		lsl	r3, r3, #1
+ 876 0396 C852     		strh	r0, [r1, r3]
+ 877              	.L94:
+ 878              		.loc 1 73 0
+ 879 0398 201C     		mov	r0, r4
+ 880              		@ sp needed for prologue
+ 881              	.LVL90:
+ 882 039a 10BC     		pop	{r4}
+ 883 039c 02BC     		pop	{r1}
+ 884 039e 0847     		bx	r1
+ 885              	.L97:
+ 886              		.align	2
+ 887              	.L96:
+ 888 03a0 00000000 		.word	lwip_stats
+ 889              	.LFE290:
+ 891              		.align	2
+ 892              		.global	sys_mbox_free
+ 893              		.code	16
+ 894              		.thumb_func
+ 896              	sys_mbox_free:
+ 897              	.LFB291:
+ 898              		.loc 1 82 0
+ 899 03a4 10B5     		push	{r4, lr}
+ 900              	.LCFI22:
+ 901              	.LVL91:
+ 902 03a6 041C     		mov	r4, r0
+ 903              		.loc 1 83 0
+ 904 03a8 FFF7FEFF 		bl	uxQueueMessagesWaiting
+ 905              	.LVL92:
+ 906 03ac 0028     		cmp	r0, #0
+ 907 03ae 06D0     		beq	.L99
+ 908              		.loc 1 86 0
+ 909              	@ 86 "rtos/common/ethernet/lwIP_132/contrib/port/FreeRTOS/sys_arch.c" 1
+ 910 03b0 C046     		NOP
+ 911              	@ 0 "" 2
+ 912              		.loc 1 88 0
+ 913              		.code	16
+ 914 03b2 0949     		ldr	r1, .L101
+ 915 03b4 B422     		mov	r2, #180
+ 916 03b6 5200     		lsl	r2, r2, #1
+ 917 03b8 8B5A     		ldrh	r3, [r1, r2]
+ 918 03ba 0133     		add	r3, r3, #1
+ 919 03bc 8B52     		strh	r3, [r1, r2]
+ 920              	.L99:
+ 921              		.loc 1 94 0
+ 922 03be 201C     		mov	r0, r4
+ 923 03c0 FFF7FEFF 		bl	vQueueDelete
+ 924              		.loc 1 97 0
+ 925 03c4 0449     		ldr	r1, .L101
+ 926 03c6 B222     		mov	r2, #178
+ 927 03c8 5200     		lsl	r2, r2, #1
+ 928 03ca 8B5A     		ldrh	r3, [r1, r2]
+ 929 03cc 013B     		sub	r3, r3, #1
+ 930 03ce 8B52     		strh	r3, [r1, r2]
+ 931              		.loc 1 99 0
+ 932              		@ sp needed for prologue
+ 933              	.LVL93:
+ 934 03d0 10BC     		pop	{r4}
+ 935 03d2 01BC     		pop	{r0}
+ 936 03d4 0047     		bx	r0
+ 937              	.L102:
+ 938 03d6 C046     		.align	2
+ 939              	.L101:
+ 940 03d8 00000000 		.word	lwip_stats
+ 941              	.LFE291:
+ 943              		.bss
+ 944              		.align	1
+ 945              	s_nextthread:
+ 946 0000 0000     		.space	2
+ 947 0002 0000     		.align	2
+ 948              	s_timeoutlist:
+ 949 0004 00000000 		.space	64
+ 949      00000000 
+ 949      00000000 
+ 949      00000000 
+ 949      00000000 
+ 1276              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 sys_arch.c
+     /tmp/cce4VZ4O.s:1      .text:00000000 $t
+     /tmp/cce4VZ4O.s:16     .text:00000000 sys_init
+     /tmp/cce4VZ4O.s:45     .text:00000018 $d
+     /tmp/cce4VZ4O.s:948    .bss:00000004 s_timeoutlist
+     /tmp/cce4VZ4O.s:945    .bss:00000000 s_nextthread
+     /tmp/cce4VZ4O.s:61     .text:00000024 sys_assert
+     /tmp/cce4VZ4O.s:58     .text:00000024 $t
+     /tmp/cce4VZ4O.s:78     .text:00000034 $d
+     /tmp/cce4VZ4O.s:86     .text:00000038 sys_arch_protect
+     /tmp/cce4VZ4O.s:83     .text:00000038 $t
+     /tmp/cce4VZ4O.s:105    .text:00000044 sys_arch_unprotect
+     /tmp/cce4VZ4O.s:125    .text:00000050 sys_arch_timeouts
+     /tmp/cce4VZ4O.s:181    .text:0000008c $d
+     /tmp/cce4VZ4O.s:191    .text:00000098 sys_thread_suicid
+     /tmp/cce4VZ4O.s:188    .text:00000098 $t
+     /tmp/cce4VZ4O.s:273    .text:00000104 $d
+     /tmp/cce4VZ4O.s:292    .text:0000010c sys_thread_new
+     /tmp/cce4VZ4O.s:289    .text:0000010c $t
+     /tmp/cce4VZ4O.s:376    .text:00000178 $d
+     /tmp/cce4VZ4O.s:387    .text:00000188 sys_sem_free
+     /tmp/cce4VZ4O.s:384    .text:00000188 $t
+     /tmp/cce4VZ4O.s:410    .text:000001a0 $d
+     /tmp/cce4VZ4O.s:418    .text:000001a4 sys_sem_signal
+     /tmp/cce4VZ4O.s:415    .text:000001a4 $t
+     /tmp/cce4VZ4O.s:441    .text:000001b4 sys_mbox_trypost
+     /tmp/cce4VZ4O.s:485    .text:000001e4 $d
+     /tmp/cce4VZ4O.s:493    .text:000001e8 sys_mbox_post
+     /tmp/cce4VZ4O.s:490    .text:000001e8 $t
+     /tmp/cce4VZ4O.s:529    .text:0000020c sys_arch_sem_wait
+     /tmp/cce4VZ4O.s:601    .text:0000025c sys_arch_mbox_tryfetch
+     /tmp/cce4VZ4O.s:645    .text:00000280 sys_arch_mbox_fetch
+     /tmp/cce4VZ4O.s:742    .text:000002f4 $d
+     /tmp/cce4VZ4O.s:755    .text:000002f8 sys_sem_new
+     /tmp/cce4VZ4O.s:752    .text:000002f8 $t
+     /tmp/cce4VZ4O.s:836    .text:00000364 $d
+     /tmp/cce4VZ4O.s:845    .text:0000036c sys_mbox_new
+     /tmp/cce4VZ4O.s:842    .text:0000036c $t
+     /tmp/cce4VZ4O.s:888    .text:000003a0 $d
+     /tmp/cce4VZ4O.s:896    .text:000003a4 sys_mbox_free
+     /tmp/cce4VZ4O.s:893    .text:000003a4 $t
+     /tmp/cce4VZ4O.s:940    .text:000003d8 $d
+
+UNDEFINED SYMBOLS
+dbgmessage
+vPortEnterCritical
+vPortExitCritical
+xTaskGetCurrentTaskHandle
+vTaskDelete
+xTaskGenericCreate
+vQueueDelete
+lwip_stats
+xQueueGenericSend
+xTaskGetTickCount
+xQueueGenericReceive
+xQueueCreate
+uxQueueMessagesWaiting

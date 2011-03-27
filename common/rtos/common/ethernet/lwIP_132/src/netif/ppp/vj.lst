@@ -1,0 +1,2501 @@
+   1              		.code	16
+   2              		.file	"vj.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	vj_compress_init
+  13              		.code	16
+  14              		.thumb_func
+  16              	vj_compress_init:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /*
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Routines to compress and uncompess tcp packets (for transmission
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * over low speed serial lines.
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Copyright (c) 1989 Regents of the University of California.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * All rights reserved.
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Redistribution and use in source and binary forms are permitted
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * provided that the above copyright notice and this paragraph are
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * duplicated in all such forms and that any documentation,
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * advertising materials, and other materials related to such
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * distribution and use acknowledge that the software was developed
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * by the University of California, Berkeley.  The name of the
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * University may not be used to endorse or promote products derived
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * from this software without specific prior written permission.
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Van Jacobson (van@helios.ee.lbl.gov), Dec 31, 1989:
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *   Initial distribution.
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Modified June 1993 by Paul Mackerras, paulus@cs.anu.edu.au,
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * so that the entire packet being decompressed doesn't have
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * to be in contiguous memory (just the compressed header).
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  *
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Modified March 1998 by Guy Lancaster, glanca@gesn.com,
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * for a 16 bit processor.
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #include "lwip/opt.h"
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #include "ppp.h"
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #include "pppdebug.h"
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #include "vj.h"
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #include <string.h>
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if VJ_SUPPORT
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if LINK_STATS
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define INCR(counter) ++comp->stats.counter
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #else
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define INCR(counter)
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #endif
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if defined(NO_CHAR_BITFIELDS)
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define getip_hl(base)  ((base).ip_hl_v&0xf)
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define getth_off(base) (((base).th_x2_off&0xf0)>>4)
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #else
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define getip_hl(base)  ((base).ip_hl)
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define getth_off(base) ((base).th_off)
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #endif
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** void
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** vj_compress_init(struct vjcompress *comp)
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** {
+  19              		.loc 1 60 0
+  20 0000 10B5     		push	{r4, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_int i;
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct cstate *tstate = comp->tstate;
+  23              		.loc 1 62 0
+  24 0002 041C     		mov	r4, r0
+  25              	.LVL1:
+  26 0004 2C34     		add	r4, r4, #44
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if MAX_SLOTS == 0
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   memset((char *)comp, 0, sizeof(*comp));
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #endif
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->maxSlotIndex = MAX_SLOTS - 1;
+  27              		.loc 1 67 0
+  28 0006 0F23     		mov	r3, #15
+  29 0008 0372     		strb	r3, [r0, #8]
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->compressSlot = 0;    /* Disable slot ID compression by default. */
+  30              		.loc 1 68 0
+  31 000a 0023     		mov	r3, #0
+  32 000c 4372     		strb	r3, [r0, #9]
+  33 000e 0E4B     		ldr	r3, .L5
+  34 0010 C218     		add	r2, r0, r3
+  35 0012 883B     		sub	r3, r3, #136
+  36 0014 C118     		add	r1, r0, r3
+  37 0016 0F23     		mov	r3, #15
+  38              	.LVL2:
+  39              	.L2:
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   for (i = MAX_SLOTS - 1; i > 0; --i) {
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     tstate[i].cs_id = i;
+  40              		.loc 1 70 0
+  41 0018 9371     		strb	r3, [r2, #6]
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     tstate[i].cs_next = &tstate[i - 1];
+  42              		.loc 1 71 0
+  43 001a 1160     		str	r1, [r2]
+  44              		.loc 1 69 0
+  45 001c 013B     		sub	r3, r3, #1
+  46 001e 883A     		sub	r2, r2, #136
+  47 0020 8839     		sub	r1, r1, #136
+  48 0022 002B     		cmp	r3, #0
+  49 0024 F8D1     		bne	.L2
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   tstate[0].cs_next = &tstate[MAX_SLOTS - 1];
+  50              		.loc 1 73 0
+  51 0026 084A     		ldr	r2, .L5
+  52 0028 8318     		add	r3, r0, r2
+  53              	.LVL3:
+  54 002a C362     		str	r3, [r0, #44]
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   tstate[0].cs_id = 0;
+  55              		.loc 1 74 0
+  56 002c 0022     		mov	r2, #0
+  57 002e 3223     		mov	r3, #50
+  58 0030 C254     		strb	r2, [r0, r3]
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->last_cs = &tstate[0];
+  59              		.loc 1 75 0
+  60 0032 0460     		str	r4, [r0]
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->last_recv = 255;
+  61              		.loc 1 76 0
+  62 0034 0123     		mov	r3, #1
+  63 0036 5B42     		neg	r3, r3
+  64 0038 0371     		strb	r3, [r0, #4]
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->last_xmit = 255;
+  65              		.loc 1 77 0
+  66 003a 4371     		strb	r3, [r0, #5]
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->flags = VJF_TOSS;
+  67              		.loc 1 78 0
+  68 003c 0123     		mov	r3, #1
+  69 003e C380     		strh	r3, [r0, #6]
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+  70              		.loc 1 79 0
+  71              		@ sp needed for prologue
+  72              	.LVL4:
+  73 0040 10BC     		pop	{r4}
+  74 0042 01BC     		pop	{r0}
+  75 0044 0047     		bx	r0
+  76              	.L6:
+  77 0046 C046     		.align	2
+  78              	.L5:
+  79 0048 24080000 		.word	2084
+  80              	.LFE290:
+  82              		.align	2
+  83              		.global	vj_uncompress_err
+  84              		.code	16
+  85              		.thumb_func
+  87              	vj_uncompress_err:
+  88              	.LFB292:
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  81:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+  82:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /* ENCODE encodes a number that is known to be non-zero.  ENCODEZ
+  83:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * checks for zero (since zero has to be encoded in the long, 3 byte
+  84:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * form).
+  85:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+  86:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define ENCODE(n) { \
+  87:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((u_short)(n) >= 256) { \
+  88:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = 0; \
+  89:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp[1] = (n); \
+  90:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp[0] = (n) >> 8; \
+  91:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp += 2; \
+  92:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else { \
+  93:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = (n); \
+  94:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } \
+  95:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+  96:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define ENCODEZ(n) { \
+  97:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((u_short)(n) >= 256 || (u_short)(n) == 0) { \
+  98:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = 0; \
+  99:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp[1] = (n); \
+ 100:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp[0] = (n) >> 8; \
+ 101:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp += 2; \
+ 102:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else { \
+ 103:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = (n); \
+ 104:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } \
+ 105:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 106:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 107:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define DECODEL(f) { \
+ 108:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (*cp == 0) {\
+ 109:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     u32_t tmp = ntohl(f) + ((cp[1] << 8) | cp[2]); \
+ 110:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htonl(tmp); \
+ 111:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp += 3; \
+ 112:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else { \
+ 113:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     u32_t tmp = ntohl(f) + (u32_t)*cp++; \
+ 114:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htonl(tmp); \
+ 115:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } \
+ 116:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 117:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 118:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define DECODES(f) { \
+ 119:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (*cp == 0) {\
+ 120:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     u_short tmp = ntohs(f) + (((u_short)cp[1] << 8) | cp[2]); \
+ 121:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htons(tmp); \
+ 122:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp += 3; \
+ 123:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else { \
+ 124:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     u_short tmp = ntohs(f) + (u_short)*cp++; \
+ 125:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htons(tmp); \
+ 126:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } \
+ 127:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 128:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 129:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #define DECODEU(f) { \
+ 130:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (*cp == 0) {\
+ 131:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htons(((u_short)cp[1] << 8) | cp[2]); \
+ 132:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp += 3; \
+ 133:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else { \
+ 134:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     (f) = htons((u_short)*cp++); \
+ 135:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } \
+ 136:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 137:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 138:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /*
+ 139:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * vj_compress_tcp - Attempt to do Van Jacobson header compression on a
+ 140:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * packet.  This assumes that nb and comp are not null and that the first
+ 141:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * buffer of the chain contains a valid IP header.
+ 142:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Return the VJ type code indicating whether or not the packet was
+ 143:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * compressed.
+ 144:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+ 145:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** u_int
+ 146:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** vj_compress_tcp(struct vjcompress *comp, struct pbuf *pb)
+ 147:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** {
+ 148:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct ip *ip = (struct ip *)pb->payload;
+ 149:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct cstate *cs = comp->last_cs->cs_next;
+ 150:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_short hlen = getip_hl(*ip);
+ 151:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct tcphdr *oth;
+ 152:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct tcphdr *th;
+ 153:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_short deltaS, deltaA;
+ 154:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_long deltaL;
+ 155:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_int changes = 0;
+ 156:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   u_char new_seq[16];
+ 157:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_char *cp = new_seq;
+ 158:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 159:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*  
+ 160:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Check that the packet is IP proto TCP.
+ 161:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 162:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (ip->ip_p != IPPROTO_TCP) {
+ 163:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     return (TYPE_IP);
+ 164:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 165:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 166:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 167:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Bail if this is an IP fragment or if the TCP packet isn't
+ 168:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * `compressible' (i.e., ACK isn't set or some other control bit is
+ 169:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * set).  
+ 170:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 171:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((ip->ip_off & htons(0x3fff)) || pb->tot_len < 40) {
+ 172:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     return (TYPE_IP);
+ 173:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 174:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   th = (struct tcphdr *)&((long *)ip)[hlen];
+ 175:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((th->th_flags & (TCP_SYN|TCP_FIN|TCP_RST|TCP_ACK)) != TCP_ACK) {
+ 176:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     return (TYPE_IP);
+ 177:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 178:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 179:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Packet is compressible -- we're going to send either a
+ 180:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * COMPRESSED_TCP or UNCOMPRESSED_TCP packet.  Either way we need
+ 181:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * to locate (or create) the connection state.  Special case the
+ 182:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * most recently used connection since it's most likely to be used
+ 183:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * again & we don't have to do any reordering if it's used.
+ 184:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 185:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_packets);
+ 186:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (ip->ip_src.s_addr != cs->cs_ip.ip_src.s_addr 
+ 187:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || ip->ip_dst.s_addr != cs->cs_ip.ip_dst.s_addr 
+ 188:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || *(long *)th != ((long *)&cs->cs_ip)[getip_hl(cs->cs_ip)]) {
+ 189:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /*
+ 190:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Wasn't the first -- search for it.
+ 191:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      *
+ 192:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * States are kept in a circularly linked list with
+ 193:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * last_cs pointing to the end of the list.  The
+ 194:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * list is kept in lru order by moving a state to the
+ 195:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * head of the list whenever it is referenced.  Since
+ 196:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * the list is short and, empirically, the connection
+ 197:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * we want is almost always near the front, we locate
+ 198:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * states via linear search.  If we don't find a state
+ 199:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * for the datagram, the oldest state is (re-)used.
+ 200:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 201:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     register struct cstate *lcs;
+ 202:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     register struct cstate *lastcs = comp->last_cs;
+ 203:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     
+ 204:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     do {
+ 205:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       lcs = cs; cs = cs->cs_next;
+ 206:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       INCR(vjs_searches);
+ 207:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       if (ip->ip_src.s_addr == cs->cs_ip.ip_src.s_addr
+ 208:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****           && ip->ip_dst.s_addr == cs->cs_ip.ip_dst.s_addr
+ 209:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****           && *(long *)th == ((long *)&cs->cs_ip)[getip_hl(cs->cs_ip)]) {
+ 210:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****         goto found;
+ 211:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       }
+ 212:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     } while (cs != lastcs);
+ 213:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 214:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /*
+ 215:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Didn't find it -- re-use oldest cstate.  Send an
+ 216:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * uncompressed packet that tells the other side what
+ 217:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * connection number we're using for this conversation.
+ 218:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Note that since the state list is circular, the oldest
+ 219:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * state points to the newest and we only need to set
+ 220:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * last_cs to update the lru linkage.
+ 221:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 222:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     INCR(vjs_misses);
+ 223:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     comp->last_cs = lcs;
+ 224:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     hlen += getth_off(*th);
+ 225:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     hlen <<= 2;
+ 226:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* Check that the IP/TCP headers are contained in the first buffer. */
+ 227:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (hlen > pb->len) {
+ 228:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       return (TYPE_IP);
+ 229:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 230:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto uncompressed;
+ 231:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 232:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     found:
+ 233:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /*
+ 234:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Found it -- move to the front on the connection list.
+ 235:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 236:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (cs == lastcs) {
+ 237:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       comp->last_cs = lcs;
+ 238:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     } else {
+ 239:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       lcs->cs_next = cs->cs_next;
+ 240:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       cs->cs_next = lastcs->cs_next;
+ 241:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       lastcs->cs_next = cs;
+ 242:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 243:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 244:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 245:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   oth = (struct tcphdr *)&((long *)&cs->cs_ip)[hlen];
+ 246:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   deltaS = hlen;
+ 247:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   hlen += getth_off(*th);
+ 248:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   hlen <<= 2;
+ 249:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /* Check that the IP/TCP headers are contained in the first buffer. */
+ 250:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (hlen > pb->len) {
+ 251:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     PPPDEBUG((LOG_INFO, "vj_compress_tcp: header len %d spans buffers\n", hlen));
+ 252:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     return (TYPE_IP);
+ 253:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 254:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 255:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 256:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Make sure that only what we expect to change changed. The first
+ 257:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * line of the `if' checks the IP protocol version, header length &
+ 258:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * type of service.  The 2nd line checks the "Don't fragment" bit.
+ 259:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * The 3rd line checks the time-to-live and protocol (the protocol
+ 260:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * check is unnecessary but costless).  The 4th line checks the TCP
+ 261:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * header length.  The 5th line checks IP options, if any.  The 6th
+ 262:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * line checks TCP options, if any.  If any of these things are
+ 263:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * different between the previous & current datagram, we send the
+ 264:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * current datagram `uncompressed'.
+ 265:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 266:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (((u_short *)ip)[0] != ((u_short *)&cs->cs_ip)[0] 
+ 267:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || ((u_short *)ip)[3] != ((u_short *)&cs->cs_ip)[3] 
+ 268:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || ((u_short *)ip)[4] != ((u_short *)&cs->cs_ip)[4] 
+ 269:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || getth_off(*th) != getth_off(*oth) 
+ 270:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || (deltaS > 5 && BCMP(ip + 1, &cs->cs_ip + 1, (deltaS - 5) << 2)) 
+ 271:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || (getth_off(*th) > 5 && BCMP(th + 1, oth + 1, (getth_off(*th) - 5) << 2))) {
+ 272:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto uncompressed;
+ 273:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 274:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 275:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 276:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Figure out which of the changing fields changed.  The
+ 277:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * receiver expects changes in the order: urgent, window,
+ 278:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * ack, seq (the order minimizes the number of temporaries
+ 279:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * needed in this section of code).
+ 280:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 281:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (th->th_flags & TCP_URG) {
+ 282:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     deltaS = ntohs(th->th_urp);
+ 283:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     ENCODEZ(deltaS);
+ 284:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= NEW_U;
+ 285:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else if (th->th_urp != oth->th_urp) {
+ 286:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* argh! URG not set but urp changed -- a sensible
+ 287:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * implementation should never do this but RFC793
+ 288:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * doesn't prohibit the change so we have to deal
+ 289:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * with it. */
+ 290:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto uncompressed;
+ 291:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 292:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 293:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((deltaS = (u_short)(ntohs(th->th_win) - ntohs(oth->th_win))) != 0) {
+ 294:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     ENCODE(deltaS);
+ 295:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= NEW_W;
+ 296:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 297:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 298:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((deltaL = ntohl(th->th_ack) - ntohl(oth->th_ack)) != 0) {
+ 299:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (deltaL > 0xffff) {
+ 300:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto uncompressed;
+ 301:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 302:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     deltaA = (u_short)deltaL;
+ 303:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     ENCODE(deltaA);
+ 304:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= NEW_A;
+ 305:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 306:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 307:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if ((deltaL = ntohl(th->th_seq) - ntohl(oth->th_seq)) != 0) {
+ 308:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (deltaL > 0xffff) {
+ 309:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto uncompressed;
+ 310:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 311:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     deltaS = (u_short)deltaL;
+ 312:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     ENCODE(deltaS);
+ 313:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= NEW_S;
+ 314:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 315:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 316:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   switch(changes) {
+ 317:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case 0:
+ 318:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /*
+ 319:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Nothing changed. If this packet contains data and the
+ 320:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * last one didn't, this is probably a data packet following
+ 321:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * an ack (normal on an interactive connection) and we send
+ 322:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * it compressed.  Otherwise it's probably a retransmit,
+ 323:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * retransmitted ack or window probe.  Send it uncompressed
+ 324:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * in case the other side missed the compressed version.
+ 325:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 326:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (ip->ip_len != cs->cs_ip.ip_len &&
+ 327:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       ntohs(cs->cs_ip.ip_len) == hlen) {
+ 328:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       break;
+ 329:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 330:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 331:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /* (fall through) */
+ 332:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 333:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case SPECIAL_I:
+ 334:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case SPECIAL_D:
+ 335:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /*
+ 336:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * actual changes match one of our special case encodings --
+ 337:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * send packet uncompressed.
+ 338:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 339:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto uncompressed;
+ 340:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 341:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case NEW_S|NEW_A:
+ 342:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (deltaS == deltaA && deltaS == ntohs(cs->cs_ip.ip_len) - hlen) {
+ 343:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* special case for echoed terminal traffic */
+ 344:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       changes = SPECIAL_I;
+ 345:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       cp = new_seq;
+ 346:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 347:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     break;
+ 348:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 349:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case NEW_S:
+ 350:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (deltaS == ntohs(cs->cs_ip.ip_len) - hlen) {
+ 351:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* special case for data xfer */
+ 352:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       changes = SPECIAL_D;
+ 353:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       cp = new_seq;
+ 354:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 355:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     break;
+ 356:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 357:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 358:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   deltaS = (u_short)(ntohs(ip->ip_id) - ntohs(cs->cs_ip.ip_id));
+ 359:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (deltaS != 1) {
+ 360:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     ENCODEZ(deltaS);
+ 361:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= NEW_I;
+ 362:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 363:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (th->th_flags & TCP_PSH) {
+ 364:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     changes |= TCP_PUSH_BIT;
+ 365:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 366:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 367:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Grab the cksum before we overwrite it below.  Then update our
+ 368:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * state with this packet's header.
+ 369:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 370:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   deltaA = ntohs(th->th_sum);
+ 371:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   BCOPY(ip, &cs->cs_ip, hlen);
+ 372:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 373:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 374:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * We want to use the original packet as our compressed packet.
+ 375:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * (cp - new_seq) is the number of bytes we need for compressed
+ 376:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * sequence numbers.  In addition we need one byte for the change
+ 377:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * mask, one for the connection id and two for the tcp checksum.
+ 378:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * So, (cp - new_seq) + 4 bytes of header are needed.  hlen is how
+ 379:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * many bytes of the original packet to toss so subtract the two to
+ 380:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * get the new packet size.
+ 381:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 382:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   deltaS = (u_short)(cp - new_seq);
+ 383:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (!comp->compressSlot || comp->last_xmit != cs->cs_id) {
+ 384:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     comp->last_xmit = cs->cs_id;
+ 385:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     hlen -= deltaS + 4;
+ 386:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(pbuf_header(pb, -hlen)){
+ 387:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* Can we cope with this failing?  Just assert for now */
+ 388:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       LWIP_ASSERT("pbuf_header failed\n", 0);
+ 389:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 390:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp = (u_char *)pb->payload;
+ 391:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = changes | NEW_C;
+ 392:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = cs->cs_id;
+ 393:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else {
+ 394:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     hlen -= deltaS + 3;
+ 395:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(pbuf_header(pb, -hlen)) {
+ 396:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* Can we cope with this failing?  Just assert for now */
+ 397:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       LWIP_ASSERT("pbuf_header failed\n", 0);
+ 398:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 399:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cp = (u_char *)pb->payload;
+ 400:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     *cp++ = changes;
+ 401:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 402:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   *cp++ = deltaA >> 8;
+ 403:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   *cp++ = deltaA;
+ 404:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   BCOPY(new_seq, cp, deltaS);
+ 405:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_compressed);
+ 406:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   return (TYPE_COMPRESSED_TCP);
+ 407:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 408:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 409:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * Update connection state cs & send uncompressed packet (that is,
+ 410:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * a regular ip/tcp packet but with the 'conversation id' we hope
+ 411:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * to use on future compressed packets in the protocol field).
+ 412:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 413:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** uncompressed:
+ 414:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   BCOPY(ip, &cs->cs_ip, hlen);
+ 415:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   ip->ip_p = cs->cs_id;
+ 416:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->last_xmit = cs->cs_id;
+ 417:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   return (TYPE_UNCOMPRESSED_TCP);
+ 418:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 419:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 420:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /*
+ 421:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Called when we may have missed a packet.
+ 422:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+ 423:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** void
+ 424:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** vj_uncompress_err(struct vjcompress *comp)
+ 425:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** {
+  89              		.loc 1 425 0
+  90              	.LVL5:
+ 426:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->flags |= VJF_TOSS;
+  91              		.loc 1 426 0
+  92 004c C388     		ldrh	r3, [r0, #6]
+  93 004e 0122     		mov	r2, #1
+  94 0050 1343     		orr	r3, r3, r2
+  95 0052 C380     		strh	r3, [r0, #6]
+ 427:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_errorin);
+  96              		.loc 1 427 0
+  97 0054 436A     		ldr	r3, [r0, #36]
+  98 0056 0133     		add	r3, r3, #1
+  99 0058 4362     		str	r3, [r0, #36]
+ 428:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 100              		.loc 1 428 0
+ 101              		@ sp needed for prologue
+ 102 005a 7047     		bx	lr
+ 103              	.LFE292:
+ 105              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 106              		.align	2
+ 107              	.LC3:
+ 108 0000 766A5F75 		.ascii	"vj_uncompress_uncomp: bad cid=%d, hlen=%d buflen=%d"
+ 108      6E636F6D 
+ 108      70726573 
+ 108      735F756E 
+ 108      636F6D70 
+ 109 0033 0A00     		.ascii	"\012\000"
+ 110              		.text
+ 111              		.align	2
+ 112              		.global	vj_uncompress_uncomp
+ 113              		.code	16
+ 114              		.thumb_func
+ 116              	vj_uncompress_uncomp:
+ 117              	.LFB293:
+ 429:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 430:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /*
+ 431:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * "Uncompress" a packet of type TYPE_UNCOMPRESSED_TCP.
+ 432:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Return 0 on success, -1 on failure.
+ 433:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+ 434:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** int
+ 435:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** vj_uncompress_uncomp(struct pbuf *nb, struct vjcompress *comp)
+ 436:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** {
+ 118              		.loc 1 436 0
+ 119 005c F0B5     		push	{r4, r5, r6, r7, lr}
+ 120              	.LCFI1:
+ 121              	.LVL6:
+ 122 005e 81B0     		sub	sp, sp, #4
+ 123              	.LCFI2:
+ 124 0060 0E1C     		mov	r6, r1
+ 437:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register u_int hlen;
+ 438:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct cstate *cs;
+ 439:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   register struct ip *ip;
+ 440:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   
+ 441:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   ip = (struct ip *)nb->payload;
+ 125              		.loc 1 441 0
+ 126 0062 4168     		ldr	r1, [r0, #4]
+ 127              	.LVL7:
+ 442:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   hlen = getip_hl(*ip) << 2;
+ 128              		.loc 1 442 0
+ 129 0064 0B78     		ldrb	r3, [r1]
+ 130 0066 1B07     		lsl	r3, r3, #28
+ 131 0068 9D0E     		lsr	r5, r3, #26
+ 132              	.LVL8:
+ 443:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (ip->ip_p >= MAX_SLOTS
+ 133              		.loc 1 443 0
+ 134 006a 4F7A     		ldrb	r7, [r1, #9]
+ 135 006c 0F2F     		cmp	r7, #15
+ 136 006e 0DD8     		bhi	.L10
+ 137 0070 4289     		ldrh	r2, [r0, #10]
+ 138 0072 2B1C     		mov	r3, r5
+ 139 0074 1433     		add	r3, r3, #20
+ 140 0076 9342     		cmp	r3, r2
+ 141 0078 08D8     		bhi	.L10
+ 142 007a 4B19     		add	r3, r1, r5
+ 143 007c 1B7B     		ldrb	r3, [r3, #12]
+ 144 007e 1B09     		lsr	r3, r3, #4
+ 145 0080 9B00     		lsl	r3, r3, #2
+ 146 0082 ED18     		add	r5, r5, r3
+ 147 0084 AA42     		cmp	r2, r5
+ 148 0086 01D3     		bcc	.L10
+ 149 0088 802D     		cmp	r5, #128
+ 150 008a 11D9     		bls	.L11
+ 151              	.L10:
+ 444:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || hlen + sizeof(struct tcphdr) > nb->len
+ 445:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || (hlen += getth_off(*((struct tcphdr *)&((char *)ip)[hlen])) << 2)
+ 446:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****           > nb->len
+ 447:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       || hlen > MAX_HDR) {
+ 448:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     PPPDEBUG((LOG_INFO, "vj_uncompress_uncomp: bad cid=%d, hlen=%d buflen=%d\n", 
+ 152              		.loc 1 448 0
+ 153 008c 1749     		ldr	r1, .L14
+ 154              	.LVL9:
+ 155 008e 4389     		ldrh	r3, [r0, #10]
+ 156 0090 0093     		str	r3, [sp]
+ 157 0092 0520     		mov	r0, #5
+ 158              	.LVL10:
+ 159 0094 3A1C     		mov	r2, r7
+ 160 0096 2B1C     		mov	r3, r5
+ 161 0098 FFF7FEFF 		bl	ppp_trace
+ 449:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****           ip->ip_p, hlen, nb->len));
+ 450:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     comp->flags |= VJF_TOSS;
+ 162              		.loc 1 450 0
+ 163 009c F388     		ldrh	r3, [r6, #6]
+ 164 009e 0122     		mov	r2, #1
+ 165 00a0 1343     		orr	r3, r3, r2
+ 166 00a2 F380     		strh	r3, [r6, #6]
+ 451:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     INCR(vjs_errorin);
+ 167              		.loc 1 451 0
+ 168 00a4 736A     		ldr	r3, [r6, #36]
+ 169 00a6 0133     		add	r3, r3, #1
+ 170 00a8 7362     		str	r3, [r6, #36]
+ 171 00aa 0120     		mov	r0, #1
+ 172 00ac 4042     		neg	r0, r0
+ 173 00ae 19E0     		b	.L12
+ 174              	.LVL11:
+ 175              	.L11:
+ 452:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     return -1;
+ 453:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 454:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs = &comp->rstate[comp->last_recv = ip->ip_p];
+ 176              		.loc 1 454 0
+ 177 00b0 3771     		strb	r7, [r6, #4]
+ 455:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->flags &=~ VJF_TOSS;
+ 178              		.loc 1 455 0
+ 179 00b2 F388     		ldrh	r3, [r6, #6]
+ 180 00b4 0122     		mov	r2, #1
+ 181 00b6 9343     		bic	r3, r3, r2
+ 182 00b8 F380     		strh	r3, [r6, #6]
+ 456:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   ip->ip_p = IPPROTO_TCP;
+ 183              		.loc 1 456 0
+ 184 00ba 0623     		mov	r3, #6
+ 185 00bc 4B72     		strb	r3, [r1, #9]
+ 457:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   BCOPY(ip, &cs->cs_ip, hlen);
+ 186              		.loc 1 457 0
+ 187 00be 3C01     		lsl	r4, r7, #4
+ 188 00c0 E419     		add	r4, r4, r7
+ 189 00c2 E000     		lsl	r0, r4, #3
+ 190              	.LVL12:
+ 191 00c4 0A4B     		ldr	r3, .L14+4
+ 192 00c6 C018     		add	r0, r0, r3
+ 193 00c8 3018     		add	r0, r6, r0
+ 194 00ca 2A1C     		mov	r2, r5
+ 195 00cc FFF7FEFF 		bl	memcpy
+ 196              	.LVL13:
+ 458:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs->cs_hlen = hlen;
+ 197              		.loc 1 458 0
+ 198 00d0 E400     		lsl	r4, r4, #3
+ 199 00d2 3419     		add	r4, r6, r4
+ 200 00d4 8B23     		mov	r3, #139
+ 201 00d6 1B01     		lsl	r3, r3, #4
+ 202 00d8 E418     		add	r4, r4, r3
+ 203 00da 2580     		strh	r5, [r4]
+ 459:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_uncompressedin);
+ 204              		.loc 1 459 0
+ 205 00dc F369     		ldr	r3, [r6, #28]
+ 206 00de 0133     		add	r3, r3, #1
+ 207 00e0 F361     		str	r3, [r6, #28]
+ 208 00e2 0020     		mov	r0, #0
+ 209              	.L12:
+ 460:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   return 0;
+ 461:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 210              		.loc 1 461 0
+ 211 00e4 01B0     		add	sp, sp, #4
+ 212              		@ sp needed for prologue
+ 213              	.LVL14:
+ 214              	.LVL15:
+ 215 00e6 F0BC     		pop	{r4, r5, r6, r7}
+ 216 00e8 02BC     		pop	{r1}
+ 217 00ea 0847     		bx	r1
+ 218              	.L15:
+ 219              		.align	2
+ 220              	.L14:
+ 221 00ec 00000000 		.word	.LC3
+ 222 00f0 B4080000 		.word	2228
+ 223              	.LFE293:
+ 225              		.section	.rodata.str1.4
+ 226 0035 000000   		.align	2
+ 227              	.LC7:
+ 228 0038 766A5F75 		.ascii	"vj_uncompress_tcp: bad cid=%d\012\000"
+ 228      6E636F6D 
+ 228      70726573 
+ 228      735F7463 
+ 228      703A2062 
+ 229 0057 00       		.align	2
+ 230              	.LC9:
+ 231 0058 766A5F75 		.ascii	"vj_uncompress_tcp: tossing\012\000"
+ 231      6E636F6D 
+ 231      70726573 
+ 231      735F7463 
+ 231      703A2074 
+ 232              		.align	2
+ 233              	.LC11:
+ 234 0074 766A5F75 		.ascii	"vj_uncompress_tcp: head buffer %d too short %d\012\000"
+ 234      6E636F6D 
+ 234      70726573 
+ 234      735F7463 
+ 234      703A2068 
+ 235              		.align	2
+ 236              	.LC13:
+ 237 00a4 766A5F75 		.ascii	"vj_uncompress_tcp: realign failed\012\000"
+ 237      6E636F6D 
+ 237      70726573 
+ 237      735F7463 
+ 237      703A2072 
+ 238 00c7 00       		.align	2
+ 239              	.LC15:
+ 240 00c8 766A5F75 		.ascii	"vj_uncompress_tcp: prepend failed\012\000"
+ 240      6E636F6D 
+ 240      70726573 
+ 240      735F7463 
+ 240      703A2070 
+ 241              		.text
+ 242              		.align	2
+ 243              		.global	vj_uncompress_tcp
+ 244              		.code	16
+ 245              		.thumb_func
+ 247              	vj_uncompress_tcp:
+ 248              	.LFB294:
+ 462:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 463:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** /*
+ 464:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * Uncompress a packet of type TYPE_COMPRESSED_TCP.
+ 465:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * The packet is composed of a buffer chain and the first buffer
+ 466:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * must contain an accurate chain length.
+ 467:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * The first buffer must include the entire compressed TCP/IP header. 
+ 468:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * This procedure replaces the compressed header with the uncompressed
+ 469:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  * header and returns the length of the VJ header.
+ 470:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****  */
+ 471:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** int
+ 472:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** vj_uncompress_tcp(struct pbuf **nb, struct vjcompress *comp)
+ 473:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** {
+ 249              		.loc 1 473 0
+ 250 00f4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 251              	.LCFI3:
+ 252 00f6 5F46     		mov	r7, fp
+ 253 00f8 5646     		mov	r6, sl
+ 254 00fa 4D46     		mov	r5, r9
+ 255 00fc 4446     		mov	r4, r8
+ 256 00fe F0B4     		push	{r4, r5, r6, r7}
+ 257              	.LCFI4:
+ 258              	.LVL16:
+ 259 0100 83B0     		sub	sp, sp, #12
+ 260              	.LCFI5:
+ 261 0102 0090     		str	r0, [sp]
+ 262 0104 8846     		mov	r8, r1
+ 474:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   u_char *cp;
+ 475:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   struct tcphdr *th;
+ 476:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   struct cstate *cs;
+ 477:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   u_short *bp;
+ 478:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   struct pbuf *n0 = *nb;
+ 263              		.loc 1 478 0
+ 264 0106 0068     		ldr	r0, [r0]
+ 265              	.LVL17:
+ 266 0108 8346     		mov	fp, r0
+ 267              	.LVL18:
+ 479:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   u32_t tmp;
+ 480:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   u_int vjlen, hlen, changes;
+ 481:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_compressedin);
+ 268              		.loc 1 482 0
+ 269 010a 0B6A     		ldr	r3, [r1, #32]
+ 270 010c 0133     		add	r3, r3, #1
+ 271 010e 0B62     		str	r3, [r1, #32]
+ 483:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cp = (u_char *)n0->payload;
+ 272              		.loc 1 483 0
+ 273 0110 4368     		ldr	r3, [r0, #4]
+ 274              	.LVL19:
+ 484:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   changes = *cp++;
+ 275              		.loc 1 484 0
+ 276 0112 1A78     		ldrb	r2, [r3]
+ 277 0114 9146     		mov	r9, r2
+ 278              	.LVL20:
+ 279 0116 5C1C     		add	r4, r3, #1
+ 280              	.LVL21:
+ 485:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (changes & NEW_C) {
+ 281              		.loc 1 485 0
+ 282 0118 5206     		lsl	r2, r2, #25
+ 283 011a 11D5     		bpl	.L17
+ 486:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* 
+ 487:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * Make sure the state index is in range, then grab the state.
+ 488:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * If we have a good state index, clear the 'discard' flag. 
+ 489:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 490:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (*cp >= MAX_SLOTS) {
+ 284              		.loc 1 490 0
+ 285 011c 2278     		ldrb	r2, [r4]
+ 286 011e 0F2A     		cmp	r2, #15
+ 287 0120 04D9     		bls	.L18
+ 491:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       PPPDEBUG((LOG_INFO, "vj_uncompress_tcp: bad cid=%d\n", *cp));
+ 288              		.loc 1 491 0
+ 289 0122 D949     		ldr	r1, .L54
+ 290              	.LVL22:
+ 291 0124 0520     		mov	r0, #5
+ 292 0126 FFF7FEFF 		bl	ppp_trace
+ 293 012a 24E2     		b	.L19
+ 294              	.LVL23:
+ 295              	.L18:
+ 492:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto bad;
+ 493:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 494:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 495:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     comp->flags &=~ VJF_TOSS;
+ 296              		.loc 1 495 0
+ 297 012c 4046     		mov	r0, r8
+ 298 012e C388     		ldrh	r3, [r0, #6]
+ 299 0130 0122     		mov	r2, #1
+ 300 0132 9343     		bic	r3, r3, r2
+ 301 0134 4246     		mov	r2, r8
+ 302 0136 D380     		strh	r3, [r2, #6]
+ 496:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     comp->last_recv = *cp++;
+ 303              		.loc 1 496 0
+ 304 0138 2378     		ldrb	r3, [r4]
+ 305 013a 1371     		strb	r3, [r2, #4]
+ 306 013c 0134     		add	r4, r4, #1
+ 307 013e 0EE0     		b	.L20
+ 308              	.L17:
+ 497:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else {
+ 498:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* 
+ 499:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * this packet has an implicit state index.  If we've
+ 500:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * had a line error since the last time we got an
+ 501:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * explicit state index, we have to toss the packet. 
+ 502:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 503:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (comp->flags & VJF_TOSS) {
+ 309              		.loc 1 503 0
+ 310 0140 4046     		mov	r0, r8
+ 311 0142 C388     		ldrh	r3, [r0, #6]
+ 312 0144 DA07     		lsl	r2, r3, #31
+ 313 0146 0AD5     		bpl	.L20
+ 314              	.LVL24:
+ 504:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       PPPDEBUG((LOG_INFO, "vj_uncompress_tcp: tossing\n"));
+ 315              		.loc 1 504 0
+ 316 0148 D049     		ldr	r1, .L54+4
+ 317 014a 0520     		mov	r0, #5
+ 318 014c FFF7FEFF 		bl	ppp_trace
+ 505:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       INCR(vjs_tossed);
+ 319              		.loc 1 505 0
+ 320 0150 4046     		mov	r0, r8
+ 321 0152 836A     		ldr	r3, [r0, #40]
+ 322 0154 0133     		add	r3, r3, #1
+ 323 0156 8362     		str	r3, [r0, #40]
+ 324 0158 0120     		mov	r0, #1
+ 325 015a 4042     		neg	r0, r0
+ 326 015c 16E2     		b	.L21
+ 327              	.LVL25:
+ 328              	.L20:
+ 506:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       return (-1);
+ 507:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 508:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 509:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs = &comp->rstate[comp->last_recv];
+ 329              		.loc 1 509 0
+ 330 015e 4246     		mov	r2, r8
+ 331 0160 1279     		ldrb	r2, [r2, #4]
+ 332 0162 9246     		mov	sl, r2
+ 510:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   hlen = getip_hl(cs->cs_ip) << 2;
+ 333              		.loc 1 510 0
+ 334 0164 1201     		lsl	r2, r2, #4
+ 335 0166 5244     		add	r2, r2, sl
+ 336 0168 0132     		add	r2, r2, #1
+ 337 016a C949     		ldr	r1, .L54+8
+ 338 016c D200     		lsl	r2, r2, #3
+ 339 016e 4046     		mov	r0, r8
+ 340 0170 8318     		add	r3, r0, r2
+ 341 0172 5B5C     		ldrb	r3, [r3, r1]
+ 342 0174 1B07     		lsl	r3, r3, #28
+ 343 0176 9B0E     		lsr	r3, r3, #26
+ 344 0178 0293     		str	r3, [sp, #8]
+ 345              	.LVL26:
+ 511:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   th = (struct tcphdr *)&((u_char *)&cs->cs_ip)[hlen];
+ 346              		.loc 1 511 0
+ 347 017a 5218     		add	r2, r2, r1
+ 348 017c 4244     		add	r2, r2, r8
+ 349 017e 0192     		str	r2, [sp, #4]
+ 350 0180 D618     		add	r6, r2, r3
+ 351              	.LVL27:
+ 512:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   th->th_sum = htons((*cp << 8) | cp[1]);
+ 352              		.loc 1 512 0
+ 353 0182 2378     		ldrb	r3, [r4]
+ 354 0184 6078     		ldrb	r0, [r4, #1]
+ 355 0186 1B02     		lsl	r3, r3, #8
+ 356 0188 1843     		orr	r0, r0, r3
+ 357 018a 0004     		lsl	r0, r0, #16
+ 358 018c 000C     		lsr	r0, r0, #16
+ 359 018e FFF7FEFF 		bl	htons
+ 360 0192 3082     		strh	r0, [r6, #16]
+ 513:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cp += 2;
+ 361              		.loc 1 513 0
+ 362 0194 A71C     		add	r7, r4, #2
+ 363              	.LVL28:
+ 514:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (changes & TCP_PUSH_BIT) {
+ 364              		.loc 1 514 0
+ 365 0196 4A46     		mov	r2, r9
+ 366 0198 D206     		lsl	r2, r2, #27
+ 367 019a 04D5     		bpl	.L22
+ 515:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     th->th_flags |= TCP_PSH;
+ 368              		.loc 1 515 0
+ 369 019c 737B     		ldrb	r3, [r6, #13]
+ 370 019e 0822     		mov	r2, #8
+ 371 01a0 1343     		orr	r3, r3, r2
+ 372 01a2 7373     		strb	r3, [r6, #13]
+ 373 01a4 03E0     		b	.L23
+ 374              	.L22:
+ 516:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else {
+ 517:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     th->th_flags &=~ TCP_PSH;
+ 375              		.loc 1 517 0
+ 376 01a6 737B     		ldrb	r3, [r6, #13]
+ 377 01a8 0822     		mov	r2, #8
+ 378 01aa 9343     		bic	r3, r3, r2
+ 379 01ac 7373     		strb	r3, [r6, #13]
+ 380              	.L23:
+ 518:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 519:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 520:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   switch (changes & SPECIALS_MASK) {
+ 381              		.loc 1 520 0
+ 382 01ae 0F23     		mov	r3, #15
+ 383 01b0 4846     		mov	r0, r9
+ 384 01b2 0340     		and	r3, r3, r0
+ 385 01b4 0B2B     		cmp	r3, #11
+ 386 01b6 02D0     		beq	.L25
+ 387 01b8 0F2B     		cmp	r3, #15
+ 388 01ba 3ED1     		bne	.L52
+ 389 01bc 21E0     		b	.L53
+ 390              	.L25:
+ 391              	.LBB2:
+ 521:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case SPECIAL_I:
+ 522:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     {
+ 523:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       register u32_t i = ntohs(cs->cs_ip.ip_len) - cs->cs_hlen;
+ 392              		.loc 1 523 0
+ 393 01be 5246     		mov	r2, sl
+ 394 01c0 1401     		lsl	r4, r2, #4
+ 395 01c2 5444     		add	r4, r4, sl
+ 396 01c4 631C     		add	r3, r4, #1
+ 397 01c6 DB00     		lsl	r3, r3, #3
+ 398 01c8 4344     		add	r3, r3, r8
+ 399 01ca B148     		ldr	r0, .L54+8
+ 400 01cc 1B18     		add	r3, r3, r0
+ 401 01ce 5888     		ldrh	r0, [r3, #2]
+ 402 01d0 FFF7FEFF 		bl	ntohs
+ 403 01d4 E400     		lsl	r4, r4, #3
+ 404 01d6 4444     		add	r4, r4, r8
+ 405 01d8 8B22     		mov	r2, #139
+ 406 01da 1201     		lsl	r2, r2, #4
+ 407 01dc A418     		add	r4, r4, r2
+ 408 01de 2388     		ldrh	r3, [r4]
+ 409 01e0 C51A     		sub	r5, r0, r3
+ 410              	.LVL29:
+ 524:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* some compilers can't nest inline assembler.. */
+ 525:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       tmp = ntohl(th->th_ack) + i;
+ 411              		.loc 1 525 0
+ 412 01e2 B068     		ldr	r0, [r6, #8]
+ 413 01e4 FFF7FEFF 		bl	ntohl
+ 526:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       th->th_ack = htonl(tmp);
+ 414              		.loc 1 526 0
+ 415 01e8 2818     		add	r0, r5, r0
+ 416 01ea FFF7FEFF 		bl	htonl
+ 417 01ee B060     		str	r0, [r6, #8]
+ 527:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       tmp = ntohl(th->th_seq) + i;
+ 418              		.loc 1 527 0
+ 419 01f0 7068     		ldr	r0, [r6, #4]
+ 420 01f2 FFF7FEFF 		bl	ntohl
+ 528:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       th->th_seq = htonl(tmp);
+ 421              		.loc 1 528 0
+ 422 01f6 2D18     		add	r5, r5, r0
+ 423              	.LVL30:
+ 424 01f8 281C     		mov	r0, r5
+ 425 01fa FFF7FEFF 		bl	htonl
+ 426 01fe 7060     		str	r0, [r6, #4]
+ 427 0200 91E0     		b	.L27
+ 428              	.L53:
+ 429              	.LBE2:
+ 529:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 530:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     break;
+ 531:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 532:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   case SPECIAL_D:
+ 533:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* some compilers can't nest inline assembler.. */
+ 534:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     tmp = ntohl(th->th_seq) + ntohs(cs->cs_ip.ip_len) - cs->cs_hlen;
+ 430              		.loc 1 534 0
+ 431 0202 7068     		ldr	r0, [r6, #4]
+ 432 0204 FFF7FEFF 		bl	ntohl
+ 433 0208 051C     		mov	r5, r0
+ 434 020a 5346     		mov	r3, sl
+ 435 020c 1C01     		lsl	r4, r3, #4
+ 436 020e 5444     		add	r4, r4, sl
+ 437 0210 631C     		add	r3, r4, #1
+ 438 0212 DB00     		lsl	r3, r3, #3
+ 439 0214 4344     		add	r3, r3, r8
+ 440 0216 9E48     		ldr	r0, .L54+8
+ 441 0218 1B18     		add	r3, r3, r0
+ 442 021a 5888     		ldrh	r0, [r3, #2]
+ 443 021c FFF7FEFF 		bl	ntohs
+ 535:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     th->th_seq = htonl(tmp);
+ 444              		.loc 1 535 0
+ 445 0220 E400     		lsl	r4, r4, #3
+ 446 0222 4444     		add	r4, r4, r8
+ 447 0224 8B22     		mov	r2, #139
+ 448 0226 1201     		lsl	r2, r2, #4
+ 449 0228 A418     		add	r4, r4, r2
+ 450 022a 2388     		ldrh	r3, [r4]
+ 451 022c ED1A     		sub	r5, r5, r3
+ 452 022e 2D18     		add	r5, r5, r0
+ 453 0230 281C     		mov	r0, r5
+ 454 0232 FFF7FEFF 		bl	htonl
+ 455 0236 7060     		str	r0, [r6, #4]
+ 456 0238 75E0     		b	.L27
+ 457              	.L52:
+ 536:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     break;
+ 537:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 538:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   default:
+ 539:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (changes & NEW_U) {
+ 458              		.loc 1 539 0
+ 459 023a 4B46     		mov	r3, r9
+ 460 023c DB07     		lsl	r3, r3, #31
+ 461 023e 16D5     		bpl	.L28
+ 540:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       th->th_flags |= TCP_URG;
+ 462              		.loc 1 540 0
+ 463 0240 737B     		ldrb	r3, [r6, #13]
+ 464 0242 2022     		mov	r2, #32
+ 465 0244 1343     		orr	r3, r3, r2
+ 466 0246 7373     		strb	r3, [r6, #13]
+ 541:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       DECODEU(th->th_urp);
+ 467              		.loc 1 541 0
+ 468 0248 3878     		ldrb	r0, [r7]
+ 469 024a 0028     		cmp	r0, #0
+ 470 024c 0AD1     		bne	.L29
+ 471 024e 7B78     		ldrb	r3, [r7, #1]
+ 472 0250 B878     		ldrb	r0, [r7, #2]
+ 473 0252 1B02     		lsl	r3, r3, #8
+ 474 0254 1843     		orr	r0, r0, r3
+ 475 0256 0004     		lsl	r0, r0, #16
+ 476 0258 000C     		lsr	r0, r0, #16
+ 477 025a FFF7FEFF 		bl	htons
+ 478 025e 7082     		strh	r0, [r6, #18]
+ 479 0260 0337     		add	r7, r7, #3
+ 480 0262 08E0     		b	.L30
+ 481              	.L29:
+ 482 0264 0137     		add	r7, r7, #1
+ 483 0266 FFF7FEFF 		bl	htons
+ 484 026a 7082     		strh	r0, [r6, #18]
+ 485 026c 03E0     		b	.L30
+ 486              	.L28:
+ 542:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     } else {
+ 543:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       th->th_flags &=~ TCP_URG;
+ 487              		.loc 1 543 0
+ 488 026e 737B     		ldrb	r3, [r6, #13]
+ 489 0270 2022     		mov	r2, #32
+ 490 0272 9343     		bic	r3, r3, r2
+ 491 0274 7373     		strb	r3, [r6, #13]
+ 492              	.L30:
+ 544:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 545:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (changes & NEW_W) {
+ 493              		.loc 1 545 0
+ 494 0276 4846     		mov	r0, r9
+ 495 0278 8007     		lsl	r0, r0, #30
+ 496 027a 1CD5     		bpl	.L31
+ 546:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       DECODES(th->th_win);
+ 497              		.loc 1 546 0
+ 498 027c 3B78     		ldrb	r3, [r7]
+ 499 027e 002B     		cmp	r3, #0
+ 500 0280 0ED1     		bne	.L32
+ 501              	.LBB3:
+ 502 0282 F089     		ldrh	r0, [r6, #14]
+ 503 0284 FFF7FEFF 		bl	ntohs
+ 504 0288 7B78     		ldrb	r3, [r7, #1]
+ 505 028a BA78     		ldrb	r2, [r7, #2]
+ 506 028c 1B02     		lsl	r3, r3, #8
+ 507 028e 1A43     		orr	r2, r2, r3
+ 508 0290 8018     		add	r0, r0, r2
+ 509 0292 0004     		lsl	r0, r0, #16
+ 510 0294 000C     		lsr	r0, r0, #16
+ 511 0296 FFF7FEFF 		bl	htons
+ 512 029a F081     		strh	r0, [r6, #14]
+ 513 029c 0337     		add	r7, r7, #3
+ 514 029e 0AE0     		b	.L31
+ 515              	.L32:
+ 516              	.LBE3:
+ 517              	.LBB4:
+ 518 02a0 F089     		ldrh	r0, [r6, #14]
+ 519 02a2 FFF7FEFF 		bl	ntohs
+ 520 02a6 3B78     		ldrb	r3, [r7]
+ 521 02a8 C018     		add	r0, r0, r3
+ 522 02aa 0004     		lsl	r0, r0, #16
+ 523 02ac 000C     		lsr	r0, r0, #16
+ 524              	.LVL31:
+ 525 02ae 0137     		add	r7, r7, #1
+ 526 02b0 FFF7FEFF 		bl	htons
+ 527              	.LVL32:
+ 528 02b4 F081     		strh	r0, [r6, #14]
+ 529              	.L31:
+ 530              	.LBE4:
+ 547:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 548:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (changes & NEW_A) {
+ 531              		.loc 1 548 0
+ 532 02b6 4A46     		mov	r2, r9
+ 533 02b8 5207     		lsl	r2, r2, #29
+ 534 02ba 18D5     		bpl	.L33
+ 549:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       DECODEL(th->th_ack);
+ 535              		.loc 1 549 0
+ 536 02bc 3B78     		ldrb	r3, [r7]
+ 537 02be 002B     		cmp	r3, #0
+ 538 02c0 0CD1     		bne	.L34
+ 539              	.LBB5:
+ 540 02c2 B068     		ldr	r0, [r6, #8]
+ 541 02c4 FFF7FEFF 		bl	ntohl
+ 542 02c8 7B78     		ldrb	r3, [r7, #1]
+ 543 02ca 1B02     		lsl	r3, r3, #8
+ 544 02cc BA78     		ldrb	r2, [r7, #2]
+ 545 02ce 1343     		orr	r3, r3, r2
+ 546 02d0 C018     		add	r0, r0, r3
+ 547 02d2 FFF7FEFF 		bl	htonl
+ 548 02d6 B060     		str	r0, [r6, #8]
+ 549 02d8 0337     		add	r7, r7, #3
+ 550 02da 08E0     		b	.L33
+ 551              	.L34:
+ 552              	.LBE5:
+ 553              	.LBB6:
+ 554 02dc B068     		ldr	r0, [r6, #8]
+ 555 02de FFF7FEFF 		bl	ntohl
+ 556 02e2 3B78     		ldrb	r3, [r7]
+ 557 02e4 C018     		add	r0, r0, r3
+ 558              	.LVL33:
+ 559 02e6 0137     		add	r7, r7, #1
+ 560 02e8 FFF7FEFF 		bl	htonl
+ 561              	.LVL34:
+ 562 02ec B060     		str	r0, [r6, #8]
+ 563              	.L33:
+ 564              	.LBE6:
+ 550:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 551:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if (changes & NEW_S) {
+ 565              		.loc 1 551 0
+ 566 02ee 4B46     		mov	r3, r9
+ 567 02f0 1B07     		lsl	r3, r3, #28
+ 568 02f2 18D5     		bpl	.L27
+ 552:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       DECODEL(th->th_seq);
+ 569              		.loc 1 552 0
+ 570 02f4 3B78     		ldrb	r3, [r7]
+ 571 02f6 002B     		cmp	r3, #0
+ 572 02f8 0CD1     		bne	.L35
+ 573              	.LBB7:
+ 574 02fa 7068     		ldr	r0, [r6, #4]
+ 575 02fc FFF7FEFF 		bl	ntohl
+ 576 0300 7B78     		ldrb	r3, [r7, #1]
+ 577 0302 1B02     		lsl	r3, r3, #8
+ 578 0304 BA78     		ldrb	r2, [r7, #2]
+ 579 0306 1343     		orr	r3, r3, r2
+ 580 0308 C018     		add	r0, r0, r3
+ 581 030a FFF7FEFF 		bl	htonl
+ 582 030e 7060     		str	r0, [r6, #4]
+ 583 0310 0337     		add	r7, r7, #3
+ 584 0312 08E0     		b	.L27
+ 585              	.L35:
+ 586              	.LBE7:
+ 587              	.LBB8:
+ 588 0314 7068     		ldr	r0, [r6, #4]
+ 589 0316 FFF7FEFF 		bl	ntohl
+ 590 031a 3B78     		ldrb	r3, [r7]
+ 591 031c C018     		add	r0, r0, r3
+ 592              	.LVL35:
+ 593 031e 0137     		add	r7, r7, #1
+ 594 0320 FFF7FEFF 		bl	htonl
+ 595              	.LVL36:
+ 596 0324 7060     		str	r0, [r6, #4]
+ 597              	.L27:
+ 598              	.LBE8:
+ 553:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 554:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     break;
+ 555:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 556:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (changes & NEW_I) {
+ 599              		.loc 1 556 0
+ 600 0326 4846     		mov	r0, r9
+ 601 0328 8006     		lsl	r0, r0, #26
+ 602 032a 2BD5     		bpl	.L36
+ 557:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     DECODES(cs->cs_ip.ip_id);
+ 603              		.loc 1 557 0
+ 604 032c 3B78     		ldrb	r3, [r7]
+ 605 032e 002B     		cmp	r3, #0
+ 606 0330 15D1     		bne	.L37
+ 607              	.LBB9:
+ 608 0332 5246     		mov	r2, sl
+ 609 0334 1401     		lsl	r4, r2, #4
+ 610 0336 5444     		add	r4, r4, sl
+ 611 0338 E400     		lsl	r4, r4, #3
+ 612 033a 4444     		add	r4, r4, r8
+ 613 033c 554B     		ldr	r3, .L54+12
+ 614 033e E418     		add	r4, r4, r3
+ 615 0340 2088     		ldrh	r0, [r4]
+ 616 0342 FFF7FEFF 		bl	ntohs
+ 617 0346 7B78     		ldrb	r3, [r7, #1]
+ 618 0348 BA78     		ldrb	r2, [r7, #2]
+ 619 034a 1B02     		lsl	r3, r3, #8
+ 620 034c 1A43     		orr	r2, r2, r3
+ 621 034e 8018     		add	r0, r0, r2
+ 622 0350 0004     		lsl	r0, r0, #16
+ 623 0352 000C     		lsr	r0, r0, #16
+ 624 0354 FFF7FEFF 		bl	htons
+ 625 0358 2080     		strh	r0, [r4]
+ 626 035a 0337     		add	r7, r7, #3
+ 627 035c 23E0     		b	.L38
+ 628              	.L37:
+ 629              	.LBE9:
+ 630              	.LBB10:
+ 631 035e 5046     		mov	r0, sl
+ 632 0360 0401     		lsl	r4, r0, #4
+ 633 0362 5444     		add	r4, r4, sl
+ 634 0364 E400     		lsl	r4, r4, #3
+ 635 0366 4444     		add	r4, r4, r8
+ 636 0368 4A4A     		ldr	r2, .L54+12
+ 637 036a A418     		add	r4, r4, r2
+ 638 036c 2088     		ldrh	r0, [r4]
+ 639 036e FFF7FEFF 		bl	ntohs
+ 640 0372 3B78     		ldrb	r3, [r7]
+ 641 0374 C018     		add	r0, r0, r3
+ 642 0376 0004     		lsl	r0, r0, #16
+ 643 0378 000C     		lsr	r0, r0, #16
+ 644              	.LVL37:
+ 645 037a 0137     		add	r7, r7, #1
+ 646 037c FFF7FEFF 		bl	htons
+ 647              	.LVL38:
+ 648 0380 2080     		strh	r0, [r4]
+ 649 0382 10E0     		b	.L38
+ 650              	.L36:
+ 651              	.LBE10:
+ 558:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   } else {
+ 559:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cs->cs_ip.ip_id = ntohs(cs->cs_ip.ip_id) + 1;
+ 652              		.loc 1 559 0
+ 653 0384 5346     		mov	r3, sl
+ 654 0386 1C01     		lsl	r4, r3, #4
+ 655 0388 5444     		add	r4, r4, sl
+ 656 038a E400     		lsl	r4, r4, #3
+ 657 038c 4444     		add	r4, r4, r8
+ 658 038e 4148     		ldr	r0, .L54+12
+ 659 0390 2418     		add	r4, r4, r0
+ 660 0392 2088     		ldrh	r0, [r4]
+ 661 0394 FFF7FEFF 		bl	ntohs
+ 662 0398 0130     		add	r0, r0, #1
+ 663 039a 0004     		lsl	r0, r0, #16
+ 664 039c 000C     		lsr	r0, r0, #16
+ 665 039e 2080     		strh	r0, [r4]
+ 560:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     cs->cs_ip.ip_id = htons(cs->cs_ip.ip_id);
+ 666              		.loc 1 560 0
+ 667 03a0 FFF7FEFF 		bl	htons
+ 668 03a4 2080     		strh	r0, [r4]
+ 669              	.L38:
+ 561:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 562:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 563:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /*
+ 564:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * At this point, cp points to the first byte of data in the
+ 565:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * packet.  Fill in the IP total length and update the IP
+ 566:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    * header checksum.
+ 567:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****    */
+ 568:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   vjlen = (u_short)(cp - (u_char*)n0->payload);
+ 670              		.loc 1 568 0
+ 671 03a6 5A46     		mov	r2, fp
+ 672 03a8 9388     		ldrh	r3, [r2, #4]
+ 673 03aa FB1A     		sub	r3, r7, r3
+ 674 03ac 1B04     		lsl	r3, r3, #16
+ 675 03ae 1E0C     		lsr	r6, r3, #16
+ 676              	.LVL39:
+ 569:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if (n0->len < vjlen) {
+ 677              		.loc 1 569 0
+ 678 03b0 5289     		ldrh	r2, [r2, #10]
+ 679 03b2 9642     		cmp	r6, r2
+ 680 03b4 05D9     		bls	.L39
+ 570:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* 
+ 571:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * We must have dropped some characters (crc should detect
+ 572:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      * this but the old slip framing won't) 
+ 573:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****      */
+ 574:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     PPPDEBUG((LOG_INFO, "vj_uncompress_tcp: head buffer %d too short %d\n", 
+ 681              		.loc 1 574 0
+ 682 03b6 3849     		ldr	r1, .L54+16
+ 683 03b8 0520     		mov	r0, #5
+ 684 03ba 331C     		mov	r3, r6
+ 685 03bc FFF7FEFF 		bl	ppp_trace
+ 686 03c0 D9E0     		b	.L19
+ 687              	.L39:
+ 575:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****           n0->len, vjlen));
+ 576:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto bad;
+ 577:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 578:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 579:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #if BYTE_ORDER == LITTLE_ENDIAN
+ 580:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   tmp = n0->tot_len - vjlen + cs->cs_hlen;
+ 581:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs->cs_ip.ip_len = htons(tmp);
+ 688              		.loc 1 581 0
+ 689 03c2 5346     		mov	r3, sl
+ 690 03c4 1C01     		lsl	r4, r3, #4
+ 691 03c6 5444     		add	r4, r4, sl
+ 692 03c8 E500     		lsl	r5, r4, #3
+ 693 03ca 4544     		add	r5, r5, r8
+ 694 03cc 8B20     		mov	r0, #139
+ 695 03ce 0001     		lsl	r0, r0, #4
+ 696 03d0 2B18     		add	r3, r5, r0
+ 697 03d2 1888     		ldrh	r0, [r3]
+ 698 03d4 5A46     		mov	r2, fp
+ 699 03d6 1389     		ldrh	r3, [r2, #8]
+ 700 03d8 C018     		add	r0, r0, r3
+ 701 03da 801B     		sub	r0, r0, r6
+ 702 03dc 0004     		lsl	r0, r0, #16
+ 703 03de 000C     		lsr	r0, r0, #16
+ 704 03e0 FFF7FEFF 		bl	htons
+ 705 03e4 0134     		add	r4, r4, #1
+ 706 03e6 E400     		lsl	r4, r4, #3
+ 707 03e8 4444     		add	r4, r4, r8
+ 708 03ea 294B     		ldr	r3, .L54+8
+ 709 03ec E418     		add	r4, r4, r3
+ 710 03ee 6080     		strh	r0, [r4, #2]
+ 582:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #else
+ 583:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs->cs_ip.ip_len = htons(n0->tot_len - vjlen + cs->cs_hlen);
+ 584:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** #endif
+ 585:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 586:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /* recompute the ip header checksum */
+ 587:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   bp = (u_short *) &cs->cs_ip;
+ 588:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs->cs_ip.ip_sum = 0;
+ 711              		.loc 1 588 0
+ 712 03f0 2A48     		ldr	r0, .L54+20
+ 713 03f2 2D18     		add	r5, r5, r0
+ 714 03f4 0023     		mov	r3, #0
+ 715 03f6 6B80     		strh	r3, [r5, #2]
+ 589:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   for (tmp = 0; hlen > 0; hlen -= 2) {
+ 716              		.loc 1 589 0
+ 717 03f8 029A     		ldr	r2, [sp, #8]
+ 718 03fa 002A     		cmp	r2, #0
+ 719 03fc 08D0     		beq	.L41
+ 720              	.LVL40:
+ 721 03fe 0022     		mov	r2, #0
+ 722              	.LVL41:
+ 723 0400 0021     		mov	r1, #0
+ 724              	.L42:
+ 590:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     tmp += *bp++;
+ 725              		.loc 1 590 0
+ 726 0402 0198     		ldr	r0, [sp, #4]
+ 727 0404 435A     		ldrh	r3, [r0, r1]
+ 728 0406 D218     		add	r2, r2, r3
+ 729 0408 0231     		add	r1, r1, #2
+ 730              		.loc 1 589 0
+ 731 040a 029B     		ldr	r3, [sp, #8]
+ 732 040c 9942     		cmp	r1, r3
+ 733 040e F8D1     		bne	.L42
+ 734              	.L41:
+ 591:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 592:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   tmp = (tmp & 0xffff) + (tmp >> 16);
+ 735              		.loc 1 592 0
+ 736 0410 2349     		ldr	r1, .L54+24
+ 737 0412 131C     		mov	r3, r2
+ 738 0414 0B40     		and	r3, r3, r1
+ 739 0416 120C     		lsr	r2, r2, #16
+ 740              	.LVL42:
+ 741 0418 D218     		add	r2, r2, r3
+ 742              	.LVL43:
+ 593:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   tmp = (tmp & 0xffff) + (tmp >> 16);
+ 743              		.loc 1 593 0
+ 744 041a 1140     		and	r1, r1, r2
+ 745 041c 120C     		lsr	r2, r2, #16
+ 746              	.LVL44:
+ 594:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   cs->cs_ip.ip_sum = (u_short)(~tmp);
+ 747              		.loc 1 594 0
+ 748 041e 5046     		mov	r0, sl
+ 749 0420 0301     		lsl	r3, r0, #4
+ 750 0422 5344     		add	r3, r3, sl
+ 751 0424 DB00     		lsl	r3, r3, #3
+ 752 0426 4344     		add	r3, r3, r8
+ 753 0428 1C48     		ldr	r0, .L54+20
+ 754 042a 1B18     		add	r3, r3, r0
+ 755 042c 5218     		add	r2, r2, r1
+ 756 042e D243     		mvn	r2, r2
+ 757 0430 5A80     		strh	r2, [r3, #2]
+ 595:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   
+ 596:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   /* Remove the compressed header and prepend the uncompressed header. */
+ 597:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if(pbuf_header(n0, -((s16_t)(vjlen)))) {
+ 758              		.loc 1 597 0
+ 759 0432 7142     		neg	r1, r6
+ 760 0434 0904     		lsl	r1, r1, #16
+ 761 0436 0914     		asr	r1, r1, #16
+ 762 0438 5846     		mov	r0, fp
+ 763 043a FFF7FEFF 		bl	pbuf_header
+ 764 043e 0028     		cmp	r0, #0
+ 765 0440 00D0     		beq	.LCB744
+ 766 0442 98E0     		b	.L19	@long jump
+ 767              	.LCB744:
+ 598:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     /* Can we cope with this failing?  Just assert for now */
+ 599:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     LWIP_ASSERT("pbuf_header failed\n", 0);
+ 600:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     goto bad;
+ 601:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 602:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 603:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if(LWIP_MEM_ALIGN(n0->payload) != n0->payload) {
+ 768              		.loc 1 603 0
+ 769 0444 5A46     		mov	r2, fp
+ 770 0446 5368     		ldr	r3, [r2, #4]
+ 771 0448 DA1C     		add	r2, r3, #3
+ 772 044a 0321     		mov	r1, #3
+ 773 044c 8A43     		bic	r2, r2, r1
+ 774 044e 9342     		cmp	r3, r2
+ 775 0450 56D0     		beq	.L43
+ 776              	.LBB11:
+ 604:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     struct pbuf *np, *q;
+ 605:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     u8_t *bufptr;
+ 606:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 607:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     np = pbuf_alloc(PBUF_RAW, n0->len + cs->cs_hlen, PBUF_POOL);
+ 777              		.loc 1 607 0
+ 778 0452 5046     		mov	r0, sl
+ 779 0454 0301     		lsl	r3, r0, #4
+ 780 0456 5344     		add	r3, r3, sl
+ 781 0458 DB00     		lsl	r3, r3, #3
+ 782 045a 4344     		add	r3, r3, r8
+ 783 045c 8B22     		mov	r2, #139
+ 784 045e 1201     		lsl	r2, r2, #4
+ 785 0460 9B18     		add	r3, r3, r2
+ 786 0462 1988     		ldrh	r1, [r3]
+ 787 0464 5846     		mov	r0, fp
+ 788 0466 4389     		ldrh	r3, [r0, #10]
+ 789 0468 C918     		add	r1, r1, r3
+ 790 046a 0904     		lsl	r1, r1, #16
+ 791 046c 090C     		lsr	r1, r1, #16
+ 792 046e 0320     		mov	r0, #3
+ 793 0470 0322     		mov	r2, #3
+ 794 0472 FFF7FEFF 		bl	pbuf_alloc
+ 795 0476 071C     		mov	r7, r0
+ 796              	.LVL45:
+ 608:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(!np) {
+ 797              		.loc 1 608 0
+ 798 0478 0028     		cmp	r0, #0
+ 799 047a 15D1     		bne	.L44
+ 800              	.LVL46:
+ 609:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       PPPDEBUG((LOG_WARNING, "vj_uncompress_tcp: realign failed\n"));
+ 801              		.loc 1 609 0
+ 802 047c 0949     		ldr	r1, .L54+28
+ 803 047e 0320     		mov	r0, #3
+ 804              	.LVL47:
+ 805 0480 FFF7FEFF 		bl	ppp_trace
+ 806 0484 77E0     		b	.L19
+ 807              	.L55:
+ 808 0486 C046     		.align	2
+ 809              	.L54:
+ 810 0488 38000000 		.word	.LC7
+ 811 048c 58000000 		.word	.LC9
+ 812 0490 AC080000 		.word	2220
+ 813 0494 B8080000 		.word	2232
+ 814 0498 74000000 		.word	.LC11
+ 815 049c BC080000 		.word	2236
+ 816 04a0 FFFF0000 		.word	65535
+ 817 04a4 A4000000 		.word	.LC13
+ 818              	.LVL48:
+ 819              	.L44:
+ 610:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto bad;
+ 611:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 612:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 613:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(pbuf_header(np, -cs->cs_hlen)) {
+ 820              		.loc 1 613 0
+ 821 04a8 5246     		mov	r2, sl
+ 822 04aa 1301     		lsl	r3, r2, #4
+ 823 04ac 5344     		add	r3, r3, sl
+ 824 04ae DB00     		lsl	r3, r3, #3
+ 825 04b0 4344     		add	r3, r3, r8
+ 826 04b2 8B20     		mov	r0, #139
+ 827              	.LVL49:
+ 828 04b4 0001     		lsl	r0, r0, #4
+ 829 04b6 1B18     		add	r3, r3, r0
+ 830 04b8 1988     		ldrh	r1, [r3]
+ 831 04ba 4942     		neg	r1, r1
+ 832 04bc 0904     		lsl	r1, r1, #16
+ 833 04be 0914     		asr	r1, r1, #16
+ 834 04c0 381C     		mov	r0, r7
+ 835 04c2 FFF7FEFF 		bl	pbuf_header
+ 836 04c6 0028     		cmp	r0, #0
+ 837 04c8 55D1     		bne	.L19
+ 614:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       /* Can we cope with this failing?  Just assert for now */
+ 615:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       LWIP_ASSERT("pbuf_header failed\n", 0);
+ 616:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto bad;
+ 617:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 618:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 619:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     bufptr = n0->payload;
+ 838              		.loc 1 619 0
+ 839 04ca 5A46     		mov	r2, fp
+ 840 04cc 5568     		ldr	r5, [r2, #4]
+ 841              	.LVL50:
+ 842 04ce 3C1C     		mov	r4, r7
+ 843              	.LVL51:
+ 844              	.L45:
+ 620:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     for(q = np; q != NULL; q = q->next) {
+ 621:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       MEMCPY(q->payload, bufptr, q->len);
+ 845              		.loc 1 621 0
+ 846 04d0 6068     		ldr	r0, [r4, #4]
+ 847 04d2 6289     		ldrh	r2, [r4, #10]
+ 848 04d4 291C     		mov	r1, r5
+ 849 04d6 FFF7FEFF 		bl	memcpy
+ 622:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       bufptr += q->len;
+ 850              		.loc 1 622 0
+ 851 04da 6389     		ldrh	r3, [r4, #10]
+ 852 04dc ED18     		add	r5, r5, r3
+ 853              		.loc 1 620 0
+ 854 04de 2468     		ldr	r4, [r4]
+ 855 04e0 002C     		cmp	r4, #0
+ 856 04e2 F5D1     		bne	.L45
+ 623:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 624:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 625:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(n0->next) {
+ 857              		.loc 1 625 0
+ 858 04e4 5B46     		mov	r3, fp
+ 859 04e6 1968     		ldr	r1, [r3]
+ 860 04e8 0029     		cmp	r1, #0
+ 861 04ea 05D0     		beq	.L46
+ 626:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       pbuf_chain(np, n0->next);
+ 862              		.loc 1 626 0
+ 863 04ec 381C     		mov	r0, r7
+ 864 04ee FFF7FEFF 		bl	pbuf_chain
+ 627:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       pbuf_dechain(n0);
+ 865              		.loc 1 627 0
+ 866 04f2 5846     		mov	r0, fp
+ 867 04f4 FFF7FEFF 		bl	pbuf_dechain
+ 868              	.L46:
+ 628:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 629:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     pbuf_free(n0);
+ 869              		.loc 1 629 0
+ 870 04f8 5846     		mov	r0, fp
+ 871 04fa FFF7FEFF 		bl	pbuf_free
+ 872 04fe BB46     		mov	fp, r7
+ 873              	.LVL52:
+ 874              	.L43:
+ 875              	.LBE11:
+ 630:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     n0 = np;
+ 631:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 632:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 633:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   if(pbuf_header(n0, cs->cs_hlen)) {
+ 876              		.loc 1 633 0
+ 877 0500 5046     		mov	r0, sl
+ 878 0502 0301     		lsl	r3, r0, #4
+ 879 0504 5344     		add	r3, r3, sl
+ 880 0506 DB00     		lsl	r3, r3, #3
+ 881 0508 4344     		add	r3, r3, r8
+ 882 050a 8B22     		mov	r2, #139
+ 883 050c 1201     		lsl	r2, r2, #4
+ 884 050e 9B18     		add	r3, r3, r2
+ 885 0510 0020     		mov	r0, #0
+ 886 0512 195E     		ldrsh	r1, [r3, r0]
+ 887 0514 5846     		mov	r0, fp
+ 888 0516 FFF7FEFF 		bl	pbuf_header
+ 889 051a 0028     		cmp	r0, #0
+ 890 051c 18D0     		beq	.L47
+ 891              	.LBB12:
+ 634:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     struct pbuf *np;
+ 635:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 636:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     LWIP_ASSERT("vj_uncompress_tcp: cs->cs_hlen <= PBUF_POOL_BUFSIZE", cs->cs_hlen <= PBUF_POOL_BUF
+ 637:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     np = pbuf_alloc(PBUF_RAW, cs->cs_hlen, PBUF_POOL);
+ 892              		.loc 1 637 0
+ 893 051e 5246     		mov	r2, sl
+ 894 0520 1301     		lsl	r3, r2, #4
+ 895 0522 5344     		add	r3, r3, sl
+ 896 0524 DB00     		lsl	r3, r3, #3
+ 897 0526 4344     		add	r3, r3, r8
+ 898 0528 8B20     		mov	r0, #139
+ 899 052a 0001     		lsl	r0, r0, #4
+ 900 052c 1B18     		add	r3, r3, r0
+ 901 052e 1988     		ldrh	r1, [r3]
+ 902 0530 0320     		mov	r0, #3
+ 903 0532 0322     		mov	r2, #3
+ 904 0534 FFF7FEFF 		bl	pbuf_alloc
+ 905 0538 041C     		mov	r4, r0
+ 906              	.LVL53:
+ 638:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     if(!np) {
+ 907              		.loc 1 638 0
+ 908 053a 0028     		cmp	r0, #0
+ 909 053c 04D1     		bne	.L48
+ 910              	.LVL54:
+ 639:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       PPPDEBUG((LOG_WARNING, "vj_uncompress_tcp: prepend failed\n"));
+ 911              		.loc 1 639 0
+ 912 053e 1849     		ldr	r1, .L56
+ 913 0540 0320     		mov	r0, #3
+ 914              	.LVL55:
+ 915 0542 FFF7FEFF 		bl	ppp_trace
+ 916 0546 16E0     		b	.L19
+ 917              	.LVL56:
+ 918              	.L48:
+ 640:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****       goto bad;
+ 641:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     }
+ 642:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     pbuf_cat(np, n0);
+ 919              		.loc 1 642 0
+ 920 0548 5946     		mov	r1, fp
+ 921 054a FFF7FEFF 		bl	pbuf_cat
+ 922              	.LVL57:
+ 923 054e A346     		mov	fp, r4
+ 924              	.LVL58:
+ 925              	.L47:
+ 926              	.LBE12:
+ 643:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****     n0 = np;
+ 644:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   }
+ 645:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   LWIP_ASSERT("n0->len >= cs->cs_hlen", n0->len >= cs->cs_hlen);
+ 646:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   MEMCPY(n0->payload, &cs->cs_ip, cs->cs_hlen);
+ 927              		.loc 1 646 0
+ 928 0550 5A46     		mov	r2, fp
+ 929 0552 5068     		ldr	r0, [r2, #4]
+ 930 0554 5246     		mov	r2, sl
+ 931 0556 1301     		lsl	r3, r2, #4
+ 932 0558 5344     		add	r3, r3, sl
+ 933 055a DB00     		lsl	r3, r3, #3
+ 934 055c 4344     		add	r3, r3, r8
+ 935 055e 8B22     		mov	r2, #139
+ 936 0560 1201     		lsl	r2, r2, #4
+ 937 0562 9B18     		add	r3, r3, r2
+ 938 0564 1A88     		ldrh	r2, [r3]
+ 939 0566 0199     		ldr	r1, [sp, #4]
+ 940 0568 FFF7FEFF 		bl	memcpy
+ 647:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 648:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   *nb = n0;
+ 941              		.loc 1 648 0
+ 942 056c 5B46     		mov	r3, fp
+ 943 056e 0098     		ldr	r0, [sp]
+ 944 0570 0360     		str	r3, [r0]
+ 649:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 650:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   return vjlen;
+ 945              		.loc 1 650 0
+ 946 0572 301C     		mov	r0, r6
+ 947 0574 0AE0     		b	.L21
+ 948              	.LVL59:
+ 949              	.L19:
+ 651:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** 
+ 652:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** bad:
+ 653:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   comp->flags |= VJF_TOSS;
+ 950              		.loc 1 653 0
+ 951 0576 4246     		mov	r2, r8
+ 952 0578 D388     		ldrh	r3, [r2, #6]
+ 953 057a 0122     		mov	r2, #1
+ 954 057c 1343     		orr	r3, r3, r2
+ 955 057e 4046     		mov	r0, r8
+ 956 0580 C380     		strh	r3, [r0, #6]
+ 654:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   INCR(vjs_errorin);
+ 957              		.loc 1 654 0
+ 958 0582 436A     		ldr	r3, [r0, #36]
+ 959 0584 0133     		add	r3, r3, #1
+ 960 0586 4362     		str	r3, [r0, #36]
+ 961 0588 0120     		mov	r0, #1
+ 962 058a 4042     		neg	r0, r0
+ 963              	.LVL60:
+ 964              	.L21:
+ 655:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c ****   return (-1);
+ 656:rtos/common/ethernet/lwIP_132/src/netif/ppp/vj.c **** }
+ 965              		.loc 1 656 0
+ 966 058c 03B0     		add	sp, sp, #12
+ 967              		@ sp needed for prologue
+ 968              	.LVL61:
+ 969              	.LVL62:
+ 970              	.LVL63:
+ 971              	.LVL64:
+ 972              	.LVL65:
+ 973              	.LVL66:
+ 974              	.LVL67:
+ 975 058e 3CBC     		pop	{r2, r3, r4, r5}
+ 976 0590 9046     		mov	r8, r2
+ 977 0592 9946     		mov	r9, r3
+ 978 0594 A246     		mov	sl, r4
+ 979 0596 AB46     		mov	fp, r5
+ 980 0598 F0BC     		pop	{r4, r5, r6, r7}
+ 981 059a 02BC     		pop	{r1}
+ 982 059c 0847     		bx	r1
+ 983              	.L57:
+ 984 059e C046     		.align	2
+ 985              	.L56:
+ 986 05a0 C8000000 		.word	.LC15
+ 987              	.LFE294:
+ 989              		.section	.rodata.str1.4
+ 990 00eb 00       		.align	2
+ 991              	.LC17:
+ 992 00ec 766A5F63 		.ascii	"vj_compress_tcp: header len %d spans buffers\012\000"
+ 992      6F6D7072 
+ 992      6573735F 
+ 992      7463703A 
+ 992      20686561 
+ 993 011a 0000     		.text
+ 994              		.align	2
+ 995              		.global	vj_compress_tcp
+ 996              		.code	16
+ 997              		.thumb_func
+ 999              	vj_compress_tcp:
+ 1000              	.LFB291:
+ 1001              		.loc 1 147 0
+ 1002 05a4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1003              	.LCFI6:
+ 1004 05a6 5F46     		mov	r7, fp
+ 1005 05a8 5646     		mov	r6, sl
+ 1006 05aa 4D46     		mov	r5, r9
+ 1007 05ac 4446     		mov	r4, r8
+ 1008 05ae F0B4     		push	{r4, r5, r6, r7}
+ 1009              	.LCFI7:
+ 1010              	.LVL68:
+ 1011 05b0 8AB0     		sub	sp, sp, #40
+ 1012              	.LCFI8:
+ 1013 05b2 071C     		mov	r7, r0
+ 1014 05b4 8846     		mov	r8, r1
+ 1015              		.loc 1 148 0
+ 1016 05b6 4E68     		ldr	r6, [r1, #4]
+ 1017              	.LVL69:
+ 1018              		.loc 1 149 0
+ 1019 05b8 0368     		ldr	r3, [r0]
+ 1020 05ba 1B68     		ldr	r3, [r3]
+ 1021 05bc 9A46     		mov	sl, r3
+ 1022              	.LVL70:
+ 1023              		.loc 1 150 0
+ 1024 05be 3378     		ldrb	r3, [r6]
+ 1025 05c0 1B07     		lsl	r3, r3, #28
+ 1026 05c2 1D0F     		lsr	r5, r3, #28
+ 1027              		.loc 1 162 0
+ 1028 05c4 737A     		ldrb	r3, [r6, #9]
+ 1029 05c6 062B     		cmp	r3, #6
+ 1030 05c8 00D0     		beq	.LCB999
+ 1031 05ca 0FE2     		b	.L59	@long jump
+ 1032              	.LCB999:
+ 1033              		.loc 1 171 0
+ 1034 05cc F488     		ldrh	r4, [r6, #6]
+ 1035 05ce CD48     		ldr	r0, .L99
+ 1036              	.LVL71:
+ 1037 05d0 FFF7FEFF 		bl	htons
+ 1038              	.LVL72:
+ 1039 05d4 2042     		tst	r0, r4
+ 1040 05d6 00D0     		beq	.LCB1010
+ 1041 05d8 08E2     		b	.L59	@long jump
+ 1042              	.LCB1010:
+ 1043 05da 4046     		mov	r0, r8
+ 1044 05dc 0389     		ldrh	r3, [r0, #8]
+ 1045 05de 272B     		cmp	r3, #39
+ 1046 05e0 00D8     		bhi	.LCB1014
+ 1047 05e2 03E2     		b	.L59	@long jump
+ 1048              	.LCB1014:
+ 1049              		.loc 1 150 0
+ 1050 05e4 AC46     		mov	ip, r5
+ 1051              	.LVL73:
+ 1052              		.loc 1 174 0
+ 1053 05e6 A900     		lsl	r1, r5, #2
+ 1054 05e8 7218     		add	r2, r6, r1
+ 1055 05ea 9146     		mov	r9, r2
+ 1056              	.LVL74:
+ 1057              		.loc 1 175 0
+ 1058 05ec 537B     		ldrb	r3, [r2, #13]
+ 1059 05ee 1722     		mov	r2, #23
+ 1060 05f0 1340     		and	r3, r3, r2
+ 1061 05f2 102B     		cmp	r3, #16
+ 1062 05f4 00D0     		beq	.LCB1025
+ 1063 05f6 F9E1     		b	.L59	@long jump
+ 1064              	.LCB1025:
+ 1065              		.loc 1 185 0
+ 1066 05f8 FB68     		ldr	r3, [r7, #12]
+ 1067 05fa 0133     		add	r3, r3, #1
+ 1068 05fc FB60     		str	r3, [r7, #12]
+ 1069              		.loc 1 186 0
+ 1070 05fe F268     		ldr	r2, [r6, #12]
+ 1071 0600 5046     		mov	r0, sl
+ 1072 0602 4369     		ldr	r3, [r0, #20]
+ 1073 0604 9A42     		cmp	r2, r3
+ 1074 0606 0CD1     		bne	.L60
+ 1075 0608 3269     		ldr	r2, [r6, #16]
+ 1076 060a 8369     		ldr	r3, [r0, #24]
+ 1077 060c 9A42     		cmp	r2, r3
+ 1078 060e 08D1     		bne	.L60
+ 1079 0610 037A     		ldrb	r3, [r0, #8]
+ 1080 0612 1B07     		lsl	r3, r3, #28
+ 1081 0614 9B0E     		lsr	r3, r3, #26
+ 1082 0616 5344     		add	r3, r3, sl
+ 1083 0618 4846     		mov	r0, r9
+ 1084 061a 0268     		ldr	r2, [r0]
+ 1085 061c 9B68     		ldr	r3, [r3, #8]
+ 1086 061e 9A42     		cmp	r2, r3
+ 1087 0620 39D0     		beq	.L61
+ 1088              	.L60:
+ 1089              	.LBB13:
+ 1090              		.loc 1 202 0
+ 1091 0622 3D68     		ldr	r5, [r7]
+ 1092              	.LVL75:
+ 1093 0624 5446     		mov	r4, sl
+ 1094              	.LVL76:
+ 1095              	.L65:
+ 1096              		.loc 1 205 0
+ 1097 0626 2068     		ldr	r0, [r4]
+ 1098              	.LVL77:
+ 1099              		.loc 1 206 0
+ 1100 0628 7B69     		ldr	r3, [r7, #20]
+ 1101 062a 0133     		add	r3, r3, #1
+ 1102 062c 7B61     		str	r3, [r7, #20]
+ 1103              		.loc 1 207 0
+ 1104 062e F268     		ldr	r2, [r6, #12]
+ 1105 0630 4369     		ldr	r3, [r0, #20]
+ 1106 0632 9A42     		cmp	r2, r3
+ 1107 0634 0FD1     		bne	.L62
+ 1108 0636 3269     		ldr	r2, [r6, #16]
+ 1109 0638 8369     		ldr	r3, [r0, #24]
+ 1110 063a 9A42     		cmp	r2, r3
+ 1111 063c 0BD1     		bne	.L62
+ 1112 063e 037A     		ldrb	r3, [r0, #8]
+ 1113 0640 1B07     		lsl	r3, r3, #28
+ 1114 0642 9B0E     		lsr	r3, r3, #26
+ 1115 0644 1B18     		add	r3, r3, r0
+ 1116 0646 9A46     		mov	sl, r3
+ 1117 0648 4B46     		mov	r3, r9
+ 1118 064a 1A68     		ldr	r2, [r3]
+ 1119 064c 5346     		mov	r3, sl
+ 1120 064e 9B68     		ldr	r3, [r3, #8]
+ 1121 0650 9A46     		mov	sl, r3
+ 1122 0652 5245     		cmp	r2, sl
+ 1123 0654 14D0     		beq	.L63
+ 1124              	.L62:
+ 1125              		.loc 1 212 0
+ 1126 0656 A842     		cmp	r0, r5
+ 1127 0658 01D0     		beq	.L64
+ 1128 065a 041C     		mov	r4, r0
+ 1129 065c E3E7     		b	.L65
+ 1130              	.LVL78:
+ 1131              	.L64:
+ 1132              		.loc 1 222 0
+ 1133 065e BB69     		ldr	r3, [r7, #24]
+ 1134 0660 0133     		add	r3, r3, #1
+ 1135 0662 BB61     		str	r3, [r7, #24]
+ 1136              		.loc 1 223 0
+ 1137 0664 3C60     		str	r4, [r7]
+ 1138              		.loc 1 224 0
+ 1139 0666 4846     		mov	r0, r9
+ 1140              	.LVL79:
+ 1141 0668 037B     		ldrb	r3, [r0, #12]
+ 1142 066a 1B09     		lsr	r3, r3, #4
+ 1143 066c 6344     		add	r3, r3, ip
+ 1144              		.loc 1 225 0
+ 1145 066e 9B04     		lsl	r3, r3, #18
+ 1146 0670 1B0C     		lsr	r3, r3, #16
+ 1147 0672 9B46     		mov	fp, r3
+ 1148              	.LVL80:
+ 1149              		.loc 1 227 0
+ 1150 0674 4146     		mov	r1, r8
+ 1151 0676 4B89     		ldrh	r3, [r1, #10]
+ 1152 0678 5B45     		cmp	r3, fp
+ 1153 067a 00D3     		bcc	.LCB1122
+ 1154 067c A8E1     		b	.L98	@long jump
+ 1155              	.LCB1122:
+ 1156 067e B5E1     		b	.L59
+ 1157              	.LVL81:
+ 1158              	.L63:
+ 1159              		.loc 1 232 0
+ 1160 0680 8246     		mov	sl, r0
+ 1161              		.loc 1 236 0
+ 1162 0682 A842     		cmp	r0, r5
+ 1163 0684 01D1     		bne	.L67
+ 1164              		.loc 1 237 0
+ 1165 0686 3C60     		str	r4, [r7]
+ 1166 0688 05E0     		b	.L61
+ 1167              	.LVL82:
+ 1168              	.L67:
+ 1169              		.loc 1 239 0
+ 1170 068a 0368     		ldr	r3, [r0]
+ 1171              	.LVL83:
+ 1172 068c 2360     		str	r3, [r4]
+ 1173              		.loc 1 240 0
+ 1174 068e 2B68     		ldr	r3, [r5]
+ 1175 0690 0360     		str	r3, [r0]
+ 1176              		.loc 1 241 0
+ 1177 0692 2860     		str	r0, [r5]
+ 1178 0694 8246     		mov	sl, r0
+ 1179              	.L61:
+ 1180              	.LBE13:
+ 1181              		.loc 1 247 0
+ 1182 0696 4846     		mov	r0, r9
+ 1183 0698 037B     		ldrb	r3, [r0, #12]
+ 1184 069a 1C09     		lsr	r4, r3, #4
+ 1185 069c 6246     		mov	r2, ip
+ 1186 069e 1319     		add	r3, r2, r4
+ 1187              	.LVL84:
+ 1188              		.loc 1 248 0
+ 1189 06a0 9B00     		lsl	r3, r3, #2
+ 1190              	.LVL85:
+ 1191 06a2 9B46     		mov	fp, r3
+ 1192              	.LVL86:
+ 1193              		.loc 1 250 0
+ 1194 06a4 4046     		mov	r0, r8
+ 1195 06a6 4389     		ldrh	r3, [r0, #10]
+ 1196 06a8 5B45     		cmp	r3, fp
+ 1197 06aa 06D2     		bcs	.L68
+ 1198              		.loc 1 251 0
+ 1199 06ac 9649     		ldr	r1, .L99+4
+ 1200 06ae 0520     		mov	r0, #5
+ 1201 06b0 5A46     		mov	r2, fp
+ 1202 06b2 FFF7FEFF 		bl	ppp_trace
+ 1203 06b6 4020     		mov	r0, #64
+ 1204 06b8 99E1     		b	.L69
+ 1205              	.L68:
+ 1206              		.loc 1 245 0
+ 1207 06ba 5246     		mov	r2, sl
+ 1208 06bc 0832     		add	r2, r2, #8
+ 1209 06be 0592     		str	r2, [sp, #20]
+ 1210              		.loc 1 266 0
+ 1211 06c0 101C     		mov	r0, r2
+ 1212 06c2 3288     		ldrh	r2, [r6]
+ 1213 06c4 0388     		ldrh	r3, [r0]
+ 1214 06c6 9A42     		cmp	r2, r3
+ 1215 06c8 00D0     		beq	.LCB1186
+ 1216 06ca 82E1     		b	.L70	@long jump
+ 1217              	.LCB1186:
+ 1218 06cc F288     		ldrh	r2, [r6, #6]
+ 1219 06ce 5346     		mov	r3, sl
+ 1220 06d0 DB89     		ldrh	r3, [r3, #14]
+ 1221 06d2 9A42     		cmp	r2, r3
+ 1222 06d4 00D0     		beq	.LCB1191
+ 1223 06d6 7CE1     		b	.L70	@long jump
+ 1224              	.LCB1191:
+ 1225 06d8 3289     		ldrh	r2, [r6, #8]
+ 1226              	.LVL87:
+ 1227 06da 0389     		ldrh	r3, [r0, #8]
+ 1228 06dc 9A42     		cmp	r2, r3
+ 1229 06de 00D0     		beq	.LCB1196
+ 1230 06e0 77E1     		b	.L70	@long jump
+ 1231              	.LCB1196:
+ 1232              		.loc 1 245 0
+ 1233 06e2 4118     		add	r1, r0, r1
+ 1234 06e4 0191     		str	r1, [sp, #4]
+ 1235              	.LVL88:
+ 1236              		.loc 1 266 0
+ 1237 06e6 0B7B     		ldrb	r3, [r1, #12]
+ 1238 06e8 1B09     		lsr	r3, r3, #4
+ 1239 06ea A342     		cmp	r3, r4
+ 1240 06ec 00D0     		beq	.LCB1207
+ 1241 06ee 70E1     		b	.L70	@long jump
+ 1242              	.LCB1207:
+ 1243 06f0 6046     		mov	r0, ip
+ 1244 06f2 0528     		cmp	r0, #5
+ 1245 06f4 0BD9     		bls	.L71
+ 1246              	.LVL89:
+ 1247 06f6 301C     		mov	r0, r6
+ 1248              	.LVL90:
+ 1249 06f8 1430     		add	r0, r0, #20
+ 1250 06fa 0599     		ldr	r1, [sp, #20]
+ 1251 06fc 1431     		add	r1, r1, #20
+ 1252 06fe 6246     		mov	r2, ip
+ 1253 0700 053A     		sub	r2, r2, #5
+ 1254 0702 9200     		lsl	r2, r2, #2
+ 1255 0704 FFF7FEFF 		bl	memcmp
+ 1256              	.LVL91:
+ 1257 0708 0028     		cmp	r0, #0
+ 1258 070a 00D0     		beq	.LCB1223
+ 1259 070c 61E1     		b	.L70	@long jump
+ 1260              	.LCB1223:
+ 1261              	.LVL92:
+ 1262              	.L71:
+ 1263 070e 221C     		mov	r2, r4
+ 1264 0710 052C     		cmp	r4, #5
+ 1265 0712 0ADD     		ble	.L72
+ 1266 0714 4846     		mov	r0, r9
+ 1267 0716 1430     		add	r0, r0, #20
+ 1268 0718 0199     		ldr	r1, [sp, #4]
+ 1269 071a 1431     		add	r1, r1, #20
+ 1270 071c 053A     		sub	r2, r2, #5
+ 1271 071e 9200     		lsl	r2, r2, #2
+ 1272 0720 FFF7FEFF 		bl	memcmp
+ 1273 0724 0028     		cmp	r0, #0
+ 1274 0726 00D0     		beq	.LCB1237
+ 1275 0728 53E1     		b	.L70	@long jump
+ 1276              	.LCB1237:
+ 1277              	.LVL93:
+ 1278              	.L72:
+ 1279              		.loc 1 281 0
+ 1280 072a 4946     		mov	r1, r9
+ 1281 072c 4B7B     		ldrb	r3, [r1, #13]
+ 1282 072e 9A06     		lsl	r2, r3, #26
+ 1283 0730 19D5     		bpl	.L73
+ 1284              		.loc 1 282 0
+ 1285 0732 488A     		ldrh	r0, [r1, #18]
+ 1286 0734 FFF7FEFF 		bl	ntohs
+ 1287              		.loc 1 283 0
+ 1288 0738 431E     		sub	r3, r0, #1
+ 1289              	.LVL94:
+ 1290 073a 1B04     		lsl	r3, r3, #16
+ 1291 073c 1B0C     		lsr	r3, r3, #16
+ 1292 073e FE2B     		cmp	r3, #254
+ 1293 0740 0AD9     		bls	.L74
+ 1294 0742 06AB     		add	r3, sp, #24
+ 1295 0744 0022     		mov	r2, #0
+ 1296 0746 1A70     		strb	r2, [r3]
+ 1297 0748 9870     		strb	r0, [r3, #2]
+ 1298 074a 020A     		lsr	r2, r0, #8
+ 1299 074c 5A70     		strb	r2, [r3, #1]
+ 1300 074e 0123     		mov	r3, #1
+ 1301 0750 0493     		str	r3, [sp, #16]
+ 1302              	.LVL95:
+ 1303 0752 6D46     		mov	r5, sp
+ 1304              	.LVL96:
+ 1305 0754 1B35     		add	r5, r5, #27
+ 1306 0756 10E0     		b	.L75
+ 1307              	.LVL97:
+ 1308              	.L74:
+ 1309 0758 06AB     		add	r3, sp, #24
+ 1310 075a 1870     		strb	r0, [r3]
+ 1311 075c 0120     		mov	r0, #1
+ 1312              	.LVL98:
+ 1313 075e 0490     		str	r0, [sp, #16]
+ 1314              	.LVL99:
+ 1315 0760 6D46     		mov	r5, sp
+ 1316              	.LVL100:
+ 1317 0762 1935     		add	r5, r5, #25
+ 1318 0764 09E0     		b	.L75
+ 1319              	.LVL101:
+ 1320              	.L73:
+ 1321              		.loc 1 285 0
+ 1322 0766 4946     		mov	r1, r9
+ 1323 0768 4A8A     		ldrh	r2, [r1, #18]
+ 1324 076a 0198     		ldr	r0, [sp, #4]
+ 1325 076c 438A     		ldrh	r3, [r0, #18]
+ 1326 076e 9A42     		cmp	r2, r3
+ 1327 0770 00D0     		beq	.LCB1297
+ 1328 0772 2EE1     		b	.L70	@long jump
+ 1329              	.LCB1297:
+ 1330              	.LVL102:
+ 1331              		.loc 1 290 0
+ 1332 0774 0021     		mov	r1, #0
+ 1333 0776 0491     		str	r1, [sp, #16]
+ 1334              	.LVL103:
+ 1335 0778 06AD     		add	r5, sp, #24
+ 1336              	.LVL104:
+ 1337              	.L75:
+ 1338              		.loc 1 293 0
+ 1339 077a 4A46     		mov	r2, r9
+ 1340 077c D089     		ldrh	r0, [r2, #14]
+ 1341              	.LVL105:
+ 1342 077e FFF7FEFF 		bl	ntohs
+ 1343 0782 041C     		mov	r4, r0
+ 1344 0784 019B     		ldr	r3, [sp, #4]
+ 1345 0786 D889     		ldrh	r0, [r3, #14]
+ 1346 0788 FFF7FEFF 		bl	ntohs
+ 1347 078c 241A     		sub	r4, r4, r0
+ 1348 078e 2404     		lsl	r4, r4, #16
+ 1349 0790 240C     		lsr	r4, r4, #16
+ 1350 0792 0294     		str	r4, [sp, #8]
+ 1351              	.LVL106:
+ 1352 0794 002C     		cmp	r4, #0
+ 1353 0796 16D0     		beq	.L76
+ 1354              	.LVL107:
+ 1355              		.loc 1 294 0
+ 1356 0798 FF2C     		cmp	r4, #255
+ 1357 079a 0BD9     		bls	.L77
+ 1358 079c 0023     		mov	r3, #0
+ 1359 079e 2B70     		strb	r3, [r5]
+ 1360 07a0 6A1C     		add	r2, r5, #1
+ 1361              	.LVL108:
+ 1362 07a2 6846     		mov	r0, sp
+ 1363 07a4 0821     		mov	r1, #8
+ 1364 07a6 085C     		ldrb	r0, [r1, r0]
+ 1365 07a8 5070     		strb	r0, [r2, #1]
+ 1366 07aa 0299     		ldr	r1, [sp, #8]
+ 1367 07ac 0B0A     		lsr	r3, r1, #8
+ 1368 07ae 1370     		strb	r3, [r2]
+ 1369 07b0 0335     		add	r5, r5, #3
+ 1370              	.LVL109:
+ 1371 07b2 04E0     		b	.L78
+ 1372              	.LVL110:
+ 1373              	.L77:
+ 1374 07b4 6A46     		mov	r2, sp
+ 1375 07b6 0823     		mov	r3, #8
+ 1376 07b8 9A5C     		ldrb	r2, [r3, r2]
+ 1377 07ba 2A70     		strb	r2, [r5]
+ 1378 07bc 0135     		add	r5, r5, #1
+ 1379              	.LVL111:
+ 1380              	.L78:
+ 1381              		.loc 1 295 0
+ 1382 07be 0223     		mov	r3, #2
+ 1383 07c0 0498     		ldr	r0, [sp, #16]
+ 1384 07c2 1843     		orr	r0, r0, r3
+ 1385 07c4 0490     		str	r0, [sp, #16]
+ 1386              	.LVL112:
+ 1387              	.L76:
+ 1388              		.loc 1 298 0
+ 1389 07c6 4946     		mov	r1, r9
+ 1390 07c8 8868     		ldr	r0, [r1, #8]
+ 1391 07ca FFF7FEFF 		bl	ntohl
+ 1392 07ce 041C     		mov	r4, r0
+ 1393 07d0 019A     		ldr	r2, [sp, #4]
+ 1394 07d2 9068     		ldr	r0, [r2, #8]
+ 1395 07d4 FFF7FEFF 		bl	ntohl
+ 1396 07d8 241A     		sub	r4, r4, r0
+ 1397              	.LVL113:
+ 1398 07da 002C     		cmp	r4, #0
+ 1399 07dc 1DD0     		beq	.L79
+ 1400              		.loc 1 299 0
+ 1401 07de 4B4B     		ldr	r3, .L99+8
+ 1402 07e0 9C42     		cmp	r4, r3
+ 1403 07e2 00D9     		bls	.LCB1373
+ 1404 07e4 F5E0     		b	.L70	@long jump
+ 1405              	.LCB1373:
+ 1406              		.loc 1 302 0
+ 1407 07e6 2304     		lsl	r3, r4, #16
+ 1408 07e8 1B0C     		lsr	r3, r3, #16
+ 1409 07ea 0393     		str	r3, [sp, #12]
+ 1410              	.LVL114:
+ 1411              		.loc 1 303 0
+ 1412 07ec FF2B     		cmp	r3, #255
+ 1413 07ee 0BD9     		bls	.L80
+ 1414 07f0 0023     		mov	r3, #0
+ 1415 07f2 2B70     		strb	r3, [r5]
+ 1416 07f4 6A1C     		add	r2, r5, #1
+ 1417              	.LVL115:
+ 1418 07f6 6B46     		mov	r3, sp
+ 1419 07f8 0C20     		mov	r0, #12
+ 1420 07fa C35C     		ldrb	r3, [r0, r3]
+ 1421 07fc 5370     		strb	r3, [r2, #1]
+ 1422 07fe 0398     		ldr	r0, [sp, #12]
+ 1423 0800 030A     		lsr	r3, r0, #8
+ 1424 0802 1370     		strb	r3, [r2]
+ 1425 0804 0335     		add	r5, r5, #3
+ 1426              	.LVL116:
+ 1427 0806 04E0     		b	.L81
+ 1428              	.LVL117:
+ 1429              	.L80:
+ 1430 0808 6946     		mov	r1, sp
+ 1431 080a 0C22     		mov	r2, #12
+ 1432 080c 515C     		ldrb	r1, [r2, r1]
+ 1433 080e 2970     		strb	r1, [r5]
+ 1434 0810 0135     		add	r5, r5, #1
+ 1435              	.LVL118:
+ 1436              	.L81:
+ 1437              		.loc 1 304 0
+ 1438 0812 0423     		mov	r3, #4
+ 1439 0814 049A     		ldr	r2, [sp, #16]
+ 1440 0816 1A43     		orr	r2, r2, r3
+ 1441 0818 0492     		str	r2, [sp, #16]
+ 1442              	.LVL119:
+ 1443              	.L79:
+ 1444              		.loc 1 307 0
+ 1445 081a 4B46     		mov	r3, r9
+ 1446 081c 5868     		ldr	r0, [r3, #4]
+ 1447 081e FFF7FEFF 		bl	ntohl
+ 1448 0822 041C     		mov	r4, r0
+ 1449              	.LVL120:
+ 1450 0824 0199     		ldr	r1, [sp, #4]
+ 1451 0826 4868     		ldr	r0, [r1, #4]
+ 1452 0828 FFF7FEFF 		bl	ntohl
+ 1453 082c 241A     		sub	r4, r4, r0
+ 1454              	.LVL121:
+ 1455 082e 002C     		cmp	r4, #0
+ 1456 0830 1DD0     		beq	.L82
+ 1457              		.loc 1 308 0
+ 1458 0832 364B     		ldr	r3, .L99+8
+ 1459 0834 9C42     		cmp	r4, r3
+ 1460 0836 00D9     		bls	.LCB1427
+ 1461 0838 CBE0     		b	.L70	@long jump
+ 1462              	.LCB1427:
+ 1463              		.loc 1 311 0
+ 1464 083a 2304     		lsl	r3, r4, #16
+ 1465 083c 1B0C     		lsr	r3, r3, #16
+ 1466 083e 0293     		str	r3, [sp, #8]
+ 1467              	.LVL122:
+ 1468              		.loc 1 312 0
+ 1469 0840 FF2B     		cmp	r3, #255
+ 1470 0842 0BD9     		bls	.L83
+ 1471 0844 0023     		mov	r3, #0
+ 1472 0846 2B70     		strb	r3, [r5]
+ 1473 0848 6A1C     		add	r2, r5, #1
+ 1474              	.LVL123:
+ 1475 084a 6B46     		mov	r3, sp
+ 1476 084c 0820     		mov	r0, #8
+ 1477 084e C35C     		ldrb	r3, [r0, r3]
+ 1478 0850 5370     		strb	r3, [r2, #1]
+ 1479 0852 0298     		ldr	r0, [sp, #8]
+ 1480 0854 030A     		lsr	r3, r0, #8
+ 1481 0856 1370     		strb	r3, [r2]
+ 1482 0858 0335     		add	r5, r5, #3
+ 1483              	.LVL124:
+ 1484 085a 04E0     		b	.L84
+ 1485              	.LVL125:
+ 1486              	.L83:
+ 1487 085c 6946     		mov	r1, sp
+ 1488 085e 0822     		mov	r2, #8
+ 1489 0860 515C     		ldrb	r1, [r2, r1]
+ 1490 0862 2970     		strb	r1, [r5]
+ 1491 0864 0135     		add	r5, r5, #1
+ 1492              	.LVL126:
+ 1493              	.L84:
+ 1494              		.loc 1 313 0
+ 1495 0866 0823     		mov	r3, #8
+ 1496 0868 049A     		ldr	r2, [sp, #16]
+ 1497 086a 1A43     		orr	r2, r2, r3
+ 1498 086c 0492     		str	r2, [sp, #16]
+ 1499              	.LVL127:
+ 1500              	.L82:
+ 1501              		.loc 1 316 0
+ 1502 086e 049B     		ldr	r3, [sp, #16]
+ 1503 0870 0F2B     		cmp	r3, #15
+ 1504 0872 2CD8     		bhi	.L85
+ 1505              	.LVL128:
+ 1506 0874 9B00     		lsl	r3, r3, #2
+ 1507 0876 264A     		ldr	r2, .L99+12
+ 1508 0878 D358     		ldr	r3, [r2, r3]
+ 1509 087a 9F46     		mov	pc, r3
+ 1510              		.section	.rodata
+ 1511              		.align	2
+ 1512              	.L89:
+ 1513 0000 7C080000 		.word	.L86
+ 1514 0004 CE080000 		.word	.L85
+ 1515 0008 CE080000 		.word	.L85
+ 1516 000c CE080000 		.word	.L85
+ 1517 0010 CE080000 		.word	.L85
+ 1518 0014 CE080000 		.word	.L85
+ 1519 0018 CE080000 		.word	.L85
+ 1520 001c CE080000 		.word	.L85
+ 1521 0020 B6080000 		.word	.L87
+ 1522 0024 CE080000 		.word	.L85
+ 1523 0028 CE080000 		.word	.L85
+ 1524 002c D2090000 		.word	.L70
+ 1525 0030 94080000 		.word	.L88
+ 1526 0034 CE080000 		.word	.L85
+ 1527 0038 CE080000 		.word	.L85
+ 1528 003c D2090000 		.word	.L70
+ 1529              		.text
+ 1530              	.L86:
+ 1531              		.loc 1 326 0
+ 1532 087c 5146     		mov	r1, sl
+ 1533 087e 4889     		ldrh	r0, [r1, #10]
+ 1534 0880 7388     		ldrh	r3, [r6, #2]
+ 1535 0882 8342     		cmp	r3, r0
+ 1536 0884 00D1     		bne	.LCB1487
+ 1537 0886 A4E0     		b	.L70	@long jump
+ 1538              	.LCB1487:
+ 1539 0888 FFF7FEFF 		bl	ntohs
+ 1540 088c 5845     		cmp	r0, fp
+ 1541 088e 00D0     		beq	.LCB1490
+ 1542 0890 9FE0     		b	.L70	@long jump
+ 1543              	.LCB1490:
+ 1544 0892 1CE0     		b	.L85
+ 1545              	.L88:
+ 1546              		.loc 1 342 0
+ 1547 0894 029A     		ldr	r2, [sp, #8]
+ 1548 0896 039B     		ldr	r3, [sp, #12]
+ 1549 0898 9A42     		cmp	r2, r3
+ 1550 089a 18D1     		bne	.L85
+ 1551              	.LVL129:
+ 1552 089c 5146     		mov	r1, sl
+ 1553 089e 4889     		ldrh	r0, [r1, #10]
+ 1554 08a0 FFF7FEFF 		bl	ntohs
+ 1555 08a4 5A46     		mov	r2, fp
+ 1556 08a6 801A     		sub	r0, r0, r2
+ 1557 08a8 029B     		ldr	r3, [sp, #8]
+ 1558 08aa 8342     		cmp	r3, r0
+ 1559 08ac 0FD1     		bne	.L85
+ 1560 08ae 0B20     		mov	r0, #11
+ 1561 08b0 0490     		str	r0, [sp, #16]
+ 1562              	.LVL130:
+ 1563 08b2 06AD     		add	r5, sp, #24
+ 1564 08b4 0BE0     		b	.L85
+ 1565              	.LVL131:
+ 1566              	.L87:
+ 1567              		.loc 1 350 0
+ 1568 08b6 5146     		mov	r1, sl
+ 1569 08b8 4889     		ldrh	r0, [r1, #10]
+ 1570 08ba FFF7FEFF 		bl	ntohs
+ 1571 08be 5A46     		mov	r2, fp
+ 1572 08c0 801A     		sub	r0, r0, r2
+ 1573 08c2 029B     		ldr	r3, [sp, #8]
+ 1574 08c4 8342     		cmp	r3, r0
+ 1575 08c6 02D1     		bne	.L85
+ 1576              	.LVL132:
+ 1577 08c8 0F20     		mov	r0, #15
+ 1578 08ca 0490     		str	r0, [sp, #16]
+ 1579              	.LVL133:
+ 1580 08cc 06AD     		add	r5, sp, #24
+ 1581              	.LVL134:
+ 1582              	.L85:
+ 1583              		.loc 1 358 0
+ 1584 08ce B088     		ldrh	r0, [r6, #4]
+ 1585 08d0 FFF7FEFF 		bl	ntohs
+ 1586 08d4 041C     		mov	r4, r0
+ 1587              	.LVL135:
+ 1588 08d6 5146     		mov	r1, sl
+ 1589 08d8 8889     		ldrh	r0, [r1, #12]
+ 1590 08da FFF7FEFF 		bl	ntohs
+ 1591 08de 241A     		sub	r4, r4, r0
+ 1592 08e0 2404     		lsl	r4, r4, #16
+ 1593 08e2 240C     		lsr	r4, r4, #16
+ 1594              	.LVL136:
+ 1595              		.loc 1 359 0
+ 1596 08e4 012C     		cmp	r4, #1
+ 1597 08e6 1BD0     		beq	.L90
+ 1598              		.loc 1 360 0
+ 1599 08e8 631E     		sub	r3, r4, #1
+ 1600 08ea 1B04     		lsl	r3, r3, #16
+ 1601 08ec 1B0C     		lsr	r3, r3, #16
+ 1602 08ee FE2B     		cmp	r3, #254
+ 1603 08f0 10D9     		bls	.L91
+ 1604 08f2 0023     		mov	r3, #0
+ 1605 08f4 2B70     		strb	r3, [r5]
+ 1606 08f6 6A1C     		add	r2, r5, #1
+ 1607              	.LVL137:
+ 1608 08f8 5470     		strb	r4, [r2, #1]
+ 1609 08fa 230A     		lsr	r3, r4, #8
+ 1610 08fc 1370     		strb	r3, [r2]
+ 1611 08fe 0335     		add	r5, r5, #3
+ 1612              	.LVL138:
+ 1613 0900 0AE0     		b	.L92
+ 1614              	.L100:
+ 1615 0902 C046     		.align	2
+ 1616              	.L99:
+ 1617 0904 FF3F0000 		.word	16383
+ 1618 0908 EC000000 		.word	.LC17
+ 1619 090c FFFF0000 		.word	65535
+ 1620 0910 00000000 		.word	.L89
+ 1621              	.L91:
+ 1622 0914 2C70     		strb	r4, [r5]
+ 1623 0916 0135     		add	r5, r5, #1
+ 1624              	.L92:
+ 1625              		.loc 1 361 0
+ 1626 0918 2023     		mov	r3, #32
+ 1627 091a 049A     		ldr	r2, [sp, #16]
+ 1628 091c 1A43     		orr	r2, r2, r3
+ 1629 091e 0492     		str	r2, [sp, #16]
+ 1630              	.LVL139:
+ 1631              	.L90:
+ 1632              		.loc 1 363 0
+ 1633 0920 4846     		mov	r0, r9
+ 1634 0922 437B     		ldrb	r3, [r0, #13]
+ 1635 0924 1907     		lsl	r1, r3, #28
+ 1636 0926 03D5     		bpl	.L93
+ 1637              		.loc 1 364 0
+ 1638 0928 1023     		mov	r3, #16
+ 1639 092a 049A     		ldr	r2, [sp, #16]
+ 1640 092c 1A43     		orr	r2, r2, r3
+ 1641 092e 0492     		str	r2, [sp, #16]
+ 1642              	.LVL140:
+ 1643              	.L93:
+ 1644              		.loc 1 370 0
+ 1645 0930 4B46     		mov	r3, r9
+ 1646 0932 188A     		ldrh	r0, [r3, #16]
+ 1647 0934 FFF7FEFF 		bl	ntohs
+ 1648 0938 8146     		mov	r9, r0
+ 1649              	.LVL141:
+ 1650              		.loc 1 371 0
+ 1651 093a 0598     		ldr	r0, [sp, #20]
+ 1652 093c 311C     		mov	r1, r6
+ 1653 093e 5A46     		mov	r2, fp
+ 1654 0940 FFF7FEFF 		bl	memcpy
+ 1655              		.loc 1 382 0
+ 1656 0944 0AAB     		add	r3, sp, #40
+ 1657 0946 103B     		sub	r3, r3, #16
+ 1658 0948 EB1A     		sub	r3, r5, r3
+ 1659 094a 1B04     		lsl	r3, r3, #16
+ 1660 094c 1C0C     		lsr	r4, r3, #16
+ 1661              	.LVL142:
+ 1662              		.loc 1 383 0
+ 1663 094e 7B7A     		ldrb	r3, [r7, #9]
+ 1664 0950 002B     		cmp	r3, #0
+ 1665 0952 04D0     		beq	.L94
+ 1666 0954 7A79     		ldrb	r2, [r7, #5]
+ 1667 0956 5046     		mov	r0, sl
+ 1668 0958 8379     		ldrb	r3, [r0, #6]
+ 1669 095a 9A42     		cmp	r2, r3
+ 1670 095c 18D0     		beq	.L95
+ 1671              	.L94:
+ 1672              		.loc 1 384 0
+ 1673 095e 5146     		mov	r1, sl
+ 1674 0960 8B79     		ldrb	r3, [r1, #6]
+ 1675 0962 7B71     		strb	r3, [r7, #5]
+ 1676              		.loc 1 385 0
+ 1677 0964 5946     		mov	r1, fp
+ 1678 0966 0439     		sub	r1, r1, #4
+ 1679 0968 0904     		lsl	r1, r1, #16
+ 1680 096a 090C     		lsr	r1, r1, #16
+ 1681              		.loc 1 386 0
+ 1682 096c 611A     		sub	r1, r4, r1
+ 1683 096e 0904     		lsl	r1, r1, #16
+ 1684 0970 0914     		asr	r1, r1, #16
+ 1685 0972 4046     		mov	r0, r8
+ 1686 0974 FFF7FEFF 		bl	pbuf_header
+ 1687              		.loc 1 390 0
+ 1688 0978 4346     		mov	r3, r8
+ 1689 097a 5A68     		ldr	r2, [r3, #4]
+ 1690              	.LVL143:
+ 1691              		.loc 1 391 0
+ 1692 097c 4023     		mov	r3, #64
+ 1693 097e 0498     		ldr	r0, [sp, #16]
+ 1694 0980 0343     		orr	r3, r3, r0
+ 1695 0982 1370     		strb	r3, [r2]
+ 1696 0984 0132     		add	r2, r2, #1
+ 1697              	.LVL144:
+ 1698              		.loc 1 392 0
+ 1699 0986 5146     		mov	r1, sl
+ 1700 0988 8B79     		ldrb	r3, [r1, #6]
+ 1701 098a 1370     		strb	r3, [r2]
+ 1702 098c 501C     		add	r0, r2, #1
+ 1703              	.LVL145:
+ 1704 098e 10E0     		b	.L96
+ 1705              	.LVL146:
+ 1706              	.L95:
+ 1707              		.loc 1 394 0
+ 1708 0990 5946     		mov	r1, fp
+ 1709 0992 0339     		sub	r1, r1, #3
+ 1710 0994 0904     		lsl	r1, r1, #16
+ 1711 0996 090C     		lsr	r1, r1, #16
+ 1712              		.loc 1 395 0
+ 1713 0998 611A     		sub	r1, r4, r1
+ 1714 099a 0904     		lsl	r1, r1, #16
+ 1715 099c 0914     		asr	r1, r1, #16
+ 1716 099e 4046     		mov	r0, r8
+ 1717 09a0 FFF7FEFF 		bl	pbuf_header
+ 1718              		.loc 1 399 0
+ 1719 09a4 4246     		mov	r2, r8
+ 1720 09a6 5368     		ldr	r3, [r2, #4]
+ 1721              	.LVL147:
+ 1722              		.loc 1 400 0
+ 1723 09a8 6846     		mov	r0, sp
+ 1724 09aa 1021     		mov	r1, #16
+ 1725 09ac 085C     		ldrb	r0, [r1, r0]
+ 1726 09ae 1870     		strb	r0, [r3]
+ 1727 09b0 581C     		add	r0, r3, #1
+ 1728              	.LVL148:
+ 1729              	.L96:
+ 1730              		.loc 1 402 0
+ 1731 09b2 4946     		mov	r1, r9
+ 1732 09b4 0B0A     		lsr	r3, r1, #8
+ 1733 09b6 0370     		strb	r3, [r0]
+ 1734 09b8 0130     		add	r0, r0, #1
+ 1735              	.LVL149:
+ 1736              		.loc 1 403 0
+ 1737 09ba 0170     		strb	r1, [r0]
+ 1738              		.loc 1 404 0
+ 1739 09bc 0130     		add	r0, r0, #1
+ 1740              	.LVL150:
+ 1741 09be 06A9     		add	r1, sp, #24
+ 1742 09c0 221C     		mov	r2, r4
+ 1743 09c2 FFF7FEFF 		bl	memcpy
+ 1744              		.loc 1 405 0
+ 1745 09c6 3B69     		ldr	r3, [r7, #16]
+ 1746 09c8 0133     		add	r3, r3, #1
+ 1747 09ca 3B61     		str	r3, [r7, #16]
+ 1748 09cc 8020     		mov	r0, #128
+ 1749 09ce 0EE0     		b	.L69
+ 1750              	.LVL151:
+ 1751              	.L98:
+ 1752              		.loc 1 406 0
+ 1753 09d0 AA46     		mov	sl, r5
+ 1754              	.LVL152:
+ 1755              	.L70:
+ 1756              		.loc 1 414 0
+ 1757 09d2 5046     		mov	r0, sl
+ 1758 09d4 0830     		add	r0, r0, #8
+ 1759 09d6 311C     		mov	r1, r6
+ 1760 09d8 5A46     		mov	r2, fp
+ 1761 09da FFF7FEFF 		bl	memcpy
+ 1762              		.loc 1 415 0
+ 1763 09de 5246     		mov	r2, sl
+ 1764 09e0 9379     		ldrb	r3, [r2, #6]
+ 1765 09e2 7372     		strb	r3, [r6, #9]
+ 1766              		.loc 1 416 0
+ 1767 09e4 9379     		ldrb	r3, [r2, #6]
+ 1768 09e6 7B71     		strb	r3, [r7, #5]
+ 1769 09e8 7020     		mov	r0, #112
+ 1770 09ea 00E0     		b	.L69
+ 1771              	.LVL153:
+ 1772              	.L59:
+ 1773              		.loc 1 417 0
+ 1774 09ec 4020     		mov	r0, #64
+ 1775              	.LVL154:
+ 1776              	.L69:
+ 1777              		.loc 1 418 0
+ 1778 09ee 0AB0     		add	sp, sp, #40
+ 1779              		@ sp needed for prologue
+ 1780              	.LVL155:
+ 1781              	.LVL156:
+ 1782              	.LVL157:
+ 1783              	.LVL158:
+ 1784              	.LVL159:
+ 1785              	.LVL160:
+ 1786              	.LVL161:
+ 1787              	.LVL162:
+ 1788 09f0 3CBC     		pop	{r2, r3, r4, r5}
+ 1789 09f2 9046     		mov	r8, r2
+ 1790 09f4 9946     		mov	r9, r3
+ 1791 09f6 A246     		mov	sl, r4
+ 1792 09f8 AB46     		mov	fp, r5
+ 1793 09fa F0BC     		pop	{r4, r5, r6, r7}
+ 1794 09fc 02BC     		pop	{r1}
+ 1795 09fe 0847     		bx	r1
+ 1796              	.LFE291:
+ 1940              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 vj.c
+     /tmp/cc39QSwK.s:1      .text:00000000 $t
+     /tmp/cc39QSwK.s:16     .text:00000000 vj_compress_init
+     /tmp/cc39QSwK.s:79     .text:00000048 $d
+     /tmp/cc39QSwK.s:87     .text:0000004c vj_uncompress_err
+     /tmp/cc39QSwK.s:84     .text:0000004c $t
+     /tmp/cc39QSwK.s:116    .text:0000005c vj_uncompress_uncomp
+     /tmp/cc39QSwK.s:221    .text:000000ec $d
+     /tmp/cc39QSwK.s:247    .text:000000f4 vj_uncompress_tcp
+     /tmp/cc39QSwK.s:244    .text:000000f4 $t
+     /tmp/cc39QSwK.s:810    .text:00000488 $d
+     /tmp/cc39QSwK.s:821    .text:000004a8 $t
+     /tmp/cc39QSwK.s:986    .text:000005a0 $d
+     /tmp/cc39QSwK.s:999    .text:000005a4 vj_compress_tcp
+     /tmp/cc39QSwK.s:996    .text:000005a4 $t
+     /tmp/cc39QSwK.s:1513   .rodata:00000000 $d
+     /tmp/cc39QSwK.s:1617   .text:00000904 $d
+     /tmp/cc39QSwK.s:1622   .text:00000914 $t
+     /tmp/cc39QSwK.s:1800   .debug_frame:00000000 $d
+     /tmp/cc39QSwK.s:1944   .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+ppp_trace
+memcpy
+htons
+ntohs
+ntohl
+htonl
+pbuf_header
+pbuf_alloc
+pbuf_chain
+pbuf_dechain
+pbuf_free
+pbuf_cat
+memcmp

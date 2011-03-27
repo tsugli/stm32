@@ -1,0 +1,730 @@
+   1              		.code	16
+   2              		.file	"memp.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	memp_init
+  13              		.code	16
+  14              		.thumb_func
+  16              	memp_init:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/memp.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Dynamic pool memory manager
+   4:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * lwIP has dedicated pools for many structures (netconn, protocol control blocks,
+   6:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * packet buffers, ...). All these pools are managed here.
+   7:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+   8:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+   9:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /*
+  10:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+  11:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * All rights reserved. 
+  12:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 
+  13:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  14:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * are permitted provided that the following conditions are met:
+  15:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+  16:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *    this list of conditions and the following disclaimer.
+  18:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  19:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *    this list of conditions and the following disclaimer in the documentation
+  20:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *    and/or other materials provided with the distribution.
+  21:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 3. The name of the author may not be used to endorse or promote products
+  22:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *    derived from this software without specific prior written permission. 
+  23:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+  24:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  25:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  26:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  27:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  28:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  29:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  30:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  31:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  32:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  33:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * OF SUCH DAMAGE.
+  34:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * This file is part of the lwIP TCP/IP stack.
+  36:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 
+  37:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Author: Adam Dunkels <adam@sics.se>
+  38:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+  40:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/opt.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  43:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/memp.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/pbuf.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/udp.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/raw.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/tcp.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/igmp.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/api.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/api_msg.h"
+  51:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/tcpip.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/sys.h"
+  53:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/stats.h"
+  54:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "netif/etharp.h"
+  55:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/ip_frag.h"
+  56:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  57:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include <string.h>
+  58:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  59:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if !MEMP_MEM_MALLOC /* don't build if not configured for use in lwipopts.h */
+  60:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  61:rtos/common/ethernet/lwIP_132/src/core/memp.c **** struct memp {
+  62:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *next;
+  63:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+  64:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   const char *file;
+  65:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   int line;
+  66:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+  67:rtos/common/ethernet/lwIP_132/src/core/memp.c **** };
+  68:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  69:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+  70:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /* if MEMP_OVERFLOW_CHECK is turned on, we reserve some bytes at the beginning
+  71:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * and at the end of each element, initialize them as 0xcd and check
+  72:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * them later. */
+  73:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /* If MEMP_OVERFLOW_CHECK is >= 2, on every call to memp_malloc or memp_free,
+  74:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * every single element in each pool is checked!
+  75:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * This is VERY SLOW but also very helpful. */
+  76:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /* MEMP_SANITY_REGION_BEFORE and MEMP_SANITY_REGION_AFTER can be overridden in
+  77:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * lwipopts.h to change the amount reserved for checking. */
+  78:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #ifndef MEMP_SANITY_REGION_BEFORE
+  79:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_BEFORE  16
+  80:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_REGION_BEFORE*/
+  81:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_BEFORE > 0
+  82:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_BEFORE_ALIGNED    LWIP_MEM_ALIGN_SIZE(MEMP_SANITY_REGION_BEFORE)
+  83:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else
+  84:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_BEFORE_ALIGNED    0
+  85:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_REGION_BEFORE*/
+  86:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #ifndef MEMP_SANITY_REGION_AFTER
+  87:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_AFTER   16
+  88:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_REGION_AFTER*/
+  89:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_AFTER > 0
+  90:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_AFTER_ALIGNED     LWIP_MEM_ALIGN_SIZE(MEMP_SANITY_REGION_AFTER)
+  91:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else
+  92:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SANITY_REGION_AFTER_ALIGNED     0
+  93:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_REGION_AFTER*/
+  94:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  95:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /* MEMP_SIZE: save space for struct memp and for sanity check */
+  96:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SIZE          (LWIP_MEM_ALIGN_SIZE(sizeof(struct memp)) + MEMP_SANITY_REGION_BEFORE_AL
+  97:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_ALIGN_SIZE(x) (LWIP_MEM_ALIGN_SIZE(x) + MEMP_SANITY_REGION_AFTER_ALIGNED)
+  98:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+  99:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else /* MEMP_OVERFLOW_CHECK */
+ 100:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 101:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /* No sanity checks
+ 102:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * We don't need to preserve the struct memp while not allocated, so we
+ 103:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * can save a little space and set MEMP_SIZE to 0.
+ 104:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 105:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_SIZE           0
+ 106:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_ALIGN_SIZE(x) (LWIP_MEM_ALIGN_SIZE(x))
+ 107:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 108:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+ 109:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 110:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /** This array holds the first free element of each pool.
+ 111:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *  Elements form a linked list. */
+ 112:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static struct memp *memp_tab[MEMP_MAX];
+ 113:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 114:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else /* MEMP_MEM_MALLOC */
+ 115:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 116:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define MEMP_ALIGN_SIZE(x) (LWIP_MEM_ALIGN_SIZE(x))
+ 117:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 118:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_MEM_MALLOC */
+ 119:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 120:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /** This array holds the element sizes of each pool. */
+ 121:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if !MEM_USE_POOLS && !MEMP_MEM_MALLOC
+ 122:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static
+ 123:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 124:rtos/common/ethernet/lwIP_132/src/core/memp.c **** const u16_t memp_sizes[MEMP_MAX] = {
+ 125:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define LWIP_MEMPOOL(name,num,size,desc)  LWIP_MEM_ALIGN_SIZE(size),
+ 126:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/memp_std.h"
+ 127:rtos/common/ethernet/lwIP_132/src/core/memp.c **** };
+ 128:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 129:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if !MEMP_MEM_MALLOC /* don't build if not configured for use in lwipopts.h */
+ 130:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 131:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /** This array holds the number of elements in each pool. */
+ 132:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static const u16_t memp_num[MEMP_MAX] = {
+ 133:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define LWIP_MEMPOOL(name,num,size,desc)  (num),
+ 134:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/memp_std.h"
+ 135:rtos/common/ethernet/lwIP_132/src/core/memp.c **** };
+ 136:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 137:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /** This array holds a textual description of each pool. */
+ 138:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #ifdef LWIP_DEBUG
+ 139:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static const char *memp_desc[MEMP_MAX] = {
+ 140:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define LWIP_MEMPOOL(name,num,size,desc)  (desc),
+ 141:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/memp_std.h"
+ 142:rtos/common/ethernet/lwIP_132/src/core/memp.c **** };
+ 143:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* LWIP_DEBUG */
+ 144:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 145:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /** This is the actual memory used by the pools. */
+ 146:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static u8_t memp_memory[MEM_ALIGNMENT - 1 
+ 147:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #define LWIP_MEMPOOL(name,num,size,desc) + ( (num) * (MEMP_SIZE + MEMP_ALIGN_SIZE(size) ) )
+ 148:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #include "lwip/memp_std.h"
+ 149:rtos/common/ethernet/lwIP_132/src/core/memp.c **** ];
+ 150:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 151:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_CHECK
+ 152:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 153:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Check that memp-lists don't form a circle
+ 154:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 155:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static int
+ 156:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_sanity(void)
+ 157:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 158:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   s16_t i, c;
+ 159:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *m, *n;
+ 160:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 161:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (i = 0; i < MEMP_MAX; i++) {
+ 162:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     for (m = memp_tab[i]; m != NULL; m = m->next) {
+ 163:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       c = 1;
+ 164:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       for (n = memp_tab[i]; n != NULL; n = n->next) {
+ 165:rtos/common/ethernet/lwIP_132/src/core/memp.c ****         if (n == m && --c < 0) {
+ 166:rtos/common/ethernet/lwIP_132/src/core/memp.c ****           return 0;
+ 167:rtos/common/ethernet/lwIP_132/src/core/memp.c ****         }
+ 168:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       }
+ 169:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 170:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 171:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   return 1;
+ 172:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 173:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_CHECK*/
+ 174:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+ 175:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 176:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Check if a memp element was victim of an overflow
+ 177:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * (e.g. the restricted area after it has been altered)
+ 178:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 179:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param p the memp element to check
+ 180:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param memp_size the element size of the pool p comes from
+ 181:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 182:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static void
+ 183:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_overflow_check_element(struct memp *p, u16_t memp_size)
+ 184:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 185:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u16_t k;
+ 186:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u8_t *m;
+ 187:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_BEFORE_ALIGNED > 0
+ 188:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   m = (u8_t*)p + MEMP_SIZE - MEMP_SANITY_REGION_BEFORE_ALIGNED;
+ 189:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (k = 0; k < MEMP_SANITY_REGION_BEFORE_ALIGNED; k++) {
+ 190:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     if (m[k] != 0xcd) {
+ 191:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       LWIP_ASSERT("detected memp underflow!", 0);
+ 192:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 193:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 194:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 195:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_AFTER_ALIGNED > 0
+ 196:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   m = (u8_t*)p + MEMP_SIZE + memp_size;
+ 197:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (k = 0; k < MEMP_SANITY_REGION_AFTER_ALIGNED; k++) {
+ 198:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     if (m[k] != 0xcd) {
+ 199:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       LWIP_ASSERT("detected memp overflow!", 0);
+ 200:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 201:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 202:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 203:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 204:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 205:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 206:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Do an overflow check for all elements in every pool.
+ 207:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 208:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @see memp_overflow_check_element for a description of the check
+ 209:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 210:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static void
+ 211:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_overflow_check_all(void)
+ 212:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 213:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u16_t i, j;
+ 214:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *p;
+ 215:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 216:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   p = LWIP_MEM_ALIGN(memp_memory);
+ 217:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (i = 0; i < MEMP_MAX; ++i) {
+ 218:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     p = p;
+ 219:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     for (j = 0; j < memp_num[i]; ++j) {
+ 220:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memp_overflow_check_element(p, memp_sizes[i]);
+ 221:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       p = (struct memp*)((u8_t*)p + MEMP_SIZE + memp_sizes[i] + MEMP_SANITY_REGION_AFTER_ALIGNED);
+ 222:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 223:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 224:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 225:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 226:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 227:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Initialize the restricted areas of all memp elements in every pool.
+ 228:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 229:rtos/common/ethernet/lwIP_132/src/core/memp.c **** static void
+ 230:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_overflow_init(void)
+ 231:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 232:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u16_t i, j;
+ 233:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *p;
+ 234:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u8_t *m;
+ 235:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 236:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   p = LWIP_MEM_ALIGN(memp_memory);
+ 237:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (i = 0; i < MEMP_MAX; ++i) {
+ 238:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     p = p;
+ 239:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     for (j = 0; j < memp_num[i]; ++j) {
+ 240:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_BEFORE_ALIGNED > 0
+ 241:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       m = (u8_t*)p + MEMP_SIZE - MEMP_SANITY_REGION_BEFORE_ALIGNED;
+ 242:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memset(m, 0xcd, MEMP_SANITY_REGION_BEFORE_ALIGNED);
+ 243:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 244:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_REGION_AFTER_ALIGNED > 0
+ 245:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       m = (u8_t*)p + MEMP_SIZE + memp_sizes[i];
+ 246:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memset(m, 0xcd, MEMP_SANITY_REGION_AFTER_ALIGNED);
+ 247:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 248:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       p = (struct memp*)((u8_t*)p + MEMP_SIZE + memp_sizes[i] + MEMP_SANITY_REGION_AFTER_ALIGNED);
+ 249:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 250:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 251:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 252:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+ 253:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 254:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 255:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Initialize this module.
+ 256:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * 
+ 257:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Carves out memp_memory into linked lists for each pool-type.
+ 258:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 259:rtos/common/ethernet/lwIP_132/src/core/memp.c **** void
+ 260:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_init(void)
+ 261:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+  19              		.loc 1 261 0
+  20 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  21              	.LCFI0:
+  22 0002 5746     		mov	r7, sl
+  23 0004 4E46     		mov	r6, r9
+  24 0006 4546     		mov	r5, r8
+  25 0008 E0B4     		push	{r5, r6, r7}
+  26              	.LCFI1:
+  27              		.loc 1 261 0
+  28 000a 2149     		ldr	r1, .L10
+  29 000c 2148     		ldr	r0, .L10+4
+ 262:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *memp;
+ 263:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   u16_t i, j;
+ 264:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 265:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (i = 0; i < MEMP_MAX; ++i) {
+ 266:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_AVAIL(used, i, 0);
+  30              		.loc 1 266 0
+  31 000e 0024     		mov	r4, #0
+  32              		.loc 1 265 0
+  33 0010 214D     		ldr	r5, .L10+8
+  34              	.L2:
+  35              		.loc 1 266 0
+  36 0012 0C80     		strh	r4, [r1]
+ 267:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_AVAIL(max, i, 0);
+  37              		.loc 1 267 0
+  38 0014 4C80     		strh	r4, [r1, #2]
+ 268:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_AVAIL(err, i, 0);
+  39              		.loc 1 268 0
+  40 0016 8C80     		strh	r4, [r1, #4]
+ 269:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_AVAIL(avail, i, memp_num[i]);
+  41              		.loc 1 269 0
+  42 0018 8A1E     		sub	r2, r1, #2
+  43 001a 0388     		ldrh	r3, [r0]
+  44 001c 1380     		strh	r3, [r2]
+  45 001e 0C31     		add	r1, r1, #12
+  46 0020 0230     		add	r0, r0, #2
+  47              		.loc 1 265 0
+  48 0022 A942     		cmp	r1, r5
+  49 0024 F5D1     		bne	.L2
+ 270:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 271:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 272:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp = LWIP_MEM_ALIGN(memp_memory);
+  50              		.loc 1 272 0
+  51 0026 1D4A     		ldr	r2, .L10+12
+  52 0028 0323     		mov	r3, #3
+  53 002a 171C     		mov	r7, r2
+  54              	.LVL0:
+  55 002c 9F43     		bic	r7, r7, r3
+  56 002e 1C4D     		ldr	r5, .L10+16
+  57 0030 0026     		mov	r6, #0
+ 273:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   /* for every pool: */
+ 274:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   for (i = 0; i < MEMP_MAX; ++i) {
+ 275:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp_tab[i] = NULL;
+  58              		.loc 1 275 0
+  59 0032 B146     		mov	r9, r6
+ 276:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     /* create a linked list of memp elements */
+ 277:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     for (j = 0; j < memp_num[i]; ++j) {
+  60              		.loc 1 277 0
+  61 0034 174B     		ldr	r3, .L10+4
+  62 0036 9846     		mov	r8, r3
+ 278:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memp->next = memp_tab[i];
+ 279:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memp_tab[i] = memp;
+ 280:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       memp = (struct memp *)((u8_t *)memp + MEMP_SIZE + memp_sizes[i]
+  63              		.loc 1 280 0
+  64 0038 1A4B     		ldr	r3, .L10+20
+  65 003a 9A46     		mov	sl, r3
+  66              		.loc 1 274 0
+  67 003c 1A4B     		ldr	r3, .L10+24
+  68 003e 9C46     		mov	ip, r3
+  69              	.L5:
+  70              		.loc 1 275 0
+  71 0040 4B46     		mov	r3, r9
+  72 0042 2B60     		str	r3, [r5]
+  73              		.loc 1 277 0
+  74 0044 4346     		mov	r3, r8
+  75 0046 985B     		ldrh	r0, [r3, r6]
+  76 0048 0028     		cmp	r0, #0
+  77 004a 16D0     		beq	.L3
+  78              		.loc 1 280 0
+  79 004c 5346     		mov	r3, sl
+  80 004e 9C5B     		ldrh	r4, [r3, r6]
+  81 0050 4946     		mov	r1, r9
+  82              	.LVL1:
+  83 0052 3A1C     		mov	r2, r7
+  84 0054 4B46     		mov	r3, r9
+  85              	.LVL2:
+  86              	.L4:
+  87              		.loc 1 278 0
+  88 0056 1160     		str	r1, [r2]
+  89              		.loc 1 277 0
+  90 0058 0133     		add	r3, r3, #1
+  91              	.LVL3:
+  92 005a 1B04     		lsl	r3, r3, #16
+  93 005c 1B0C     		lsr	r3, r3, #16
+  94              	.LVL4:
+  95 005e 111C     		mov	r1, r2
+  96 0060 1219     		add	r2, r2, r4
+  97 0062 9842     		cmp	r0, r3
+  98 0064 F7D8     		bhi	.L4
+  99              		.loc 1 261 0
+ 100 0066 431E     		sub	r3, r0, #1
+ 101              	.LVL5:
+ 102 0068 1B04     		lsl	r3, r3, #16
+ 103 006a 1B0C     		lsr	r3, r3, #16
+ 104 006c 221C     		mov	r2, r4
+ 105 006e 5A43     		mul	r2, r3
+ 106              	.LVL6:
+ 107 0070 BA18     		add	r2, r7, r2
+ 108              	.LVL7:
+ 109 0072 0133     		add	r3, r3, #1
+ 110 0074 6343     		mul	r3, r4
+ 111 0076 FF18     		add	r7, r7, r3
+ 112 0078 2A60     		str	r2, [r5]
+ 113              	.L3:
+ 114 007a 0435     		add	r5, r5, #4
+ 115 007c 0236     		add	r6, r6, #2
+ 116              		.loc 1 274 0
+ 117 007e 6545     		cmp	r5, ip
+ 118 0080 DED1     		bne	.L5
+ 281:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+ 282:rtos/common/ethernet/lwIP_132/src/core/memp.c ****         + MEMP_SANITY_REGION_AFTER_ALIGNED
+ 283:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 284:rtos/common/ethernet/lwIP_132/src/core/memp.c ****       );
+ 285:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     }
+ 286:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 287:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+ 288:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_overflow_init();
+ 289:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   /* check everything a first time to see if it worked */
+ 290:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_overflow_check_all();
+ 291:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+ 292:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 119              		.loc 1 292 0
+ 120              		@ sp needed for prologue
+ 121              	.LVL8:
+ 122 0082 1CBC     		pop	{r2, r3, r4}
+ 123 0084 9046     		mov	r8, r2
+ 124 0086 9946     		mov	r9, r3
+ 125 0088 A246     		mov	sl, r4
+ 126 008a F0BC     		pop	{r4, r5, r6, r7}
+ 127 008c 01BC     		pop	{r0}
+ 128 008e 0047     		bx	r0
+ 129              	.L11:
+ 130              		.align	2
+ 131              	.L10:
+ 132 0090 B6000000 		.word	lwip_stats+182
+ 133 0094 00000000 		.word	memp_num
+ 134 0098 5E010000 		.word	lwip_stats+350
+ 135 009c 3B000000 		.word	memp_memory+3
+ 136 00a0 00000000 		.word	memp_tab
+ 137 00a4 1C000000 		.word	memp_sizes
+ 138 00a8 38000000 		.word	memp_tab+56
+ 139              	.LFE290:
+ 141              		.align	2
+ 142              		.global	memp_free
+ 143              		.code	16
+ 144              		.thumb_func
+ 146              	memp_free:
+ 147              	.LFB292:
+ 293:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 294:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 295:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Get an element from a specific pool.
+ 296:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 297:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param type the pool to get an element from
+ 298:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 299:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * the debug version has two more parameters:
+ 300:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param file file name calling this function
+ 301:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param line number of line where this function is called
+ 302:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 303:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @return a pointer to the allocated memory or a NULL pointer on error
+ 304:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 305:rtos/common/ethernet/lwIP_132/src/core/memp.c **** void *
+ 306:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if !MEMP_OVERFLOW_CHECK
+ 307:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_malloc(memp_t type)
+ 308:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else
+ 309:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_malloc_fn(memp_t type, const char* file, const int line)
+ 310:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif
+ 311:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 312:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *memp;
+ 313:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_DECL_PROTECT(old_level);
+ 314:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  
+ 315:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   LWIP_ERROR("memp_malloc: type < MEMP_MAX", (type < MEMP_MAX), return NULL;);
+ 316:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 317:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_PROTECT(old_level);
+ 318:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK >= 2
+ 319:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_overflow_check_all();
+ 320:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK >= 2 */
+ 321:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 322:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp = memp_tab[type];
+ 323:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   
+ 324:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   if (memp != NULL) {
+ 325:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp_tab[type] = memp->next;
+ 326:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+ 327:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp->next = NULL;
+ 328:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp->file = file;
+ 329:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp->line = line;
+ 330:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+ 331:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_INC_USED(used, type);
+ 332:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     LWIP_ASSERT("memp_malloc: memp properly aligned",
+ 333:rtos/common/ethernet/lwIP_132/src/core/memp.c ****                 ((mem_ptr_t)memp % MEM_ALIGNMENT) == 0);
+ 334:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     memp = (struct memp*)((u8_t*)memp + MEMP_SIZE);
+ 335:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   } else {
+ 336:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     LWIP_DEBUGF(MEMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("memp_malloc: out of memory in pool %s\n", me
+ 337:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     MEMP_STATS_INC(err, type);
+ 338:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 339:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 340:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_UNPROTECT(old_level);
+ 341:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 342:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   return memp;
+ 343:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 344:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 345:rtos/common/ethernet/lwIP_132/src/core/memp.c **** /**
+ 346:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * Put an element back into its pool.
+ 347:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  *
+ 348:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param type the pool where to put mem
+ 349:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  * @param mem the memp element to free
+ 350:rtos/common/ethernet/lwIP_132/src/core/memp.c ****  */
+ 351:rtos/common/ethernet/lwIP_132/src/core/memp.c **** void
+ 352:rtos/common/ethernet/lwIP_132/src/core/memp.c **** memp_free(memp_t type, void *mem)
+ 353:rtos/common/ethernet/lwIP_132/src/core/memp.c **** {
+ 148              		.loc 1 353 0
+ 149 00ac 30B5     		push	{r4, r5, lr}
+ 150              	.LCFI2:
+ 151              	.LVL9:
+ 152 00ae 041C     		mov	r4, r0
+ 153 00b0 0D1C     		mov	r5, r1
+ 354:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   struct memp *memp;
+ 355:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_DECL_PROTECT(old_level);
+ 356:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 357:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   if (mem == NULL) {
+ 154              		.loc 1 357 0
+ 155 00b2 0029     		cmp	r1, #0
+ 156 00b4 11D0     		beq	.L14
+ 157              	.LVL10:
+ 358:rtos/common/ethernet/lwIP_132/src/core/memp.c ****     return;
+ 359:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   }
+ 360:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   LWIP_ASSERT("memp_free: mem properly aligned",
+ 361:rtos/common/ethernet/lwIP_132/src/core/memp.c ****                 ((mem_ptr_t)mem % MEM_ALIGNMENT) == 0);
+ 362:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 363:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp = (struct memp *)((u8_t*)mem - MEMP_SIZE);
+ 364:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 365:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_PROTECT(old_level);
+ 158              		.loc 1 365 0
+ 159 00b6 FFF7FEFF 		bl	sys_arch_protect
+ 160              	.LVL11:
+ 366:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK
+ 367:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_OVERFLOW_CHECK >= 2
+ 368:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_overflow_check_all();
+ 369:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #else
+ 370:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_overflow_check_element(memp, memp_sizes[type]);
+ 371:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK >= 2 */
+ 372:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_OVERFLOW_CHECK */
+ 373:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 374:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   MEMP_STATS_DEC(used, type); 
+ 161              		.loc 1 374 0
+ 162 00ba 094A     		ldr	r2, .L15
+ 163 00bc 6300     		lsl	r3, r4, #1
+ 164 00be 1B19     		add	r3, r3, r4
+ 165 00c0 9B00     		lsl	r3, r3, #2
+ 166 00c2 D218     		add	r2, r2, r3
+ 167 00c4 B432     		add	r2, r2, #180
+ 168 00c6 5388     		ldrh	r3, [r2, #2]
+ 169 00c8 013B     		sub	r3, r3, #1
+ 170 00ca 5380     		strh	r3, [r2, #2]
+ 375:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   
+ 376:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp->next = memp_tab[type]; 
+ 171              		.loc 1 376 0
+ 172 00cc 0549     		ldr	r1, .L15+4
+ 173 00ce A200     		lsl	r2, r4, #2
+ 174 00d0 5358     		ldr	r3, [r2, r1]
+ 175 00d2 2B60     		str	r3, [r5]
+ 377:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   memp_tab[type] = memp;
+ 176              		.loc 1 377 0
+ 177 00d4 5550     		str	r5, [r2, r1]
+ 378:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 379:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #if MEMP_SANITY_CHECK
+ 380:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   LWIP_ASSERT("memp sanity", memp_sanity());
+ 381:rtos/common/ethernet/lwIP_132/src/core/memp.c **** #endif /* MEMP_SANITY_CHECK */
+ 382:rtos/common/ethernet/lwIP_132/src/core/memp.c **** 
+ 383:rtos/common/ethernet/lwIP_132/src/core/memp.c ****   SYS_ARCH_UNPROTECT(old_level);
+ 178              		.loc 1 383 0
+ 179 00d6 FFF7FEFF 		bl	sys_arch_unprotect
+ 180              	.LVL12:
+ 181              	.L14:
+ 384:rtos/common/ethernet/lwIP_132/src/core/memp.c **** }
+ 182              		.loc 1 384 0
+ 183              		@ sp needed for prologue
+ 184              	.LVL13:
+ 185              	.LVL14:
+ 186 00da 30BC     		pop	{r4, r5}
+ 187 00dc 01BC     		pop	{r0}
+ 188 00de 0047     		bx	r0
+ 189              	.L16:
+ 190              		.align	2
+ 191              	.L15:
+ 192 00e0 00000000 		.word	lwip_stats
+ 193 00e4 00000000 		.word	memp_tab
+ 194              	.LFE292:
+ 196              		.align	2
+ 197              		.global	memp_malloc
+ 198              		.code	16
+ 199              		.thumb_func
+ 201              	memp_malloc:
+ 202              	.LFB291:
+ 203              		.loc 1 311 0
+ 204 00e8 70B5     		push	{r4, r5, r6, lr}
+ 205              	.LCFI3:
+ 206              	.LVL15:
+ 207 00ea 041C     		mov	r4, r0
+ 208              		.loc 1 315 0
+ 209 00ec 0D28     		cmp	r0, #13
+ 210 00ee 01D9     		bls	.L18
+ 211 00f0 0020     		mov	r0, #0
+ 212              	.LVL16:
+ 213 00f2 30E0     		b	.L19
+ 214              	.LVL17:
+ 215              	.L18:
+ 216              		.loc 1 317 0
+ 217 00f4 FFF7FEFF 		bl	sys_arch_protect
+ 218              	.LVL18:
+ 219 00f8 061C     		mov	r6, r0
+ 220              	.LVL19:
+ 221              		.loc 1 322 0
+ 222 00fa 184A     		ldr	r2, .L23
+ 223 00fc A300     		lsl	r3, r4, #2
+ 224 00fe 9D58     		ldr	r5, [r3, r2]
+ 225              	.LVL20:
+ 226              		.loc 1 324 0
+ 227 0100 002D     		cmp	r5, #0
+ 228 0102 1BD0     		beq	.L20
+ 229              		.loc 1 325 0
+ 230 0104 111C     		mov	r1, r2
+ 231 0106 1A1C     		mov	r2, r3
+ 232 0108 2B68     		ldr	r3, [r5]
+ 233 010a 5350     		str	r3, [r2, r1]
+ 234              		.loc 1 331 0
+ 235 010c 144A     		ldr	r2, .L23+4
+ 236 010e 6300     		lsl	r3, r4, #1
+ 237 0110 1B19     		add	r3, r3, r4
+ 238 0112 9B00     		lsl	r3, r3, #2
+ 239 0114 D218     		add	r2, r2, r3
+ 240 0116 111C     		mov	r1, r2
+ 241 0118 B431     		add	r1, r1, #180
+ 242 011a 4B88     		ldrh	r3, [r1, #2]
+ 243 011c 0133     		add	r3, r3, #1
+ 244 011e 1B04     		lsl	r3, r3, #16
+ 245 0120 180C     		lsr	r0, r3, #16
+ 246 0122 4880     		strh	r0, [r1, #2]
+ 247 0124 B832     		add	r2, r2, #184
+ 248 0126 1388     		ldrh	r3, [r2]
+ 249 0128 8342     		cmp	r3, r0
+ 250 012a 10D2     		bcs	.L21
+ 251 012c 0C4A     		ldr	r2, .L23+4
+ 252 012e 6300     		lsl	r3, r4, #1
+ 253 0130 1B19     		add	r3, r3, r4
+ 254 0132 9B00     		lsl	r3, r3, #2
+ 255 0134 D218     		add	r2, r2, r3
+ 256 0136 B832     		add	r2, r2, #184
+ 257 0138 1080     		strh	r0, [r2]
+ 258 013a 08E0     		b	.L21
+ 259              	.L20:
+ 260              		.loc 1 337 0
+ 261 013c 084B     		ldr	r3, .L23+4
+ 262 013e 6200     		lsl	r2, r4, #1
+ 263 0140 1219     		add	r2, r2, r4
+ 264 0142 9200     		lsl	r2, r2, #2
+ 265 0144 9B18     		add	r3, r3, r2
+ 266 0146 B833     		add	r3, r3, #184
+ 267 0148 5A88     		ldrh	r2, [r3, #2]
+ 268 014a 0132     		add	r2, r2, #1
+ 269 014c 5A80     		strh	r2, [r3, #2]
+ 270              	.L21:
+ 271              		.loc 1 340 0
+ 272 014e 301C     		mov	r0, r6
+ 273 0150 FFF7FEFF 		bl	sys_arch_unprotect
+ 274 0154 281C     		mov	r0, r5
+ 275              	.L19:
+ 276              		.loc 1 343 0
+ 277              		@ sp needed for prologue
+ 278              	.LVL21:
+ 279              	.LVL22:
+ 280              	.LVL23:
+ 281 0156 70BC     		pop	{r4, r5, r6}
+ 282 0158 02BC     		pop	{r1}
+ 283 015a 0847     		bx	r1
+ 284              	.L24:
+ 285              		.align	2
+ 286              	.L23:
+ 287 015c 00000000 		.word	memp_tab
+ 288 0160 00000000 		.word	lwip_stats
+ 289              	.LFE291:
+ 291              		.section	.rodata
+ 292              		.align	1
+ 295              	memp_num:
+ 296 0000 0400     		.short	4
+ 297 0002 0100     		.short	1
+ 298 0004 0500     		.short	5
+ 299 0006 0500     		.short	5
+ 300 0008 1000     		.short	16
+ 301 000a 0500     		.short	5
+ 302 000c 0400     		.short	4
+ 303 000e 0400     		.short	4
+ 304 0010 0800     		.short	8
+ 305 0012 0800     		.short	8
+ 306 0014 1E00     		.short	30
+ 307 0016 0600     		.short	6
+ 308 0018 0800     		.short	8
+ 309 001a 0800     		.short	8
+ 310              		.align	1
+ 313              	memp_sizes:
+ 314 001c 1C00     		.short	28
+ 315 001e 2000     		.short	32
+ 316 0020 A800     		.short	168
+ 317 0022 2400     		.short	36
+ 318 0024 1400     		.short	20
+ 319 0026 2000     		.short	32
+ 320 0028 1000     		.short	16
+ 321 002a 3400     		.short	52
+ 322 002c 1400     		.short	20
+ 323 002e 1400     		.short	20
+ 324 0030 0800     		.short	8
+ 325 0032 1000     		.short	16
+ 326 0034 1000     		.short	16
+ 327 0036 D800     		.short	216
+ 328              		.bss
+ 329              		.align	2
+ 330              	memp_tab:
+ 331 0000 00000000 		.space	56
+ 331      00000000 
+ 331      00000000 
+ 331      00000000 
+ 331      00000000 
+ 332              	memp_memory:
+ 333 0038 00000000 		.space	4431
+ 333      00000000 
+ 333      00000000 
+ 333      00000000 
+ 333      00000000 
+ 420              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 memp.c
+     /tmp/ccIODrsV.s:1      .text:00000000 $t
+     /tmp/ccIODrsV.s:16     .text:00000000 memp_init
+     /tmp/ccIODrsV.s:132    .text:00000090 $d
+     /tmp/ccIODrsV.s:295    .rodata:00000000 memp_num
+     /tmp/ccIODrsV.s:332    .bss:00000038 memp_memory
+     /tmp/ccIODrsV.s:330    .bss:00000000 memp_tab
+     /tmp/ccIODrsV.s:313    .rodata:0000001c memp_sizes
+     /tmp/ccIODrsV.s:146    .text:000000ac memp_free
+     /tmp/ccIODrsV.s:143    .text:000000ac $t
+     /tmp/ccIODrsV.s:192    .text:000000e0 $d
+     /tmp/ccIODrsV.s:201    .text:000000e8 memp_malloc
+     /tmp/ccIODrsV.s:198    .text:000000e8 $t
+     /tmp/ccIODrsV.s:287    .text:0000015c $d
+     /tmp/ccIODrsV.s:296    .rodata:00000000 $d
+
+UNDEFINED SYMBOLS
+lwip_stats
+sys_arch_protect
+sys_arch_unprotect

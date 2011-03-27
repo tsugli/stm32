@@ -1,0 +1,122 @@
+   1              		.code	16
+   2              		.file	"magic.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	magicInit
+  13              		.code	16
+  14              		.thumb_func
+  16              	magicInit:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /*****************************************************************************
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * magic.c - Network Random Number Generator program file.
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * Copyright (c) 2003 by Marc Boucher, Services Informatiques (MBSI) inc.
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * portions Copyright (c) 1997 by Global Election Systems Inc.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * The authors hereby grant permission to use, copy, modify, distribute,
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * and license this software and its documentation for any purpose, provided
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * that existing copyright notices are retained in all copies and that this
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * notice and the following disclaimer are included verbatim in any 
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * distributions. No written agreement, license, or royalty fee is required
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * for any of the authorized uses.
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * THIS SOFTWARE IS PROVIDED BY THE CONTRIBUTORS *AS IS* AND ANY EXPRESS OR
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** ******************************************************************************
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * REVISION HISTORY
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * 03-01-01 Marc Boucher <marc@mbsi.ca>
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *   Ported to lwIP.
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** * 97-12-04 Guy Lancaster <lancasterg@acm.org>, Global Election Systems Inc.
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *   Original based on BSD magic.c.
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** *****************************************************************************/
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /*
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * magic.c - PPP Magic Number routines.
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  *
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * Copyright (c) 1989 Carnegie Mellon University.
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * All rights reserved.
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * Redistribution and use in source and binary forms are permitted
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * provided that the above copyright notice and this paragraph are
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * duplicated in all such forms and that any documentation,
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * advertising materials, and other materials related to such
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * distribution and use acknowledge that the software was developed
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * by Carnegie Mellon University.  The name of the
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * University may not be used to endorse or promote products derived
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * from this software without specific prior written permission.
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  */
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** 
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** #include "lwip/opt.h"
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** 
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** #if PPP_SUPPORT
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** 
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** #include "ppp.h"
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** #include "randm.h"
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** #include "magic.h"
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** 
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /***********************************/
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /*** PUBLIC FUNCTION DEFINITIONS ***/
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /***********************************/
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /*
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * magicInit - Initialize the magic number generator.
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  *
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * Since we use another random number generator that has its own
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * initialization, we do nothing here.
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  */
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** void magicInit()
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** {
+  19              		.loc 1 70 0
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****   return;
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** }
+  20              		.loc 1 72 0
+  21              		@ sp needed for prologue
+  22 0000 7047     		bx	lr
+  23              	.LFE290:
+  25 0002 C046     		.align	2
+  26              		.global	magic
+  27              		.code	16
+  28              		.thumb_func
+  30              	magic:
+  31              	.LFB291:
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** 
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** /*
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  * magic - Returns the next magic number.
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****  */
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** u32_t magic()
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** {
+  32              		.loc 1 78 0
+  33 0004 00B5     		push	{lr}
+  34              	.LCFI0:
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c ****   return avRandom();
+  35              		.loc 1 79 0
+  36 0006 FFF7FEFF 		bl	avRandom
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/magic.c **** }
+  37              		.loc 1 80 0
+  38              		@ sp needed for prologue
+  39 000a 02BC     		pop	{r1}
+  40 000c 0847     		bx	r1
+  41              	.LFE291:
+  81              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 magic.c
+     /tmp/ccK3nft9.s:1      .text:00000000 $t
+     /tmp/ccK3nft9.s:16     .text:00000000 magicInit
+     /tmp/ccK3nft9.s:30     .text:00000004 magic
+     /tmp/ccK3nft9.s:45     .debug_frame:00000000 $d
+     /tmp/ccK3nft9.s:85     .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+avRandom

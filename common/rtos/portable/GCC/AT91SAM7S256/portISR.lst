@@ -1,0 +1,557 @@
+   1              		.file	"portISR.c"
+   9              	.Ltext0:
+  10              		.align	2
+  11              		.global	vPortISRStartFirstTask
+  13              	vPortISRStartFirstTask:
+  14              	.LFB290:
+  15              		.file 1 "rtos/portable/GCC/AT91SAM7S256/portISR.c"
+   1:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+   2:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	FreeRTOS.org V5.2.0 - Copyright (C) 2003-2009 Richard Barry.
+   3:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+   4:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	This file is part of the FreeRTOS.org distribution.
+   5:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+   6:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	FreeRTOS.org is free software; you can redistribute it and/or modify it
+   7:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	under the terms of the GNU General Public License (version 2) as published
+   8:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	by the Free Software Foundation and modified by the FreeRTOS exception.
+   9:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  10:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	FreeRTOS.org is distributed in the hope that it will be useful,	but WITHOUT
+  11:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  12:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  13:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	more details.
+  14:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  15:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	You should have received a copy of the GNU General Public License along
+  16:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	with FreeRTOS.org; if not, write to the Free Software Foundation, Inc., 59
+  17:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	Temple Place, Suite 330, Boston, MA  02111-1307  USA.
+  18:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  19:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	A special exception to the GPL is included to allow you to distribute a
+  20:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	combined work that includes FreeRTOS.org without being obliged to provide
+  21:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	the source code for any proprietary components.  See the licensing section
+  22:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	of http://www.FreeRTOS.org for full details.
+  23:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  24:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  25:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	***************************************************************************
+  26:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	*                                                                         *
+  27:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* Get the FreeRTOS eBook!  See http://www.FreeRTOS.org/Documentation      *
+  28:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	*                                                                         *
+  29:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* This is a concise, step by step, 'hands on' guide that describes both   *
+  30:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* general multitasking concepts and FreeRTOS specifics. It presents and   *
+  31:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* explains numerous examples that are written using the FreeRTOS API.     *
+  32:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* Full source code for all the examples is provided in an accompanying    *
+  33:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	* .zip file.                                                              *
+  34:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	*                                                                         *
+  35:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	***************************************************************************
+  36:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  37:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	1 tab == 4 spaces!
+  38:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  39:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	Please ensure to read the configuration and relevant port sections of the
+  40:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	online documentation.
+  41:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  42:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	http://www.FreeRTOS.org - Documentation, latest information, license and
+  43:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	contact details.
+  44:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  45:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	http://www.SafeRTOS.com - A version that is certified for use in safety
+  46:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	critical systems.
+  47:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  48:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	http://www.OpenRTOS.com - Commercial support, development, porting,
+  49:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	licensing and training services.
+  50:rtos/portable/GCC/AT91SAM7S256/portISR.c **** */
+  51:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  52:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  53:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------
+  54:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * Components that can be compiled to either ARM or THUMB mode are
+  55:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * contained in port.c  The ISR routines, which can only be compiled
+  56:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * to ARM mode, are contained in this file.
+  57:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  *----------------------------------------------------------*/
+  58:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  59:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+  60:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	Changes from V3.2.4
+  61:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  62:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	+ The assembler statements are now included in a single asm block rather
+  63:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	  than each line having its own asm block.
+  64:rtos/portable/GCC/AT91SAM7S256/portISR.c **** */
+  65:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  66:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /* Scheduler includes. */
+  67:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #include "FreeRTOS.h"
+  68:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #include "task.h"
+  69:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  70:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #include "AT91SAM7S256.h"
+  71:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  72:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /* Constants required to handle interrupts. */
+  73:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #define portTIMER_MATCH_ISR_BIT		( ( unsigned portCHAR ) 0x01 )
+  74:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #define portCLEAR_VIC_INTERRUPT		( ( unsigned portLONG ) 0 )
+  75:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  76:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /* Constants required to handle critical sections. */
+  77:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #define portNO_CRITICAL_NESTING		( ( unsigned portLONG ) 0 )
+  78:rtos/portable/GCC/AT91SAM7S256/portISR.c **** volatile unsigned portLONG ulCriticalNesting = 9999UL;
+  79:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  80:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------*/
+  81:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  82:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /* ISR to handle manual context switches (from a call to taskYIELD()). */
+  83:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortYieldProcessor( void ) __attribute__((interrupt("SWI"), naked));
+  84:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  85:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+  86:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * The scheduler can only be started from ARM mode, hence the inclusion of this
+  87:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * function here.
+  88:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  */
+  89:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortISRStartFirstTask( void );
+  90:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------*/
+  91:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+  92:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortISRStartFirstTask( void )
+  93:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+  16              		.loc 1 93 0
+  17              		@ Function supports interworking.
+  18              		@ args = 0, pretend = 0, frame = 0
+  19              		@ frame_needed = 0, uses_anonymous_args = 0
+  20              		@ link register save eliminated.
+  94:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Simply start the scheduler.  This is included here as it can only be
+  95:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	called from ARM mode. */
+  96:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	portRESTORE_CONTEXT();
+  21              		.loc 1 96 0
+  22              	@ 96 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+  23 0000 40029FE5 		LDR		R0, =pxCurrentTCB								
+  24 0004 000090E5 		LDR		R0, [R0]										
+  25 0008 00E090E5 		LDR		LR, [R0]										
+  26 000c 38029FE5 		LDR		R0, =ulCriticalNesting							
+  27 0010 0200BEE8 		LDMFD	LR!, {R1}											
+  28 0014 001080E5 		STR		R1, [R0]										
+  29 0018 0100BEE8 		LDMFD	LR!, {R0}											
+  30 001c 00F069E1 		MSR		SPSR, R0										
+  31 0020 FF7FDEE8 		LDMFD	LR, {R0-R14}^										
+  32 0024 0000A0E1 		NOP														
+  33 0028 3CE09EE5 		LDR		LR, [LR, #+60]									
+  34 002c 04F05EE2 		SUBS	PC, LR, #4											
+  35              		
+  36              	@ 0 "" 2
+  37 0030 0C309FE5 		ldr	r3, .L3
+  38 0034 003093E5 		ldr	r3, [r3, #0]
+  39 0038 08309FE5 		ldr	r3, .L3+4
+  40 003c 003093E5 		ldr	r3, [r3, #0]
+  97:rtos/portable/GCC/AT91SAM7S256/portISR.c **** }
+  41              		.loc 1 97 0
+  42 0040 1EFF2FE1 		bx	lr
+  43              	.L4:
+  44              		.align	2
+  45              	.L3:
+  46 0044 00000000 		.word	ulCriticalNesting
+  47 0048 00000000 		.word	pxCurrentTCB
+  48              	.LFE290:
+  50              		.align	2
+  51              		.global	vPortDisableInterruptsFromThumb
+  53              	vPortDisableInterruptsFromThumb:
+  54              	.LFB293:
+  98:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------*/
+  99:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 100:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+ 101:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * Called by portYIELD() or taskYIELD() to manually force a context switch.
+ 102:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  *
+ 103:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * When a context switch is performed from the task level the saved task
+ 104:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * context is made to look as if it occurred from within the tick ISR.  This
+ 105:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * way the same restore context function can be used when restoring the context
+ 106:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * saved from the ISR or that saved from a call to vPortYieldProcessor.
+ 107:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  */
+ 108:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortYieldProcessor( void )
+ 109:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+ 110:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Within an IRQ ISR the link register has an offset from the true return
+ 111:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	address, but an SWI ISR does not.  Add the offset manually so the same
+ 112:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	ISR return code can be used in both cases. */
+ 113:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	asm volatile ( "ADD		LR, LR, #4" );
+ 114:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 115:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Perform the context switch.  First save the context of the current task. */
+ 116:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	portSAVE_CONTEXT();
+ 117:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 118:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Find the highest priority task that is ready to run. */
+ 119:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	vTaskSwitchContext();
+ 120:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 121:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Restore the context of the new task. */
+ 122:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	portRESTORE_CONTEXT();
+ 123:rtos/portable/GCC/AT91SAM7S256/portISR.c **** }
+ 124:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------*/
+ 125:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 126:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+ 127:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * The ISR used for the scheduler tick depends on whether the cooperative or
+ 128:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * the preemptive scheduler is being used.
+ 129:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  */
+ 130:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 131:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #if configUSE_PREEMPTION == 0
+ 132:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 133:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* The cooperative scheduler requires a normal IRQ service routine to
+ 134:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	simply increment the system tick. */
+ 135:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	void vNonPreemptiveTick( void ) __attribute__ ((interrupt ("IRQ")));
+ 136:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	void vNonPreemptiveTick( void )
+ 137:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	{
+ 138:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		unsigned portLONG ulDummy;
+ 139:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 140:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Increment the tick count - which may wake some tasks but as the
+ 141:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		preemptive scheduler is not being used any woken task is not given
+ 142:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		processor time no matter what its priority. */
+ 143:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		vTaskIncrementTick();
+ 144:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 145:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Clear the PIT interrupt. */
+ 146:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		ulDummy = AT91C_BASE_PITC->PITC_PIVR;
+ 147:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 148:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* End the interrupt in the AIC. */
+ 149:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		AT91C_BASE_AIC->AIC_EOICR = ulDummy;
+ 150:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	}
+ 151:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 152:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #else
+ 153:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 154:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* The preemptive scheduler is defined as "naked" as the full context is
+ 155:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	saved on entry as part of the context switch. */
+ 156:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	void volatile vPreemptiveTick( void ) __attribute__((naked));
+ 157:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	void volatile vPreemptiveTick( void )
+ 158:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	{
+ 159:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Save the context of the current task. */
+ 160:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		portSAVE_CONTEXT();
+ 161:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 162:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Increment the tick count - this may wake a task. */
+ 163:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		vTaskIncrementTick();
+ 164:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 165:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Find the highest priority task that is ready to run. */
+ 166:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		vTaskSwitchContext();
+ 167:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 168:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* End the interrupt in the AIC. */
+ 169:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		AT91C_BASE_AIC->AIC_EOICR = AT91C_BASE_PITC->PITC_PIVR;;
+ 170:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 171:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		portRESTORE_CONTEXT();
+ 172:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	}
+ 173:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 174:rtos/portable/GCC/AT91SAM7S256/portISR.c **** #endif
+ 175:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*-----------------------------------------------------------*/
+ 176:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 177:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /*
+ 178:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * The interrupt management utilities can only be called from ARM mode.  When
+ 179:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * THUMB_INTERWORK is defined the utilities are defined as functions here to
+ 180:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * ensure a switch to ARM mode.  When THUMB_INTERWORK is not defined then
+ 181:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  * the utilities are defined as macros in portmacro.h - as per other ports.
+ 182:rtos/portable/GCC/AT91SAM7S256/portISR.c ****  */
+ 183:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortDisableInterruptsFromThumb( void ) __attribute__ ((naked));
+ 184:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortEnableInterruptsFromThumb( void ) __attribute__ ((naked));
+ 185:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 186:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortDisableInterruptsFromThumb( void )
+ 187:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+  55              		.loc 1 187 0
+  56              		@ Function supports interworking.
+  57              		@ Naked Function: prologue and epilogue provided by programmer.
+  58              		@ args = 0, pretend = 0, frame = 0
+  59              		@ frame_needed = 0, uses_anonymous_args = 0
+ 188:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	asm volatile (
+  60              		.loc 1 188 0
+  61              	@ 188 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+  62 004c 01002DE9 		STMDB	SP!, {R0}		
+  63 0050 00000FE1 		MRS	R0, CPSR		
+  64 0054 C00080E3 		ORR	R0, R0, #0xC0	
+  65 0058 00F029E1 		MSR	CPSR, R0		
+  66 005c 0100BDE8 		LDMIA	SP!, {R0}		
+  67 0060 1EFF2FE1 		BX		R14
+  68              	@ 0 "" 2
+ 189:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"STMDB	SP!, {R0}		\n\t"	/* Push R0.									*/
+ 190:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MRS	R0, CPSR		\n\t"	/* Get CPSR.								*/
+ 191:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"ORR	R0, R0, #0xC0	\n\t"	/* Disable IRQ, FIQ.						*/
+ 192:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MSR	CPSR, R0		\n\t"	/* Write back modified value.				*/
+ 193:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"LDMIA	SP!, {R0}		\n\t"	/* Pop R0.									*/
+ 194:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"BX		R14" );					/* Return back to thumb.					*/
+ 195:rtos/portable/GCC/AT91SAM7S256/portISR.c **** }
+  69              		.loc 1 195 0
+  70              	.LFE293:
+  72              		.align	2
+  73              		.global	vPortEnableInterruptsFromThumb
+  75              	vPortEnableInterruptsFromThumb:
+  76              	.LFB294:
+ 196:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 197:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortEnableInterruptsFromThumb( void )
+ 198:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+  77              		.loc 1 198 0
+  78              		@ Function supports interworking.
+  79              		@ Naked Function: prologue and epilogue provided by programmer.
+  80              		@ args = 0, pretend = 0, frame = 0
+  81              		@ frame_needed = 0, uses_anonymous_args = 0
+ 199:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	asm volatile (
+  82              		.loc 1 199 0
+  83              	@ 199 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+  84 0064 01002DE9 		STMDB	SP!, {R0}		
+  85 0068 00000FE1 		MRS	R0, CPSR		
+  86 006c C000C0E3 		BIC	R0, R0, #0xC0	
+  87 0070 00F029E1 		MSR	CPSR, R0		
+  88 0074 0100BDE8 		LDMIA	SP!, {R0}		
+  89 0078 1EFF2FE1 		BX		R14
+  90              	@ 0 "" 2
+ 200:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"STMDB	SP!, {R0}		\n\t"	/* Push R0.									*/
+ 201:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MRS	R0, CPSR		\n\t"	/* Get CPSR.								*/
+ 202:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"BIC	R0, R0, #0xC0	\n\t"	/* Enable IRQ, FIQ.							*/
+ 203:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MSR	CPSR, R0		\n\t"	/* Write back modified value.				*/
+ 204:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"LDMIA	SP!, {R0}		\n\t"	/* Pop R0.									*/
+ 205:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"BX		R14" );					/* Return back to thumb.					*/
+ 206:rtos/portable/GCC/AT91SAM7S256/portISR.c **** }
+  91              		.loc 1 206 0
+  92              	.LFE294:
+  94              		.align	2
+  95              		.global	vPortEnterCritical
+  97              	vPortEnterCritical:
+  98              	.LFB295:
+ 207:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 208:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 209:rtos/portable/GCC/AT91SAM7S256/portISR.c **** /* The code generated by the GCC compiler uses the stack in different ways at
+ 210:rtos/portable/GCC/AT91SAM7S256/portISR.c **** different optimisation levels.  The interrupt flags can therefore not always
+ 211:rtos/portable/GCC/AT91SAM7S256/portISR.c **** be saved to the stack.  Instead the critical section nesting level is stored
+ 212:rtos/portable/GCC/AT91SAM7S256/portISR.c **** in a variable, which is then saved as part of the stack context. */
+ 213:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortEnterCritical( void )
+ 214:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+  99              		.loc 1 214 0
+ 100              		@ Function supports interworking.
+ 101              		@ args = 0, pretend = 0, frame = 0
+ 102              		@ frame_needed = 0, uses_anonymous_args = 0
+ 103              		@ link register save eliminated.
+ 215:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Disable interrupts as per portDISABLE_INTERRUPTS(); 							*/
+ 216:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	asm volatile (
+ 104              		.loc 1 216 0
+ 105              	@ 216 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 106 007c 01002DE9 		STMDB	SP!, {R0}			
+ 107 0080 00000FE1 		MRS	R0, CPSR			
+ 108 0084 C00080E3 		ORR	R0, R0, #0xC0		
+ 109 0088 00F029E1 		MSR	CPSR, R0			
+ 110 008c 0100BDE8 		LDMIA	SP!, {R0}
+ 111              	@ 0 "" 2
+ 217:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"STMDB	SP!, {R0}			\n\t"	/* Push R0.								*/
+ 218:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MRS	R0, CPSR			\n\t"	/* Get CPSR.							*/
+ 219:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"ORR	R0, R0, #0xC0		\n\t"	/* Disable IRQ, FIQ.					*/
+ 220:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"MSR	CPSR, R0			\n\t"	/* Write back modified value.			*/
+ 221:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		"LDMIA	SP!, {R0}" );				/* Pop R0.								*/
+ 222:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 223:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	/* Now interrupts are disabled ulCriticalNesting can be accessed
+ 224:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	directly.  Increment ulCriticalNesting to keep a count of how many times
+ 225:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	portENTER_CRITICAL() has been called. */
+ 226:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	ulCriticalNesting++;
+ 112              		.loc 1 226 0
+ 113 0090 0C209FE5 		ldr	r2, .L11
+ 114 0094 003092E5 		ldr	r3, [r2, #0]
+ 115 0098 013083E2 		add	r3, r3, #1
+ 116 009c 003082E5 		str	r3, [r2, #0]
+ 227:rtos/portable/GCC/AT91SAM7S256/portISR.c **** }
+ 117              		.loc 1 227 0
+ 118 00a0 1EFF2FE1 		bx	lr
+ 119              	.L12:
+ 120              		.align	2
+ 121              	.L11:
+ 122 00a4 00000000 		.word	ulCriticalNesting
+ 123              	.LFE295:
+ 125              		.align	2
+ 126              		.global	vPortExitCritical
+ 128              	vPortExitCritical:
+ 129              	.LFB296:
+ 228:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 229:rtos/portable/GCC/AT91SAM7S256/portISR.c **** void vPortExitCritical( void )
+ 230:rtos/portable/GCC/AT91SAM7S256/portISR.c **** {
+ 130              		.loc 1 230 0
+ 131              		@ Function supports interworking.
+ 132              		@ args = 0, pretend = 0, frame = 0
+ 133              		@ frame_needed = 0, uses_anonymous_args = 0
+ 134              		@ link register save eliminated.
+ 231:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	if( ulCriticalNesting > portNO_CRITICAL_NESTING )
+ 135              		.loc 1 231 0
+ 136 00a8 3C309FE5 		ldr	r3, .L16
+ 137 00ac 003093E5 		ldr	r3, [r3, #0]
+ 138 00b0 000053E3 		cmp	r3, #0
+ 139 00b4 1EFF2F01 		bxeq	lr
+ 232:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 	{
+ 233:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* Decrement the nesting count as we are leaving a critical section. */
+ 234:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		ulCriticalNesting--;
+ 140              		.loc 1 234 0
+ 141 00b8 2C309FE5 		ldr	r3, .L16
+ 142 00bc 002093E5 		ldr	r2, [r3, #0]
+ 143 00c0 012042E2 		sub	r2, r2, #1
+ 144 00c4 002083E5 		str	r2, [r3, #0]
+ 235:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 
+ 236:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		/* If the nesting level has reached zero then interrupts should be
+ 237:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		re-enabled. */
+ 238:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		if( ulCriticalNesting == portNO_CRITICAL_NESTING )
+ 145              		.loc 1 238 0
+ 146 00c8 003093E5 		ldr	r3, [r3, #0]
+ 147 00cc 000053E3 		cmp	r3, #0
+ 148 00d0 1EFF2F11 		bxne	lr
+ 239:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 		{
+ 240:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 			/* Enable interrupts as per portEXIT_CRITICAL().					*/
+ 241:rtos/portable/GCC/AT91SAM7S256/portISR.c **** 			asm volatile (
+ 149              		.loc 1 241 0
+ 150              	@ 241 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 151 00d4 01002DE9 		STMDB	SP!, {R0}		
+ 152 00d8 00000FE1 		MRS	R0, CPSR		
+ 153 00dc C000C0E3 		BIC	R0, R0, #0xC0	
+ 154 00e0 00F029E1 		MSR	CPSR, R0		
+ 155 00e4 0100BDE8 		LDMIA	SP!, {R0}
+ 156              	@ 0 "" 2
+ 157 00e8 1EFF2FE1 		bx	lr
+ 158              	.L17:
+ 159              		.align	2
+ 160              	.L16:
+ 161 00ec 00000000 		.word	ulCriticalNesting
+ 162              	.LFE296:
+ 164              		.align	2
+ 165              		.global	vPreemptiveTick
+ 167              	vPreemptiveTick:
+ 168              	.LFB292:
+ 169              		.loc 1 158 0
+ 170              		@ Function supports interworking.
+ 171              		@ Naked Function: prologue and epilogue provided by programmer.
+ 172              		@ args = 0, pretend = 0, frame = 0
+ 173              		@ frame_needed = 0, uses_anonymous_args = 0
+ 174              		.loc 1 160 0
+ 175              	@ 160 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 176 00f0 01002DE9 		STMDB	SP!, {R0}											
+ 177 00f4 00204DE9 		STMDB	SP,{SP}^											
+ 178 00f8 0000A0E1 		NOP														
+ 179 00fc 04D04DE2 		SUB	SP, SP, #4											
+ 180 0100 0100BDE8 		LDMIA	SP!,{R0}											
+ 181 0104 004020E9 		STMDB	R0!, {LR}											
+ 182 0108 00E0A0E1 		MOV	LR, R0												
+ 183 010c 0100BDE8 		LDMIA	SP!, {R0}											
+ 184 0110 FF7F4EE9 		STMDB	LR,{R0-LR}^											
+ 185 0114 0000A0E1 		NOP														
+ 186 0118 3CE04EE2 		SUB	LR, LR, #60											
+ 187 011c 00004FE1 		MRS	R0, SPSR											
+ 188 0120 01002EE9 		STMDB	LR!, {R0}											
+ 189 0124 20019FE5 		LDR	R0, =ulCriticalNesting								
+ 190 0128 000090E5 		LDR	R0, [R0]											
+ 191 012c 01002EE9 		STMDB	LR!, {R0}											
+ 192 0130 10019FE5 		LDR	R0, =pxCurrentTCB									
+ 193 0134 000090E5 		LDR	R0, [R0]											
+ 194 0138 00E080E5 		STR	LR, [R0]											
+ 195              		
+ 196              	@ 0 "" 2
+ 197 013c 58509FE5 		ldr	r5, .L20
+ 198 0140 003095E5 		ldr	r3, [r5, #0]
+ 199 0144 54409FE5 		ldr	r4, .L20+4
+ 200 0148 003094E5 		ldr	r3, [r4, #0]
+ 201              		.loc 1 163 0
+ 202 014c FEFFFFEB 		bl	vTaskIncrementTick
+ 203              		.loc 1 166 0
+ 204 0150 FEFFFFEB 		bl	vTaskSwitchContext
+ 205              		.loc 1 169 0
+ 206 0154 023CE0E3 		mvn	r3, #512
+ 207 0158 C72013E5 		ldr	r2, [r3, #-199]
+ 208 015c 0D3C43E2 		sub	r3, r3, #3328
+ 209 0160 312083E5 		str	r2, [r3, #49]
+ 210              		.loc 1 171 0
+ 211              	@ 171 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 212 0164 DC009FE5 		LDR		R0, =pxCurrentTCB								
+ 213 0168 000090E5 		LDR		R0, [R0]										
+ 214 016c 00E090E5 		LDR		LR, [R0]										
+ 215 0170 D4009FE5 		LDR		R0, =ulCriticalNesting							
+ 216 0174 0200BEE8 		LDMFD	LR!, {R1}											
+ 217 0178 001080E5 		STR		R1, [R0]										
+ 218 017c 0100BEE8 		LDMFD	LR!, {R0}											
+ 219 0180 00F069E1 		MSR		SPSR, R0										
+ 220 0184 FF7FDEE8 		LDMFD	LR, {R0-R14}^										
+ 221 0188 0000A0E1 		NOP														
+ 222 018c 3CE09EE5 		LDR		LR, [LR, #+60]									
+ 223 0190 04F05EE2 		SUBS	PC, LR, #4											
+ 224              		
+ 225              	@ 0 "" 2
+ 226 0194 005095E5 		ldr	r5, [r5, #0]
+ 227 0198 004094E5 		ldr	r4, [r4, #0]
+ 228              		.loc 1 172 0
+ 229              	.L21:
+ 230              		.align	2
+ 231              	.L20:
+ 232 019c 00000000 		.word	ulCriticalNesting
+ 233 01a0 00000000 		.word	pxCurrentTCB
+ 234              	.LFE292:
+ 236              		.align	2
+ 237              		.global	vPortYieldProcessor
+ 239              	vPortYieldProcessor:
+ 240              	.LFB291:
+ 241              		.loc 1 109 0
+ 242              		@ ARM Exception Handler.
+ 243              		@ Naked Function: prologue and epilogue provided by programmer.
+ 244              		@ args = 0, pretend = 0, frame = 0
+ 245              		@ frame_needed = 0, uses_anonymous_args = 0
+ 246              		.loc 1 113 0
+ 247              	@ 113 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 248 01a4 04E08EE2 		ADD		LR, LR, #4
+ 249              	@ 0 "" 2
+ 250              		.loc 1 116 0
+ 251              	@ 116 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 252 01a8 01002DE9 		STMDB	SP!, {R0}											
+ 253 01ac 00204DE9 		STMDB	SP,{SP}^											
+ 254 01b0 0000A0E1 		NOP														
+ 255 01b4 04D04DE2 		SUB	SP, SP, #4											
+ 256 01b8 0100BDE8 		LDMIA	SP!,{R0}											
+ 257 01bc 004020E9 		STMDB	R0!, {LR}											
+ 258 01c0 00E0A0E1 		MOV	LR, R0												
+ 259 01c4 0100BDE8 		LDMIA	SP!, {R0}											
+ 260 01c8 FF7F4EE9 		STMDB	LR,{R0-LR}^											
+ 261 01cc 0000A0E1 		NOP														
+ 262 01d0 3CE04EE2 		SUB	LR, LR, #60											
+ 263 01d4 00004FE1 		MRS	R0, SPSR											
+ 264 01d8 01002EE9 		STMDB	LR!, {R0}											
+ 265 01dc 68009FE5 		LDR	R0, =ulCriticalNesting								
+ 266 01e0 000090E5 		LDR	R0, [R0]											
+ 267 01e4 01002EE9 		STMDB	LR!, {R0}											
+ 268 01e8 58009FE5 		LDR	R0, =pxCurrentTCB									
+ 269 01ec 000090E5 		LDR	R0, [R0]											
+ 270 01f0 00E080E5 		STR	LR, [R0]											
+ 271              		
+ 272              	@ 0 "" 2
+ 273 01f4 44509FE5 		ldr	r5, .L24
+ 274 01f8 003095E5 		ldr	r3, [r5, #0]
+ 275 01fc 40409FE5 		ldr	r4, .L24+4
+ 276 0200 003094E5 		ldr	r3, [r4, #0]
+ 277              		.loc 1 119 0
+ 278 0204 FEFFFFEB 		bl	vTaskSwitchContext
+ 279              		.loc 1 122 0
+ 280              	@ 122 "rtos/portable/GCC/AT91SAM7S256/portISR.c" 1
+ 281 0208 38009FE5 		LDR		R0, =pxCurrentTCB								
+ 282 020c 000090E5 		LDR		R0, [R0]										
+ 283 0210 00E090E5 		LDR		LR, [R0]										
+ 284 0214 30009FE5 		LDR		R0, =ulCriticalNesting							
+ 285 0218 0200BEE8 		LDMFD	LR!, {R1}											
+ 286 021c 001080E5 		STR		R1, [R0]										
+ 287 0220 0100BEE8 		LDMFD	LR!, {R0}											
+ 288 0224 00F069E1 		MSR		SPSR, R0										
+ 289 0228 FF7FDEE8 		LDMFD	LR, {R0-R14}^										
+ 290 022c 0000A0E1 		NOP														
+ 291 0230 3CE09EE5 		LDR		LR, [LR, #+60]									
+ 292 0234 04F05EE2 		SUBS	PC, LR, #4											
+ 293              		
+ 294              	@ 0 "" 2
+ 295 0238 005095E5 		ldr	r5, [r5, #0]
+ 296 023c 004094E5 		ldr	r4, [r4, #0]
+ 297              		.loc 1 123 0
+ 298              	.L25:
+ 299              		.align	2
+ 300              	.L24:
+ 301 0240 00000000 		.word	ulCriticalNesting
+ 302 0244 00000000 		.word	pxCurrentTCB
+ 303              	.LFE291:
+ 305              		.global	ulCriticalNesting
+ 306              		.data
+ 307              		.align	2
+ 310              	ulCriticalNesting:
+ 311 0000 0F270000 		.word	9999
+ 384              	.Letext0:
+ 385              		.file 2 "./rtos/portable/GCC/AT91SAM7S256/AT91SAM7S256.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 portISR.c
+     /tmp/ccoGSrMs.s:13     .text:00000000 vPortISRStartFirstTask
+     /tmp/ccoGSrMs.s:23     .text:00000000 $a
+     /tmp/ccoGSrMs.s:310    .data:00000000 ulCriticalNesting
+     /tmp/ccoGSrMs.s:46     .text:00000044 $d
+     /tmp/ccoGSrMs.s:53     .text:0000004c vPortDisableInterruptsFromThumb
+     /tmp/ccoGSrMs.s:62     .text:0000004c $a
+     /tmp/ccoGSrMs.s:75     .text:00000064 vPortEnableInterruptsFromThumb
+     /tmp/ccoGSrMs.s:97     .text:0000007c vPortEnterCritical
+     /tmp/ccoGSrMs.s:122    .text:000000a4 $d
+     /tmp/ccoGSrMs.s:128    .text:000000a8 vPortExitCritical
+     /tmp/ccoGSrMs.s:136    .text:000000a8 $a
+     /tmp/ccoGSrMs.s:161    .text:000000ec $d
+     /tmp/ccoGSrMs.s:167    .text:000000f0 vPreemptiveTick
+     /tmp/ccoGSrMs.s:176    .text:000000f0 $a
+     /tmp/ccoGSrMs.s:232    .text:0000019c $d
+     /tmp/ccoGSrMs.s:239    .text:000001a4 vPortYieldProcessor
+     /tmp/ccoGSrMs.s:248    .text:000001a4 $a
+     /tmp/ccoGSrMs.s:301    .text:00000240 $d
+     /tmp/ccoGSrMs.s:311    .data:00000000 $d
+
+UNDEFINED SYMBOLS
+pxCurrentTCB
+vTaskIncrementTick
+vTaskSwitchContext

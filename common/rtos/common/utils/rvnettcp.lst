@@ -1,0 +1,234 @@
+   1              		.code	16
+   2              		.file	"rvnettcp.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	RVnetTcpSlaveProcess
+  13              		.code	16
+  14              		.thumb_func
+  16              	RVnetTcpSlaveProcess:
+  17              	.LFB290:
+  18              		.file 1 "rtos/common/utils/rvnettcp.c"
+   1:rtos/common/utils/rvnettcp.c **** /*
+   2:rtos/common/utils/rvnettcp.c ****  * rvnettcp.c
+   3:rtos/common/utils/rvnettcp.c ****  *
+   4:rtos/common/utils/rvnettcp.c ****  *  Created on: Jul 6, 2010
+   5:rtos/common/utils/rvnettcp.c ****  *      Author: albert
+   6:rtos/common/utils/rvnettcp.c ****  */
+   7:rtos/common/utils/rvnettcp.c **** //======================================================================
+   8:rtos/common/utils/rvnettcp.c **** #include"rvnettcp.h"
+   9:rtos/common/utils/rvnettcp.c **** #include "memman.h"
+  10:rtos/common/utils/rvnettcp.c **** #include "crc.h"
+  11:rtos/common/utils/rvnettcp.c **** 
+  12:rtos/common/utils/rvnettcp.c **** //extern void BOOTSTART( void );
+  13:rtos/common/utils/rvnettcp.c **** 
+  14:rtos/common/utils/rvnettcp.c **** // * <------------------------ RV TCP/IP ADU(1) ------------------------->
+  15:rtos/common/utils/rvnettcp.c **** // *              <----------- RV PDU (1') ---------------->
+  16:rtos/common/utils/rvnettcp.c **** // *  +-----------+---------------+------------------------------------------+
+  17:rtos/common/utils/rvnettcp.c **** // *  | TID | PID | Length | UID  |Code | Data                               |
+  18:rtos/common/utils/rvnettcp.c **** // *  +-----------+---------------+------------------------------------------+
+  19:rtos/common/utils/rvnettcp.c **** // *  |     |     |        |      |
+  20:rtos/common/utils/rvnettcp.c **** // * (2)   (3)   (4)      (5)    (6)
+  21:rtos/common/utils/rvnettcp.c **** // *
+  22:rtos/common/utils/rvnettcp.c **** // * (2)  ... RVTCP_TID          = 0 (Transaction Identifier - 2 Byte)
+  23:rtos/common/utils/rvnettcp.c **** // * (3)  ... RVTCP_PID          = 2 (Protocol Identifier - 2 Byte)
+  24:rtos/common/utils/rvnettcp.c **** // * (4)  ... RVTCP_LEN          = 4 (Number of bytes - 2 Byte)
+  25:rtos/common/utils/rvnettcp.c **** // * (5)  ... RVTCP_UID          = 6 (Unit Identifier - 1 Byte)
+  26:rtos/common/utils/rvnettcp.c **** // * (6)  ... RVTCP_FUNC         = 7 (Modbus Function Code)
+  27:rtos/common/utils/rvnettcp.c **** 
+  28:rtos/common/utils/rvnettcp.c **** #define RVTCP_TID	0
+  29:rtos/common/utils/rvnettcp.c **** #define RVTCP_PID	2
+  30:rtos/common/utils/rvnettcp.c **** #define RVTCP_LEN	4
+  31:rtos/common/utils/rvnettcp.c **** #define RVTCP_UID	6
+  32:rtos/common/utils/rvnettcp.c **** #define RVTCP_FUNC	7
+  33:rtos/common/utils/rvnettcp.c **** #define RVTCP_DATA	8
+  34:rtos/common/utils/rvnettcp.c **** 
+  35:rtos/common/utils/rvnettcp.c **** #define MB_TCP_PROTOCOL_ID  0
+  36:rtos/common/utils/rvnettcp.c **** 
+  37:rtos/common/utils/rvnettcp.c **** 
+  38:rtos/common/utils/rvnettcp.c **** 
+  39:rtos/common/utils/rvnettcp.c **** RVNET_DATATYPE RVnetTcpSlaveProcess(uint8 *buf, RVNET_DATATYPE pkSize,
+  40:rtos/common/utils/rvnettcp.c **** 		uint8 device_address)
+  41:rtos/common/utils/rvnettcp.c **** {
+  19              		.loc 1 41 0
+  20 0000 70B5     		push	{r4, r5, r6, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  42:rtos/common/utils/rvnettcp.c **** 	uint16 len, pid;
+  43:rtos/common/utils/rvnettcp.c **** 
+  44:rtos/common/utils/rvnettcp.c **** 	len = buf[RVTCP_LEN] << 8U;
+  23              		.loc 1 44 0
+  24 0002 051D     		add	r5, r0, #4
+  25 0004 2C78     		ldrb	r4, [r5]
+  45:rtos/common/utils/rvnettcp.c **** 	len |= buf[RVTCP_LEN + 1];
+  26              		.loc 1 45 0
+  27 0006 461D     		add	r6, r0, #5
+  28 0008 3178     		ldrb	r1, [r6]
+  29              	.LVL1:
+  46:rtos/common/utils/rvnettcp.c **** 	// Len Test
+  47:rtos/common/utils/rvnettcp.c **** 	//if(len != (pkSize-RVTCP_FUNC)){return 0;}
+  48:rtos/common/utils/rvnettcp.c **** 
+  49:rtos/common/utils/rvnettcp.c **** 	pid = buf[RVTCP_PID] << 8U;
+  50:rtos/common/utils/rvnettcp.c **** 	pid |= buf[RVTCP_PID + 1];
+  51:rtos/common/utils/rvnettcp.c **** 	//if(pid != MB_TCP_PROTOCOL_ID){return 0;}
+  52:rtos/common/utils/rvnettcp.c **** 
+  53:rtos/common/utils/rvnettcp.c **** 	switch (buf[RVTCP_FUNC])
+  30              		.loc 1 53 0
+  31 000a C379     		ldrb	r3, [r0, #7]
+  32 000c 102B     		cmp	r3, #16
+  33 000e 1ED8     		bhi	.L2
+  34 0010 9B00     		lsl	r3, r3, #2
+  35 0012 194A     		ldr	r2, .L11
+  36              	.LVL2:
+  37 0014 D358     		ldr	r3, [r2, r3]
+  38 0016 9F46     		mov	pc, r3
+  39              		.section	.rodata
+  40              		.align	2
+  41              	.L8:
+  42 0000 18000000 		.word	.L3
+  43 0004 22000000 		.word	.L4
+  44 0008 22000000 		.word	.L4
+  45 000c 2C000000 		.word	.L5
+  46 0010 2C000000 		.word	.L5
+  47 0014 36000000 		.word	.L6
+  48 0018 4E000000 		.word	.L2
+  49 001c 4E000000 		.word	.L2
+  50 0020 4E000000 		.word	.L2
+  51 0024 4E000000 		.word	.L2
+  52 0028 4E000000 		.word	.L2
+  53 002c 4E000000 		.word	.L2
+  54 0030 4E000000 		.word	.L2
+  55 0034 4E000000 		.word	.L2
+  56 0038 4E000000 		.word	.L2
+  57 003c 4E000000 		.word	.L2
+  58 0040 40000000 		.word	.L7
+  59              		.text
+  60              	.L3:
+  54:rtos/common/utils/rvnettcp.c **** 	{
+  55:rtos/common/utils/rvnettcp.c **** 	case 0x00:
+  56:rtos/common/utils/rvnettcp.c **** 		len = ReadDeviceID(&buf[RVTCP_DATA]);
+  61              		.loc 1 56 0
+  62 0018 0830     		add	r0, r0, #8
+  63              	.LVL3:
+  64 001a FFF7FEFF 		bl	ReadDeviceID
+  65 001e 041C     		mov	r4, r0
+  66              	.LVL4:
+  67 0020 19E0     		b	.L9
+  68              	.LVL5:
+  69              	.L4:
+  57:rtos/common/utils/rvnettcp.c **** 		break;
+  58:rtos/common/utils/rvnettcp.c **** 	case 0x01:
+  59:rtos/common/utils/rvnettcp.c **** 	case 0x02:
+  60:rtos/common/utils/rvnettcp.c **** 		len = ReadNBits(&buf[RVTCP_DATA]);
+  70              		.loc 1 60 0
+  71 0022 0830     		add	r0, r0, #8
+  72              	.LVL6:
+  73 0024 FFF7FEFF 		bl	ReadNBits
+  74 0028 041C     		mov	r4, r0
+  75              	.LVL7:
+  76 002a 14E0     		b	.L9
+  77              	.LVL8:
+  78              	.L5:
+  61:rtos/common/utils/rvnettcp.c **** 		break;
+  62:rtos/common/utils/rvnettcp.c **** 	case 0x03:
+  63:rtos/common/utils/rvnettcp.c **** 	case 0x04:
+  64:rtos/common/utils/rvnettcp.c **** 		len = ReadNWords(&buf[RVTCP_DATA]);
+  79              		.loc 1 64 0
+  80 002c 0830     		add	r0, r0, #8
+  81              	.LVL9:
+  82 002e FFF7FEFF 		bl	ReadNWords
+  83 0032 041C     		mov	r4, r0
+  84              	.LVL10:
+  85 0034 0FE0     		b	.L9
+  86              	.LVL11:
+  87              	.L6:
+  65:rtos/common/utils/rvnettcp.c **** 		break;
+  66:rtos/common/utils/rvnettcp.c **** 	case 0x05:
+  67:rtos/common/utils/rvnettcp.c **** 		len = WriteBit(&buf[RVTCP_DATA]);
+  88              		.loc 1 67 0
+  89 0036 0830     		add	r0, r0, #8
+  90              	.LVL12:
+  91 0038 FFF7FEFF 		bl	WriteBit
+  92 003c 041C     		mov	r4, r0
+  93              	.LVL13:
+  94 003e 0AE0     		b	.L9
+  95              	.LVL14:
+  96              	.L7:
+  97              		.loc 1 44 0
+  98 0040 2302     		lsl	r3, r4, #8
+  99              	.LVL15:
+ 100              		.loc 1 45 0
+ 101 0042 1C1C     		mov	r4, r3
+ 102 0044 0C43     		orr	r4, r4, r1
+ 103              	.LVL16:
+  68:rtos/common/utils/rvnettcp.c **** 		break;
+  69:rtos/common/utils/rvnettcp.c **** 	case 0x10:
+  70:rtos/common/utils/rvnettcp.c **** 		pkSize = WriteNWords(&buf[RVTCP_DATA]);
+ 104              		.loc 1 70 0
+ 105 0046 0830     		add	r0, r0, #8
+ 106              	.LVL17:
+ 107 0048 FFF7FEFF 		bl	WriteNWords
+ 108 004c 03E0     		b	.L9
+ 109              	.LVL18:
+ 110              	.L2:
+  71:rtos/common/utils/rvnettcp.c **** 		break;
+  72:rtos/common/utils/rvnettcp.c **** 	default:
+  73:rtos/common/utils/rvnettcp.c **** 		len = ErrorAddress(&buf[RVTCP_DATA]);
+ 111              		.loc 1 73 0
+ 112 004e 0830     		add	r0, r0, #8
+ 113              	.LVL19:
+ 114 0050 FFF7FEFF 		bl	ErrorAddress
+ 115              	.LVL20:
+ 116 0054 041C     		mov	r4, r0
+ 117              	.LVL21:
+ 118              	.L9:
+  74:rtos/common/utils/rvnettcp.c **** 		break;
+  75:rtos/common/utils/rvnettcp.c **** 	}
+  76:rtos/common/utils/rvnettcp.c **** 	len +=1;// + function code
+ 119              		.loc 1 76 0
+ 120 0056 601C     		add	r0, r4, #1
+ 121 0058 0004     		lsl	r0, r0, #16
+ 122 005a 000C     		lsr	r0, r0, #16
+ 123              	.LVL22:
+  77:rtos/common/utils/rvnettcp.c **** 	buf[RVTCP_LEN] = (len + 1) >> 8U; //+1 - UID
+ 124              		.loc 1 77 0
+ 125 005c 431C     		add	r3, r0, #1
+ 126 005e 1B12     		asr	r3, r3, #8
+ 127 0060 2B70     		strb	r3, [r5]
+  78:rtos/common/utils/rvnettcp.c **** 	buf[RVTCP_LEN + 1] = (len + 1) & 0xFF; //+1 - UID
+ 128              		.loc 1 78 0
+ 129 0062 0006     		lsl	r0, r0, #24
+ 130              	.LVL23:
+ 131 0064 000E     		lsr	r0, r0, #24
+ 132 0066 431C     		add	r3, r0, #1
+ 133 0068 3370     		strb	r3, [r6]
+ 134 006a 0730     		add	r0, r0, #7
+ 135 006c 0006     		lsl	r0, r0, #24
+ 136 006e 000E     		lsr	r0, r0, #24
+  79:rtos/common/utils/rvnettcp.c **** 
+  80:rtos/common/utils/rvnettcp.c **** 	return (len + RVTCP_FUNC);
+  81:rtos/common/utils/rvnettcp.c **** }
+ 137              		.loc 1 81 0
+ 138              		@ sp needed for prologue
+ 139 0070 70BC     		pop	{r4, r5, r6}
+ 140 0072 02BC     		pop	{r1}
+ 141 0074 0847     		bx	r1
+ 142              	.L12:
+ 143 0076 C046     		.align	2
+ 144              	.L11:
+ 145 0078 00000000 		.word	.L8
+ 146              	.LFE290:
+ 184              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 rvnettcp.c
+     /tmp/cc2CCXnE.s:1      .text:00000000 $t
+     /tmp/cc2CCXnE.s:16     .text:00000000 RVnetTcpSlaveProcess
+     /tmp/cc2CCXnE.s:42     .rodata:00000000 $d
+     /tmp/cc2CCXnE.s:145    .text:00000078 $d
+
+UNDEFINED SYMBOLS
+ReadDeviceID
+ReadNBits
+ReadNWords
+WriteBit
+WriteNWords
+ErrorAddress

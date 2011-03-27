@@ -1,0 +1,1001 @@
+   1              		.code	16
+   2              		.file	"rvnet.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	SwapBuffer
+  13              		.code	16
+  14              		.thumb_func
+  16              	SwapBuffer:
+  17              	.LFB291:
+  18              		.file 1 "rtos/common/utils/rvnet.c"
+   1:rtos/common/utils/rvnet.c **** //********************************************************
+   2:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½      :
+   3:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½      : 1.0.
+   4:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½        : 29.03.2009
+   5:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½       : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï
+   6:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½    : ï¿½ï¿½ï¿½ï¿½
+   7:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½        :
+   8:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ :
+   9:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ : IAR
+  10:rtos/common/utils/rvnet.c **** //*********************************************************
+  11:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½           :
+  12:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  :
+  13:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½       : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  14:rtos/common/utils/rvnet.c **** //    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½       :
+  15:rtos/common/utils/rvnet.c **** //*********************************************************
+  16:rtos/common/utils/rvnet.c **** #include "rvnet.h"
+  17:rtos/common/utils/rvnet.c **** #include "memman.h"
+  18:rtos/common/utils/rvnet.c **** #include "crc.h"
+  19:rtos/common/utils/rvnet.c **** 
+  20:rtos/common/utils/rvnet.c **** //extern uint8 ebuf[256];
+  21:rtos/common/utils/rvnet.c **** 
+  22:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadDeviceID(uint8 *);
+  23:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadNWords(uint8 *);
+  24:rtos/common/utils/rvnet.c **** RVNET_DATATYPE WriteNWords(uint8 *);
+  25:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ErrorAddress(uint8 *);
+  26:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadNBits(uint8 *);
+  27:rtos/common/utils/rvnet.c **** RVNET_DATATYPE WriteBit(uint8 *);
+  28:rtos/common/utils/rvnet.c **** void SwapBuffer(uint8 *buf, uint16 len);
+  29:rtos/common/utils/rvnet.c **** inline uint16 SwapWord(uint16 Word)
+  30:rtos/common/utils/rvnet.c ****   {
+  31:rtos/common/utils/rvnet.c ****     return (Word >> 8) | (Word << 8);
+  32:rtos/common/utils/rvnet.c ****   }
+  33:rtos/common/utils/rvnet.c **** 
+  34:rtos/common/utils/rvnet.c **** inline void SwapBuffer(unsigned char *buf, uint16 len)
+  35:rtos/common/utils/rvnet.c ****   {
+  19              		.loc 1 35 0
+  20 0000 30B5     		push	{r4, r5, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 0904     		lsl	r1, r1, #16
+  24              	.LVL1:
+  25 0004 090C     		lsr	r1, r1, #16
+  26              	.LVL2:
+  36:rtos/common/utils/rvnet.c ****     unsigned char tint;
+  37:rtos/common/utils/rvnet.c **** 
+  38:rtos/common/utils/rvnet.c ****     while (len--)
+  27              		.loc 1 38 0
+  28 0006 0029     		cmp	r1, #0
+  29 0008 0DD0     		beq	.L4
+  30 000a 4B1E     		sub	r3, r1, #1
+  31 000c 1B04     		lsl	r3, r3, #16
+  32 000e 1B0C     		lsr	r3, r3, #16
+  33              	.LVL3:
+  34 0010 011C     		mov	r1, r0
+  35 0012 5D1C     		add	r5, r3, #1
+  36 0014 6C00     		lsl	r4, r5, #1
+  37 0016 0019     		add	r0, r0, r4
+  38              	.LVL4:
+  39              	.L3:
+  39:rtos/common/utils/rvnet.c ****       {
+  40:rtos/common/utils/rvnet.c ****         tint = *buf;
+  40              		.loc 1 40 0
+  41 0018 0A78     		ldrb	r2, [r1]
+  42              	.LVL5:
+  41:rtos/common/utils/rvnet.c ****         *buf = *(buf + 1);
+  43              		.loc 1 41 0
+  44 001a 4B78     		ldrb	r3, [r1, #1]
+  45              	.LVL6:
+  46 001c 0B70     		strb	r3, [r1]
+  42:rtos/common/utils/rvnet.c ****         *(buf + 1) = tint;
+  47              		.loc 1 42 0
+  48 001e 4A70     		strb	r2, [r1, #1]
+  43:rtos/common/utils/rvnet.c ****         buf += 2;
+  49              		.loc 1 43 0
+  50 0020 0231     		add	r1, r1, #2
+  51              		.loc 1 38 0
+  52 0022 8142     		cmp	r1, r0
+  53 0024 F8D1     		bne	.L3
+  54              	.LVL7:
+  55              	.L4:
+  44:rtos/common/utils/rvnet.c ****       }
+  45:rtos/common/utils/rvnet.c ****   }
+  56              		.loc 1 45 0
+  57              		@ sp needed for prologue
+  58 0026 30BC     		pop	{r4, r5}
+  59 0028 01BC     		pop	{r0}
+  60 002a 0047     		bx	r0
+  61              	.LFE291:
+  63              		.align	2
+  64              		.global	ReadDeviceID
+  65              		.code	16
+  66              		.thumb_func
+  68              	ReadDeviceID:
+  69              	.LFB293:
+  46:rtos/common/utils/rvnet.c **** //======================================================================
+  47:rtos/common/utils/rvnet.c **** //extern void BOOTSTART( void );
+  48:rtos/common/utils/rvnet.c **** 
+  49:rtos/common/utils/rvnet.c **** RVNET_DATATYPE RVnetSlaveProcess(uint8 *px_buf, RVNET_DATATYPE pkSize,
+  50:rtos/common/utils/rvnet.c ****     uint8 device_address)
+  51:rtos/common/utils/rvnet.c ****   {
+  52:rtos/common/utils/rvnet.c ****     volatile uint8 *pxPack = px_buf;
+  53:rtos/common/utils/rvnet.c ****     if (*pxPack == device_address)
+  54:rtos/common/utils/rvnet.c ****       {
+  55:rtos/common/utils/rvnet.c ****         if (CheckCRC(pxPack, pkSize))
+  56:rtos/common/utils/rvnet.c ****           {
+  57:rtos/common/utils/rvnet.c ****             pxPack++;
+  58:rtos/common/utils/rvnet.c ****             switch (*pxPack)
+  59:rtos/common/utils/rvnet.c ****               {
+  60:rtos/common/utils/rvnet.c ****             case 0x00:
+  61:rtos/common/utils/rvnet.c ****               pxPack++;
+  62:rtos/common/utils/rvnet.c ****               pkSize = ReadDeviceID(pxPack);
+  63:rtos/common/utils/rvnet.c ****               break;
+  64:rtos/common/utils/rvnet.c ****             case 0x01:
+  65:rtos/common/utils/rvnet.c ****             case 0x02:
+  66:rtos/common/utils/rvnet.c ****               pxPack++;
+  67:rtos/common/utils/rvnet.c ****               pkSize = ReadNBits(pxPack);
+  68:rtos/common/utils/rvnet.c ****               break;
+  69:rtos/common/utils/rvnet.c ****             case 0x03:
+  70:rtos/common/utils/rvnet.c ****             case 0x04:
+  71:rtos/common/utils/rvnet.c ****               pxPack++;
+  72:rtos/common/utils/rvnet.c ****               pkSize = ReadNWords(pxPack);
+  73:rtos/common/utils/rvnet.c ****               break;
+  74:rtos/common/utils/rvnet.c ****             case 0x05:
+  75:rtos/common/utils/rvnet.c ****               pxPack++;
+  76:rtos/common/utils/rvnet.c ****               pkSize = WriteBit(pxPack);
+  77:rtos/common/utils/rvnet.c ****               break;
+  78:rtos/common/utils/rvnet.c ****             case 0x10:
+  79:rtos/common/utils/rvnet.c ****               pxPack++;
+  80:rtos/common/utils/rvnet.c ****               pkSize = WriteNWords(pxPack);
+  81:rtos/common/utils/rvnet.c ****               break;
+  82:rtos/common/utils/rvnet.c ****             default:
+  83:rtos/common/utils/rvnet.c ****               pxPack++;
+  84:rtos/common/utils/rvnet.c ****               pkSize = ErrorAddress(pxPack);
+  85:rtos/common/utils/rvnet.c ****               break;
+  86:rtos/common/utils/rvnet.c **** 
+  87:rtos/common/utils/rvnet.c ****               }
+  88:rtos/common/utils/rvnet.c ****           }
+  89:rtos/common/utils/rvnet.c ****         else
+  90:rtos/common/utils/rvnet.c ****           return 0;
+  91:rtos/common/utils/rvnet.c ****       }
+  92:rtos/common/utils/rvnet.c ****     else
+  93:rtos/common/utils/rvnet.c ****       return 0;
+  94:rtos/common/utils/rvnet.c ****     pkSize += 2; // Add heder
+  95:rtos/common/utils/rvnet.c ****     SetCRC(px_buf, pkSize);
+  96:rtos/common/utils/rvnet.c ****     pkSize += 2; // Add CRC
+  97:rtos/common/utils/rvnet.c ****     return pkSize;
+  98:rtos/common/utils/rvnet.c ****   }
+  99:rtos/common/utils/rvnet.c **** //======================================================================
+ 100:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadDeviceID(unsigned char *pxPack)
+ 101:rtos/common/utils/rvnet.c ****   {
+  70              		.loc 1 101 0
+  71              	.LVL8:
+ 102:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ 103:rtos/common/utils/rvnet.c ****     *pxPack = 0x00;
+  72              		.loc 1 103 0
+  73 002c 0023     		mov	r3, #0
+  74 002e 0370     		strb	r3, [r0]
+ 104:rtos/common/utils/rvnet.c ****     pxPack++;
+  75              		.loc 1 104 0
+  76 0030 0130     		add	r0, r0, #1
+  77              	.LVL9:
+ 105:rtos/common/utils/rvnet.c ****     *pxPack = 0x01;
+  78              		.loc 1 105 0
+  79 0032 0123     		mov	r3, #1
+  80 0034 0370     		strb	r3, [r0]
+ 106:rtos/common/utils/rvnet.c ****     pxPack++;
+  81              		.loc 1 106 0
+  82 0036 0130     		add	r0, r0, #1
+  83              	.LVL10:
+ 107:rtos/common/utils/rvnet.c ****     *pxPack = 0x01;
+  84              		.loc 1 107 0
+  85 0038 0370     		strb	r3, [r0]
+ 108:rtos/common/utils/rvnet.c ****     pxPack++;
+ 109:rtos/common/utils/rvnet.c ****     *pxPack = 0x01;
+  86              		.loc 1 109 0
+  87 003a 4370     		strb	r3, [r0, #1]
+ 110:rtos/common/utils/rvnet.c ****     pxPack++;
+ 111:rtos/common/utils/rvnet.c ****     return 4;
+ 112:rtos/common/utils/rvnet.c ****   }
+  88              		.loc 1 112 0
+  89 003c 0420     		mov	r0, #4
+  90              	.LVL11:
+  91              		@ sp needed for prologue
+  92 003e 7047     		bx	lr
+  93              	.LFE293:
+  95              		.align	2
+  96              		.global	ErrorAddress
+  97              		.code	16
+  98              		.thumb_func
+ 100              	ErrorAddress:
+ 101              	.LFB298:
+ 113:rtos/common/utils/rvnet.c **** //======================================================================
+ 114:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadNWords(uint8 *pxPack)
+ 115:rtos/common/utils/rvnet.c ****   {
+ 116:rtos/common/utils/rvnet.c ****    volatile uint16 base, wnum;
+ 117:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï
+ 118:rtos/common/utils/rvnet.c ****     base = *(pxPack) << 8;
+ 119:rtos/common/utils/rvnet.c ****     base += *(pxPack + 1);
+ 120:rtos/common/utils/rvnet.c ****     wnum = *(pxPack + 2) << 8;
+ 121:rtos/common/utils/rvnet.c ****     wnum += *(pxPack + 3);
+ 122:rtos/common/utils/rvnet.c ****     if (wnum > 123)
+ 123:rtos/common/utils/rvnet.c ****       {
+ 124:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 125:rtos/common/utils/rvnet.c ****       }
+ 126:rtos/common/utils/rvnet.c ****     *pxPack = (unsigned char) (wnum * 2);
+ 127:rtos/common/utils/rvnet.c ****     if (MemGetWords(base, (uint16*)(pxPack + 1), wnum) == 0)
+ 128:rtos/common/utils/rvnet.c ****       {
+ 129:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 130:rtos/common/utils/rvnet.c ****       }
+ 131:rtos/common/utils/rvnet.c ****     SwapBuffer(pxPack + 1, wnum);
+ 132:rtos/common/utils/rvnet.c ****     return (RVNET_DATATYPE)(wnum * 2 + 1);
+ 133:rtos/common/utils/rvnet.c ****   }
+ 134:rtos/common/utils/rvnet.c **** //======================================================================
+ 135:rtos/common/utils/rvnet.c **** RVNET_DATATYPE WriteNWords(unsigned char *pxPack)
+ 136:rtos/common/utils/rvnet.c ****   {
+ 137:rtos/common/utils/rvnet.c ****     volatile uint16 base, wnum;
+ 138:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï
+ 139:rtos/common/utils/rvnet.c ****     base = *(pxPack) << 8;
+ 140:rtos/common/utils/rvnet.c ****     base += *(pxPack + 1);
+ 141:rtos/common/utils/rvnet.c ****     wnum = *(pxPack + 2) << 8;
+ 142:rtos/common/utils/rvnet.c ****     wnum += *(pxPack + 3);
+ 143:rtos/common/utils/rvnet.c ****     if (wnum > 123)
+ 144:rtos/common/utils/rvnet.c ****       {
+ 145:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 146:rtos/common/utils/rvnet.c ****       }
+ 147:rtos/common/utils/rvnet.c ****     SwapBuffer(pxPack + 5, wnum);
+ 148:rtos/common/utils/rvnet.c ****     if (MemSetWords(base, pxPack + 5, wnum) == 0)
+ 149:rtos/common/utils/rvnet.c ****       {
+ 150:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 151:rtos/common/utils/rvnet.c ****       }
+ 152:rtos/common/utils/rvnet.c ****     return 4;
+ 153:rtos/common/utils/rvnet.c ****   }
+ 154:rtos/common/utils/rvnet.c **** //======================================================================
+ 155:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ReadNBits(unsigned char *pxPack)
+ 156:rtos/common/utils/rvnet.c ****   {
+ 157:rtos/common/utils/rvnet.c ****     volatile  uint16 base, wnum;
+ 158:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï
+ 159:rtos/common/utils/rvnet.c ****     base = *(pxPack) << 8;
+ 160:rtos/common/utils/rvnet.c ****     base += *(pxPack + 1);
+ 161:rtos/common/utils/rvnet.c ****     wnum = *(pxPack + 2) << 8;
+ 162:rtos/common/utils/rvnet.c ****     wnum += *(pxPack + 3);
+ 163:rtos/common/utils/rvnet.c ****     *pxPack = ((wnum/8) & 0xff);
+ 164:rtos/common/utils/rvnet.c ****     base /= 16;
+ 165:rtos/common/utils/rvnet.c ****     wnum /= 16;
+ 166:rtos/common/utils/rvnet.c ****     if (wnum > 123)
+ 167:rtos/common/utils/rvnet.c ****       {
+ 168:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 169:rtos/common/utils/rvnet.c ****       }
+ 170:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ 171:rtos/common/utils/rvnet.c ****     // Eï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ RAM    -------------------------------------------------
+ 172:rtos/common/utils/rvnet.c **** 
+ 173:rtos/common/utils/rvnet.c ****     if (MemGetWords(base,  pxPack + 1, wnum) == 0)
+ 174:rtos/common/utils/rvnet.c ****       {
+ 175:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 176:rtos/common/utils/rvnet.c ****       }
+ 177:rtos/common/utils/rvnet.c ****     return (RVNET_DATATYPE)(wnum * 2 + 1);
+ 178:rtos/common/utils/rvnet.c ****   }
+ 179:rtos/common/utils/rvnet.c **** //======================================================================
+ 180:rtos/common/utils/rvnet.c **** RVNET_DATATYPE WriteBit(unsigned char *pxPack)
+ 181:rtos/common/utils/rvnet.c ****   {
+ 182:rtos/common/utils/rvnet.c ****     volatile uint16 base, wnum;
+ 183:rtos/common/utils/rvnet.c ****     uint16 temp_word;
+ 184:rtos/common/utils/rvnet.c ****     uint16 bit_shift;
+ 185:rtos/common/utils/rvnet.c ****     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï
+ 186:rtos/common/utils/rvnet.c ****     base = *(pxPack) << 8;
+ 187:rtos/common/utils/rvnet.c ****     base += *(pxPack + 1);
+ 188:rtos/common/utils/rvnet.c ****     wnum = *(pxPack + 2) << 8;
+ 189:rtos/common/utils/rvnet.c ****     wnum += *(pxPack + 3);
+ 190:rtos/common/utils/rvnet.c ****     bit_shift = base % 16;
+ 191:rtos/common/utils/rvnet.c ****     base /= 16;
+ 192:rtos/common/utils/rvnet.c ****     //if(wnum >123){return ErrorAddress(pxPack);}
+ 193:rtos/common/utils/rvnet.c ****     // wnum.word /= 16;
+ 194:rtos/common/utils/rvnet.c ****     if (MemGetWords(base, &temp_word, 1) == 0)
+ 195:rtos/common/utils/rvnet.c ****       {
+ 196:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 197:rtos/common/utils/rvnet.c ****       }
+ 198:rtos/common/utils/rvnet.c ****     if ((wnum & 0xFF00) == 0)
+ 199:rtos/common/utils/rvnet.c ****       temp_word &= ~(1 << bit_shift);
+ 200:rtos/common/utils/rvnet.c ****     else
+ 201:rtos/common/utils/rvnet.c ****       temp_word |= (1 << bit_shift);
+ 202:rtos/common/utils/rvnet.c ****     if (MemSetWords(base, &temp_word, 1) == 0)
+ 203:rtos/common/utils/rvnet.c ****       {
+ 204:rtos/common/utils/rvnet.c ****         return ErrorAddress(pxPack);
+ 205:rtos/common/utils/rvnet.c ****       }
+ 206:rtos/common/utils/rvnet.c ****     return 4;
+ 207:rtos/common/utils/rvnet.c ****   }
+ 208:rtos/common/utils/rvnet.c **** //======================================================================
+ 209:rtos/common/utils/rvnet.c **** 
+ 210:rtos/common/utils/rvnet.c **** RVNET_DATATYPE ErrorAddress(unsigned char *pxPack)
+ 211:rtos/common/utils/rvnet.c ****   {
+ 102              		.loc 1 211 0
+ 103              	.LVL12:
+ 212:rtos/common/utils/rvnet.c ****     *(pxPack - 1) |= 0x80;
+ 104              		.loc 1 212 0
+ 105 0040 0138     		sub	r0, r0, #1
+ 106              	.LVL13:
+ 107 0042 0378     		ldrb	r3, [r0]
+ 108 0044 8022     		mov	r2, #128
+ 109 0046 5242     		neg	r2, r2
+ 110 0048 1343     		orr	r3, r3, r2
+ 111 004a 0370     		strb	r3, [r0]
+ 213:rtos/common/utils/rvnet.c ****     return 0;
+ 214:rtos/common/utils/rvnet.c ****   }
+ 112              		.loc 1 214 0
+ 113 004c 0020     		mov	r0, #0
+ 114              		@ sp needed for prologue
+ 115 004e 7047     		bx	lr
+ 116              	.LFE298:
+ 118              		.align	2
+ 119              		.global	ReadNBits
+ 120              		.code	16
+ 121              		.thumb_func
+ 123              	ReadNBits:
+ 124              	.LFB296:
+ 125              		.loc 1 156 0
+ 126 0050 10B5     		push	{r4, lr}
+ 127              	.LCFI1:
+ 128              	.LVL14:
+ 129 0052 81B0     		sub	sp, sp, #4
+ 130              	.LCFI2:
+ 131 0054 041C     		mov	r4, r0
+ 132              		.loc 1 159 0
+ 133 0056 0378     		ldrb	r3, [r0]
+ 134 0058 1B02     		lsl	r3, r3, #8
+ 135              	.LVL15:
+ 136 005a 6846     		mov	r0, sp
+ 137              	.LVL16:
+ 138 005c 0230     		add	r0, r0, #2
+ 139 005e 0380     		strh	r3, [r0]
+ 140              		.loc 1 160 0
+ 141 0060 0388     		ldrh	r3, [r0]
+ 142              	.LVL17:
+ 143 0062 6278     		ldrb	r2, [r4, #1]
+ 144 0064 9B18     		add	r3, r3, r2
+ 145              	.LVL18:
+ 146 0066 1B04     		lsl	r3, r3, #16
+ 147 0068 1B0C     		lsr	r3, r3, #16
+ 148              	.LVL19:
+ 149 006a 0380     		strh	r3, [r0]
+ 150              		.loc 1 161 0
+ 151 006c A378     		ldrb	r3, [r4, #2]
+ 152              	.LVL20:
+ 153 006e 1B02     		lsl	r3, r3, #8
+ 154              	.LVL21:
+ 155 0070 6946     		mov	r1, sp
+ 156 0072 0B80     		strh	r3, [r1]
+ 157              		.loc 1 162 0
+ 158 0074 0B88     		ldrh	r3, [r1]
+ 159              	.LVL22:
+ 160 0076 E278     		ldrb	r2, [r4, #3]
+ 161 0078 9B18     		add	r3, r3, r2
+ 162              	.LVL23:
+ 163 007a 1B04     		lsl	r3, r3, #16
+ 164 007c 1B0C     		lsr	r3, r3, #16
+ 165              	.LVL24:
+ 166 007e 0B80     		strh	r3, [r1]
+ 167              		.loc 1 163 0
+ 168 0080 0B88     		ldrh	r3, [r1]
+ 169              	.LVL25:
+ 170 0082 DB08     		lsr	r3, r3, #3
+ 171              	.LVL26:
+ 172 0084 2370     		strb	r3, [r4]
+ 173              		.loc 1 164 0
+ 174 0086 0388     		ldrh	r3, [r0]
+ 175              	.LVL27:
+ 176 0088 1B09     		lsr	r3, r3, #4
+ 177              	.LVL28:
+ 178 008a 0380     		strh	r3, [r0]
+ 179              		.loc 1 165 0
+ 180 008c 0B88     		ldrh	r3, [r1]
+ 181              	.LVL29:
+ 182 008e 1B09     		lsr	r3, r3, #4
+ 183              	.LVL30:
+ 184 0090 0B80     		strh	r3, [r1]
+ 185              		.loc 1 166 0
+ 186 0092 0B88     		ldrh	r3, [r1]
+ 187              	.LVL31:
+ 188 0094 7B2B     		cmp	r3, #123
+ 189 0096 03D9     		bls	.L11
+ 190              		.loc 1 168 0
+ 191 0098 201C     		mov	r0, r4
+ 192 009a FFF7FEFF 		bl	ErrorAddress
+ 193              	.LVL32:
+ 194 009e 14E0     		b	.L12
+ 195              	.LVL33:
+ 196              	.L11:
+ 197              		.loc 1 173 0
+ 198 00a0 6B46     		mov	r3, sp
+ 199              	.LVL34:
+ 200 00a2 0233     		add	r3, r3, #2
+ 201 00a4 1888     		ldrh	r0, [r3]
+ 202              	.LVL35:
+ 203 00a6 6B46     		mov	r3, sp
+ 204 00a8 1A88     		ldrh	r2, [r3]
+ 205              	.LVL36:
+ 206 00aa 611C     		add	r1, r4, #1
+ 207 00ac FFF7FEFF 		bl	MemGetWords
+ 208              	.LVL37:
+ 209 00b0 0028     		cmp	r0, #0
+ 210 00b2 03D1     		bne	.L13
+ 211              		.loc 1 175 0
+ 212 00b4 201C     		mov	r0, r4
+ 213 00b6 FFF7FEFF 		bl	ErrorAddress
+ 214 00ba 06E0     		b	.L12
+ 215              	.L13:
+ 216              		.loc 1 177 0
+ 217 00bc 6B46     		mov	r3, sp
+ 218 00be 1B88     		ldrh	r3, [r3]
+ 219              	.LVL38:
+ 220 00c0 5B06     		lsl	r3, r3, #25
+ 221              	.LVL39:
+ 222 00c2 8022     		mov	r2, #128
+ 223 00c4 5204     		lsl	r2, r2, #17
+ 224 00c6 9B18     		add	r3, r3, r2
+ 225 00c8 180E     		lsr	r0, r3, #24
+ 226              	.LVL40:
+ 227              	.L12:
+ 228              		.loc 1 178 0
+ 229 00ca 01B0     		add	sp, sp, #4
+ 230              		@ sp needed for prologue
+ 231              	.LVL41:
+ 232 00cc 10BC     		pop	{r4}
+ 233 00ce 02BC     		pop	{r1}
+ 234 00d0 0847     		bx	r1
+ 235              	.LFE296:
+ 237 00d2 C046     		.align	2
+ 238              		.global	ReadNWords
+ 239              		.code	16
+ 240              		.thumb_func
+ 242              	ReadNWords:
+ 243              	.LFB294:
+ 244              		.loc 1 115 0
+ 245 00d4 30B5     		push	{r4, r5, lr}
+ 246              	.LCFI3:
+ 247              	.LVL42:
+ 248 00d6 81B0     		sub	sp, sp, #4
+ 249              	.LCFI4:
+ 250 00d8 051C     		mov	r5, r0
+ 251              		.loc 1 118 0
+ 252 00da 0378     		ldrb	r3, [r0]
+ 253 00dc 1B02     		lsl	r3, r3, #8
+ 254              	.LVL43:
+ 255 00de 6946     		mov	r1, sp
+ 256 00e0 0231     		add	r1, r1, #2
+ 257 00e2 0B80     		strh	r3, [r1]
+ 258              		.loc 1 119 0
+ 259 00e4 441C     		add	r4, r0, #1
+ 260              	.LVL44:
+ 261 00e6 0B88     		ldrh	r3, [r1]
+ 262              	.LVL45:
+ 263 00e8 2278     		ldrb	r2, [r4]
+ 264 00ea 9B18     		add	r3, r3, r2
+ 265              	.LVL46:
+ 266 00ec 1B04     		lsl	r3, r3, #16
+ 267 00ee 1B0C     		lsr	r3, r3, #16
+ 268              	.LVL47:
+ 269 00f0 0B80     		strh	r3, [r1]
+ 270              		.loc 1 120 0
+ 271 00f2 8378     		ldrb	r3, [r0, #2]
+ 272              	.LVL48:
+ 273 00f4 1B02     		lsl	r3, r3, #8
+ 274              	.LVL49:
+ 275 00f6 6946     		mov	r1, sp
+ 276 00f8 0B80     		strh	r3, [r1]
+ 277              		.loc 1 121 0
+ 278 00fa 0B88     		ldrh	r3, [r1]
+ 279              	.LVL50:
+ 280 00fc C278     		ldrb	r2, [r0, #3]
+ 281 00fe 9B18     		add	r3, r3, r2
+ 282              	.LVL51:
+ 283 0100 1B04     		lsl	r3, r3, #16
+ 284 0102 1B0C     		lsr	r3, r3, #16
+ 285              	.LVL52:
+ 286 0104 0B80     		strh	r3, [r1]
+ 287              		.loc 1 122 0
+ 288 0106 0B88     		ldrh	r3, [r1]
+ 289              	.LVL53:
+ 290 0108 7B2B     		cmp	r3, #123
+ 291 010a 02D9     		bls	.L16
+ 292              		.loc 1 124 0
+ 293 010c FFF7FEFF 		bl	ErrorAddress
+ 294              	.LVL54:
+ 295 0110 27E0     		b	.L17
+ 296              	.LVL55:
+ 297              	.L16:
+ 298              		.loc 1 126 0
+ 299 0112 6A46     		mov	r2, sp
+ 300 0114 1388     		ldrh	r3, [r2]
+ 301              	.LVL56:
+ 302 0116 5B00     		lsl	r3, r3, #1
+ 303              	.LVL57:
+ 304 0118 0370     		strb	r3, [r0]
+ 305              		.loc 1 127 0
+ 306 011a 6B46     		mov	r3, sp
+ 307 011c 0233     		add	r3, r3, #2
+ 308 011e 1888     		ldrh	r0, [r3]
+ 309              	.LVL58:
+ 310 0120 1288     		ldrh	r2, [r2]
+ 311              	.LVL59:
+ 312 0122 691C     		add	r1, r5, #1
+ 313 0124 FFF7FEFF 		bl	MemGetWords
+ 314              	.LVL60:
+ 315 0128 0028     		cmp	r0, #0
+ 316 012a 03D1     		bne	.L18
+ 317              		.loc 1 129 0
+ 318 012c 281C     		mov	r0, r5
+ 319 012e FFF7FEFF 		bl	ErrorAddress
+ 320 0132 16E0     		b	.L17
+ 321              	.L18:
+ 322              		.loc 1 131 0
+ 323 0134 6B46     		mov	r3, sp
+ 324 0136 1B88     		ldrh	r3, [r3]
+ 325              	.LVL61:
+ 326              	.LBB6:
+ 327              	.LBB7:
+ 328              		.loc 1 38 0
+ 329 0138 002B     		cmp	r3, #0
+ 330 013a 0BD0     		beq	.L19
+ 331              	.LVL62:
+ 332 013c 013B     		sub	r3, r3, #1
+ 333 013e 1B04     		lsl	r3, r3, #16
+ 334 0140 DB0B     		lsr	r3, r3, #15
+ 335 0142 0333     		add	r3, r3, #3
+ 336 0144 E818     		add	r0, r5, r3
+ 337              	.L20:
+ 338              		.loc 1 40 0
+ 339 0146 2278     		ldrb	r2, [r4]
+ 340              	.LVL63:
+ 341              		.loc 1 41 0
+ 342 0148 6378     		ldrb	r3, [r4, #1]
+ 343 014a 2370     		strb	r3, [r4]
+ 344              		.loc 1 42 0
+ 345 014c 6270     		strb	r2, [r4, #1]
+ 346              		.loc 1 43 0
+ 347 014e 0234     		add	r4, r4, #2
+ 348              		.loc 1 38 0
+ 349 0150 8442     		cmp	r4, r0
+ 350 0152 F8D1     		bne	.L20
+ 351              	.L19:
+ 352              	.LBE7:
+ 353              	.LBE6:
+ 354              		.loc 1 132 0
+ 355 0154 6B46     		mov	r3, sp
+ 356 0156 1B88     		ldrh	r3, [r3]
+ 357              	.LVL64:
+ 358 0158 5B06     		lsl	r3, r3, #25
+ 359              	.LVL65:
+ 360 015a 8022     		mov	r2, #128
+ 361              	.LVL66:
+ 362 015c 5204     		lsl	r2, r2, #17
+ 363 015e 9B18     		add	r3, r3, r2
+ 364 0160 180E     		lsr	r0, r3, #24
+ 365              	.LVL67:
+ 366              	.L17:
+ 367              		.loc 1 133 0
+ 368 0162 01B0     		add	sp, sp, #4
+ 369              		@ sp needed for prologue
+ 370              	.LVL68:
+ 371              	.LVL69:
+ 372 0164 30BC     		pop	{r4, r5}
+ 373 0166 02BC     		pop	{r1}
+ 374 0168 0847     		bx	r1
+ 375              	.LFE294:
+ 377 016a C046     		.align	2
+ 378              		.global	WriteBit
+ 379              		.code	16
+ 380              		.thumb_func
+ 382              	WriteBit:
+ 383              	.LFB297:
+ 384              		.loc 1 181 0
+ 385 016c 30B5     		push	{r4, r5, lr}
+ 386              	.LCFI5:
+ 387              	.LVL70:
+ 388 016e 82B0     		sub	sp, sp, #8
+ 389              	.LCFI6:
+ 390 0170 041C     		mov	r4, r0
+ 391              		.loc 1 186 0
+ 392 0172 0378     		ldrb	r3, [r0]
+ 393 0174 1B02     		lsl	r3, r3, #8
+ 394              	.LVL71:
+ 395 0176 6846     		mov	r0, sp
+ 396              	.LVL72:
+ 397 0178 0630     		add	r0, r0, #6
+ 398 017a 0380     		strh	r3, [r0]
+ 399              		.loc 1 187 0
+ 400 017c 0388     		ldrh	r3, [r0]
+ 401              	.LVL73:
+ 402 017e 6278     		ldrb	r2, [r4, #1]
+ 403 0180 9B18     		add	r3, r3, r2
+ 404              	.LVL74:
+ 405 0182 1B04     		lsl	r3, r3, #16
+ 406 0184 1B0C     		lsr	r3, r3, #16
+ 407              	.LVL75:
+ 408 0186 0380     		strh	r3, [r0]
+ 409              		.loc 1 188 0
+ 410 0188 A378     		ldrb	r3, [r4, #2]
+ 411              	.LVL76:
+ 412 018a 1B02     		lsl	r3, r3, #8
+ 413              	.LVL77:
+ 414 018c 01A9     		add	r1, sp, #4
+ 415 018e 0B80     		strh	r3, [r1]
+ 416              		.loc 1 189 0
+ 417 0190 0B88     		ldrh	r3, [r1]
+ 418              	.LVL78:
+ 419 0192 E278     		ldrb	r2, [r4, #3]
+ 420 0194 9B18     		add	r3, r3, r2
+ 421              	.LVL79:
+ 422 0196 1B04     		lsl	r3, r3, #16
+ 423 0198 1B0C     		lsr	r3, r3, #16
+ 424              	.LVL80:
+ 425 019a 0B80     		strh	r3, [r1]
+ 426              		.loc 1 190 0
+ 427 019c 0388     		ldrh	r3, [r0]
+ 428              	.LVL81:
+ 429 019e 1D1C     		mov	r5, r3
+ 430              		.loc 1 191 0
+ 431 01a0 0388     		ldrh	r3, [r0]
+ 432              	.LVL82:
+ 433 01a2 1B09     		lsr	r3, r3, #4
+ 434              	.LVL83:
+ 435 01a4 0380     		strh	r3, [r0]
+ 436              		.loc 1 194 0
+ 437 01a6 0088     		ldrh	r0, [r0]
+ 438              	.LVL84:
+ 439 01a8 0239     		sub	r1, r1, #2
+ 440 01aa 0122     		mov	r2, #1
+ 441 01ac FFF7FEFF 		bl	MemGetWords
+ 442              	.LVL85:
+ 443 01b0 0028     		cmp	r0, #0
+ 444 01b2 03D1     		bne	.L24
+ 445              		.loc 1 196 0
+ 446 01b4 201C     		mov	r0, r4
+ 447 01b6 FFF7FEFF 		bl	ErrorAddress
+ 448 01ba 26E0     		b	.L25
+ 449              	.L24:
+ 450              		.loc 1 190 0
+ 451 01bc 0F23     		mov	r3, #15
+ 452 01be 281C     		mov	r0, r5
+ 453              	.LVL86:
+ 454 01c0 1840     		and	r0, r0, r3
+ 455              	.LVL87:
+ 456              		.loc 1 198 0
+ 457 01c2 01AB     		add	r3, sp, #4
+ 458 01c4 1A88     		ldrh	r2, [r3]
+ 459              	.LVL88:
+ 460 01c6 FF23     		mov	r3, #255
+ 461 01c8 1B02     		lsl	r3, r3, #8
+ 462 01ca 1A42     		tst	r2, r3
+ 463 01cc 07D1     		bne	.L26
+ 464              		.loc 1 199 0
+ 465 01ce 6946     		mov	r1, sp
+ 466 01d0 0231     		add	r1, r1, #2
+ 467 01d2 0122     		mov	r2, #1
+ 468              	.LVL89:
+ 469 01d4 8240     		lsl	r2, r2, r0
+ 470 01d6 0B88     		ldrh	r3, [r1]
+ 471              	.LVL90:
+ 472 01d8 9343     		bic	r3, r3, r2
+ 473              	.LVL91:
+ 474 01da 0B80     		strh	r3, [r1]
+ 475              	.LVL92:
+ 476 01dc 06E0     		b	.L27
+ 477              	.LVL93:
+ 478              	.L26:
+ 479              		.loc 1 201 0
+ 480 01de 6B46     		mov	r3, sp
+ 481 01e0 0233     		add	r3, r3, #2
+ 482 01e2 0122     		mov	r2, #1
+ 483              	.LVL94:
+ 484 01e4 8240     		lsl	r2, r2, r0
+ 485 01e6 1988     		ldrh	r1, [r3]
+ 486              	.LVL95:
+ 487 01e8 0A43     		orr	r2, r2, r1
+ 488 01ea 1A80     		strh	r2, [r3]
+ 489              	.LVL96:
+ 490              	.L27:
+ 491              		.loc 1 202 0
+ 492 01ec 6B46     		mov	r3, sp
+ 493 01ee 0633     		add	r3, r3, #6
+ 494 01f0 1888     		ldrh	r0, [r3]
+ 495              	.LVL97:
+ 496 01f2 6946     		mov	r1, sp
+ 497 01f4 0231     		add	r1, r1, #2
+ 498 01f6 0122     		mov	r2, #1
+ 499 01f8 FFF7FEFF 		bl	MemSetWords
+ 500              	.LVL98:
+ 501 01fc 0028     		cmp	r0, #0
+ 502 01fe 01D0     		beq	.L28
+ 503 0200 0420     		mov	r0, #4
+ 504 0202 02E0     		b	.L25
+ 505              	.L28:
+ 506              		.loc 1 204 0
+ 507 0204 201C     		mov	r0, r4
+ 508 0206 FFF7FEFF 		bl	ErrorAddress
+ 509              	.LVL99:
+ 510              	.L25:
+ 511              		.loc 1 207 0
+ 512 020a 02B0     		add	sp, sp, #8
+ 513              		@ sp needed for prologue
+ 514              	.LVL100:
+ 515 020c 30BC     		pop	{r4, r5}
+ 516 020e 02BC     		pop	{r1}
+ 517 0210 0847     		bx	r1
+ 518              	.LFE297:
+ 520 0212 C046     		.align	2
+ 521              		.global	WriteNWords
+ 522              		.code	16
+ 523              		.thumb_func
+ 525              	WriteNWords:
+ 526              	.LFB295:
+ 527              		.loc 1 136 0
+ 528 0214 10B5     		push	{r4, lr}
+ 529              	.LCFI7:
+ 530              	.LVL101:
+ 531 0216 81B0     		sub	sp, sp, #4
+ 532              	.LCFI8:
+ 533 0218 041C     		mov	r4, r0
+ 534              		.loc 1 139 0
+ 535 021a 0378     		ldrb	r3, [r0]
+ 536 021c 1B02     		lsl	r3, r3, #8
+ 537              	.LVL102:
+ 538 021e 6946     		mov	r1, sp
+ 539 0220 0231     		add	r1, r1, #2
+ 540 0222 0B80     		strh	r3, [r1]
+ 541              		.loc 1 140 0
+ 542 0224 0B88     		ldrh	r3, [r1]
+ 543              	.LVL103:
+ 544 0226 4278     		ldrb	r2, [r0, #1]
+ 545 0228 9B18     		add	r3, r3, r2
+ 546              	.LVL104:
+ 547 022a 1B04     		lsl	r3, r3, #16
+ 548 022c 1B0C     		lsr	r3, r3, #16
+ 549              	.LVL105:
+ 550 022e 0B80     		strh	r3, [r1]
+ 551              		.loc 1 141 0
+ 552 0230 8378     		ldrb	r3, [r0, #2]
+ 553              	.LVL106:
+ 554 0232 1B02     		lsl	r3, r3, #8
+ 555              	.LVL107:
+ 556 0234 6946     		mov	r1, sp
+ 557 0236 0B80     		strh	r3, [r1]
+ 558              		.loc 1 142 0
+ 559 0238 0B88     		ldrh	r3, [r1]
+ 560              	.LVL108:
+ 561 023a C278     		ldrb	r2, [r0, #3]
+ 562 023c 9B18     		add	r3, r3, r2
+ 563              	.LVL109:
+ 564 023e 1B04     		lsl	r3, r3, #16
+ 565 0240 1B0C     		lsr	r3, r3, #16
+ 566              	.LVL110:
+ 567 0242 0B80     		strh	r3, [r1]
+ 568              		.loc 1 143 0
+ 569 0244 0B88     		ldrh	r3, [r1]
+ 570              	.LVL111:
+ 571 0246 7B2B     		cmp	r3, #123
+ 572 0248 02D9     		bls	.L31
+ 573              		.loc 1 145 0
+ 574 024a FFF7FEFF 		bl	ErrorAddress
+ 575              	.LVL112:
+ 576 024e 1FE0     		b	.L32
+ 577              	.LVL113:
+ 578              	.L31:
+ 579              		.loc 1 147 0
+ 580 0250 6B46     		mov	r3, sp
+ 581              	.LVL114:
+ 582 0252 1B88     		ldrh	r3, [r3]
+ 583              	.LVL115:
+ 584              	.LBB8:
+ 585              	.LBB9:
+ 586              		.loc 1 38 0
+ 587 0254 002B     		cmp	r3, #0
+ 588 0256 0CD0     		beq	.L33
+ 589              	.LVL116:
+ 590              	.LBE9:
+ 591              	.LBE8:
+ 592              		.loc 1 147 0
+ 593 0258 411D     		add	r1, r0, #5
+ 594              	.LVL117:
+ 595              	.LBB11:
+ 596              	.LBB10:
+ 597              		.loc 1 38 0
+ 598 025a 013B     		sub	r3, r3, #1
+ 599 025c 1B04     		lsl	r3, r3, #16
+ 600 025e DB0B     		lsr	r3, r3, #15
+ 601 0260 0733     		add	r3, r3, #7
+ 602 0262 C018     		add	r0, r0, r3
+ 603              	.LVL118:
+ 604              	.L34:
+ 605              		.loc 1 40 0
+ 606 0264 0A78     		ldrb	r2, [r1]
+ 607              	.LVL119:
+ 608              		.loc 1 41 0
+ 609 0266 4B78     		ldrb	r3, [r1, #1]
+ 610 0268 0B70     		strb	r3, [r1]
+ 611              		.loc 1 42 0
+ 612 026a 4A70     		strb	r2, [r1, #1]
+ 613              		.loc 1 43 0
+ 614 026c 0231     		add	r1, r1, #2
+ 615              		.loc 1 38 0
+ 616 026e 8142     		cmp	r1, r0
+ 617 0270 F8D1     		bne	.L34
+ 618              	.LVL120:
+ 619              	.L33:
+ 620              	.LBE10:
+ 621              	.LBE11:
+ 622              		.loc 1 148 0
+ 623 0272 6B46     		mov	r3, sp
+ 624 0274 0233     		add	r3, r3, #2
+ 625 0276 1888     		ldrh	r0, [r3]
+ 626              	.LVL121:
+ 627 0278 6B46     		mov	r3, sp
+ 628 027a 1A88     		ldrh	r2, [r3]
+ 629              	.LVL122:
+ 630 027c 611D     		add	r1, r4, #5
+ 631              	.LVL123:
+ 632 027e FFF7FEFF 		bl	MemSetWords
+ 633              	.LVL124:
+ 634 0282 0028     		cmp	r0, #0
+ 635 0284 01D0     		beq	.L35
+ 636 0286 0420     		mov	r0, #4
+ 637 0288 02E0     		b	.L32
+ 638              	.L35:
+ 639              		.loc 1 150 0
+ 640 028a 201C     		mov	r0, r4
+ 641 028c FFF7FEFF 		bl	ErrorAddress
+ 642              	.LVL125:
+ 643              	.L32:
+ 644              		.loc 1 153 0
+ 645 0290 01B0     		add	sp, sp, #4
+ 646              		@ sp needed for prologue
+ 647              	.LVL126:
+ 648 0292 10BC     		pop	{r4}
+ 649 0294 02BC     		pop	{r1}
+ 650 0296 0847     		bx	r1
+ 651              	.LFE295:
+ 653              		.align	2
+ 654              		.global	RVnetSlaveProcess
+ 655              		.code	16
+ 656              		.thumb_func
+ 658              	RVnetSlaveProcess:
+ 659              	.LFB292:
+ 660              		.loc 1 51 0
+ 661 0298 30B5     		push	{r4, r5, lr}
+ 662              	.LCFI9:
+ 663              	.LVL127:
+ 664 029a 051C     		mov	r5, r0
+ 665 029c 0906     		lsl	r1, r1, #24
+ 666              	.LVL128:
+ 667 029e 090E     		lsr	r1, r1, #24
+ 668              	.LVL129:
+ 669 02a0 1206     		lsl	r2, r2, #24
+ 670              	.LVL130:
+ 671 02a2 120E     		lsr	r2, r2, #24
+ 672              	.LVL131:
+ 673              		.loc 1 53 0
+ 674 02a4 0378     		ldrb	r3, [r0]
+ 675 02a6 9342     		cmp	r3, r2
+ 676 02a8 2DD1     		bne	.L39
+ 677              		.loc 1 55 0
+ 678 02aa FFF7FEFF 		bl	CheckCRC
+ 679              	.LVL132:
+ 680 02ae 0028     		cmp	r0, #0
+ 681 02b0 29D0     		beq	.L39
+ 682              		.loc 1 57 0
+ 683 02b2 681C     		add	r0, r5, #1
+ 684              	.LVL133:
+ 685              		.loc 1 58 0
+ 686 02b4 0378     		ldrb	r3, [r0]
+ 687 02b6 102B     		cmp	r3, #16
+ 688 02b8 17D8     		bhi	.L40
+ 689 02ba 9B00     		lsl	r3, r3, #2
+ 690 02bc 144A     		ldr	r2, .L50
+ 691 02be D358     		ldr	r3, [r2, r3]
+ 692 02c0 9F46     		mov	pc, r3
+ 693              		.section	.rodata
+ 694              		.align	2
+ 695              	.L46:
+ 696 0000 C2020000 		.word	.L41
+ 697 0004 CA020000 		.word	.L42
+ 698 0008 CA020000 		.word	.L42
+ 699 000c D2020000 		.word	.L43
+ 700 0010 D2020000 		.word	.L43
+ 701 0014 DA020000 		.word	.L44
+ 702 0018 EA020000 		.word	.L40
+ 703 001c EA020000 		.word	.L40
+ 704 0020 EA020000 		.word	.L40
+ 705 0024 EA020000 		.word	.L40
+ 706 0028 EA020000 		.word	.L40
+ 707 002c EA020000 		.word	.L40
+ 708 0030 EA020000 		.word	.L40
+ 709 0034 EA020000 		.word	.L40
+ 710 0038 EA020000 		.word	.L40
+ 711 003c EA020000 		.word	.L40
+ 712 0040 E2020000 		.word	.L45
+ 713              		.text
+ 714              	.L41:
+ 715              		.loc 1 62 0
+ 716 02c2 0130     		add	r0, r0, #1
+ 717              	.LVL134:
+ 718 02c4 FFF7FEFF 		bl	ReadDeviceID
+ 719 02c8 12E0     		b	.L47
+ 720              	.LVL135:
+ 721              	.L42:
+ 722              		.loc 1 67 0
+ 723 02ca 0130     		add	r0, r0, #1
+ 724              	.LVL136:
+ 725 02cc FFF7FEFF 		bl	ReadNBits
+ 726 02d0 0EE0     		b	.L47
+ 727              	.LVL137:
+ 728              	.L43:
+ 729              		.loc 1 72 0
+ 730 02d2 0130     		add	r0, r0, #1
+ 731              	.LVL138:
+ 732 02d4 FFF7FEFF 		bl	ReadNWords
+ 733 02d8 0AE0     		b	.L47
+ 734              	.LVL139:
+ 735              	.L44:
+ 736              		.loc 1 76 0
+ 737 02da 0130     		add	r0, r0, #1
+ 738              	.LVL140:
+ 739 02dc FFF7FEFF 		bl	WriteBit
+ 740 02e0 06E0     		b	.L47
+ 741              	.LVL141:
+ 742              	.L45:
+ 743              		.loc 1 80 0
+ 744 02e2 0130     		add	r0, r0, #1
+ 745              	.LVL142:
+ 746 02e4 FFF7FEFF 		bl	WriteNWords
+ 747 02e8 02E0     		b	.L47
+ 748              	.LVL143:
+ 749              	.L40:
+ 750              		.loc 1 84 0
+ 751 02ea 0130     		add	r0, r0, #1
+ 752              	.LVL144:
+ 753 02ec FFF7FEFF 		bl	ErrorAddress
+ 754              	.L47:
+ 755              		.loc 1 94 0
+ 756 02f0 841C     		add	r4, r0, #2
+ 757              	.LVL145:
+ 758 02f2 2406     		lsl	r4, r4, #24
+ 759 02f4 240E     		lsr	r4, r4, #24
+ 760              	.LVL146:
+ 761              		.loc 1 95 0
+ 762 02f6 281C     		mov	r0, r5
+ 763 02f8 211C     		mov	r1, r4
+ 764 02fa FFF7FEFF 		bl	SetCRC
+ 765              		.loc 1 96 0
+ 766 02fe 0234     		add	r4, r4, #2
+ 767              	.LVL147:
+ 768 0300 2406     		lsl	r4, r4, #24
+ 769 0302 200E     		lsr	r0, r4, #24
+ 770              	.LVL148:
+ 771 0304 00E0     		b	.L48
+ 772              	.LVL149:
+ 773              	.L39:
+ 774              		.loc 1 97 0
+ 775 0306 0020     		mov	r0, #0
+ 776              	.LVL150:
+ 777              	.L48:
+ 778              	.LVL151:
+ 779              		.loc 1 98 0
+ 780              		@ sp needed for prologue
+ 781              	.LVL152:
+ 782 0308 30BC     		pop	{r4, r5}
+ 783 030a 02BC     		pop	{r1}
+ 784 030c 0847     		bx	r1
+ 785              	.L51:
+ 786 030e C046     		.align	2
+ 787              	.L50:
+ 788 0310 00000000 		.word	.L46
+ 789              	.LFE292:
+ 943              	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 rvnet.c
+     /tmp/cc424Qhm.s:1      .text:00000000 $t
+     /tmp/cc424Qhm.s:16     .text:00000000 SwapBuffer
+     /tmp/cc424Qhm.s:68     .text:0000002c ReadDeviceID
+     /tmp/cc424Qhm.s:100    .text:00000040 ErrorAddress
+     /tmp/cc424Qhm.s:123    .text:00000050 ReadNBits
+     /tmp/cc424Qhm.s:242    .text:000000d4 ReadNWords
+     /tmp/cc424Qhm.s:382    .text:0000016c WriteBit
+     /tmp/cc424Qhm.s:525    .text:00000214 WriteNWords
+     /tmp/cc424Qhm.s:658    .text:00000298 RVnetSlaveProcess
+     /tmp/cc424Qhm.s:696    .rodata:00000000 $d
+     /tmp/cc424Qhm.s:788    .text:00000310 $d
+
+UNDEFINED SYMBOLS
+MemGetWords
+MemSetWords
+CheckCRC
+SetCRC

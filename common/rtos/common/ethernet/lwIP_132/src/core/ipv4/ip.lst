@@ -1,0 +1,1460 @@
+   1              		.code	16
+   2              		.file	"ip.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	ip_output_if
+  13              		.code	16
+  14              		.thumb_func
+  16              	ip_output_if:
+  17              	.LFB292:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * This is the IPv4 layer implementation for incoming and outgoing IP traffic.
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * 
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @see ip_frag.c
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /*
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * All rights reserved.
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * are permitted provided that the following conditions are met:
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *    this list of conditions and the following disclaimer.
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *    this list of conditions and the following disclaimer in the documentation
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *    and/or other materials provided with the distribution.
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * 3. The name of the author may not be used to endorse or promote products
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *    derived from this software without specific prior written permission.
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * OF SUCH DAMAGE.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * This file is part of the lwIP TCP/IP stack.
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Author: Adam Dunkels <adam@sics.se>
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/opt.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/ip.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/def.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/mem.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/ip_frag.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/inet.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/inet_chksum.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/netif.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/icmp.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/igmp.h"
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/raw.h"
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/udp.h"
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/tcp.h"
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/snmp.h"
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/dhcp.h"
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "lwip/stats.h"
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include "arch/perf.h"
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #include <string.h>
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * The interface that provided the packet for the current callback
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * invocation.
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** struct netif *current_netif;
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Header of the input packet currently being processed.
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** const struct ip_hdr *current_header;
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Finds the appropriate network interface for a given IP address. It
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * searches the list of network interfaces linearly. A match is found
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * if the masked IP address of the network interface equals the masked
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * IP address given to the function.
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param dest the destination IP address for which to find the route
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @return the netif on which to send to reach dest
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** struct netif *
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** ip_route(struct ip_addr *dest)
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct netif *netif;
+  85:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+  86:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* iterate through netifs */
+  87:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   for(netif = netif_list; netif != NULL; netif = netif->next) {
+  88:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* network mask matches? */
+  89:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (netif_is_up(netif)) {
+  90:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (ip_addr_netcmp(dest, &(netif->ip_addr), &(netif->netmask))) {
+  91:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         /* return netif on which to forward IP packet */
+  92:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         return netif;
+  93:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+  94:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+  95:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+  96:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if ((netif_default == NULL) || (!netif_is_up(netif_default))) {
+  97:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip_route: No route to 0x%"X32_F"\n", dest->add
+  98:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.rterr);
+  99:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipoutnoroutes();
+ 100:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return NULL;
+ 101:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 102:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* no matching netif found, use default netif */
+ 103:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return netif_default;
+ 104:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 105:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 106:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_FORWARD
+ 107:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+ 108:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Forwards an IP packet. It finds an appropriate route for the
+ 109:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * packet, decrements the TTL value of the packet, adjusts the
+ 110:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * checksum and outputs the packet on the appropriate interface.
+ 111:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 112:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param p the packet to forward (p->payload points to IP header)
+ 113:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param iphdr the IP header of the input packet
+ 114:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param inp the netif on which this packet was received
+ 115:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @return the netif on which the packet was sent (NULL if it wasn't sent)
+ 116:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+ 117:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** static struct netif *
+ 118:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** ip_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
+ 119:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+ 120:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct netif *netif;
+ 121:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 122:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   PERF_START;
+ 123:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Find network interface where to forward this IP packet to. */
+ 124:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   netif = ip_route((struct ip_addr *)&(iphdr->dest));
+ 125:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (netif == NULL) {
+ 126:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG, ("ip_forward: no forwarding route for 0x%"X32_F" found\n",
+ 127:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****                       iphdr->dest.addr));
+ 128:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipoutnoroutes();
+ 129:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return (struct netif *)NULL;
+ 130:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 131:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Do not forward packets onto the same network interface on which
+ 132:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****    * they arrived. */
+ 133:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (netif == inp) {
+ 134:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG, ("ip_forward: not bouncing packets back on incoming interface.\n"));
+ 135:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipoutnoroutes();
+ 136:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return (struct netif *)NULL;
+ 137:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 138:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 139:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* decrement TTL */
+ 140:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   IPH_TTL_SET(iphdr, IPH_TTL(iphdr) - 1);
+ 141:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* send ICMP if TTL == 0 */
+ 142:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (IPH_TTL(iphdr) == 0) {
+ 143:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipinhdrerrors();
+ 144:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_ICMP
+ 145:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* Don't send ICMP messages in response to ICMP messages */
+ 146:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (IPH_PROTO(iphdr) != IP_PROTO_ICMP) {
+ 147:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       icmp_time_exceeded(p, ICMP_TE_TTL);
+ 148:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 149:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_ICMP */
+ 150:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return (struct netif *)NULL;
+ 151:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 152:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 153:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Incrementally update the IP checksum. */
+ 154:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (IPH_CHKSUM(iphdr) >= htons(0xffff - 0x100)) {
+ 155:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_CHKSUM_SET(iphdr, IPH_CHKSUM(iphdr) + htons(0x100) + 1);
+ 156:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   } else {
+ 157:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_CHKSUM_SET(iphdr, IPH_CHKSUM(iphdr) + htons(0x100));
+ 158:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 159:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 160:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   LWIP_DEBUGF(IP_DEBUG, ("ip_forward: forwarding packet to 0x%"X32_F"\n",
+ 161:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****                     iphdr->dest.addr));
+ 162:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 163:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   IP_STATS_INC(ip.fw);
+ 164:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   IP_STATS_INC(ip.xmit);
+ 165:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   snmp_inc_ipforwdatagrams();
+ 166:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 167:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   PERF_STOP("ip_forward");
+ 168:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* transmit pbuf on chosen interface */
+ 169:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   netif->output(netif, p, (struct ip_addr *)&(iphdr->dest));
+ 170:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return netif;
+ 171:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 172:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_FORWARD */
+ 173:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 174:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+ 175:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * This function is called by the network interface device driver when
+ 176:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * an IP packet is received. The function does the basic checks of the
+ 177:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * IP header such as packet size being at least larger than the header
+ 178:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * size etc. If the packet was not destined for us, the packet is
+ 179:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * forwarded (using ip_forward). The IP checksum is always checked.
+ 180:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 181:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Finally, the packet is sent to the upper layer protocol input function.
+ 182:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * 
+ 183:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param p the received IP packet (p->payload points to IP header)
+ 184:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param inp the netif on which this packet was received
+ 185:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @return ERR_OK if the packet was processed (could return ERR_* if it wasn't
+ 186:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         processed, but currently always returns ERR_OK)
+ 187:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+ 188:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** err_t
+ 189:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** ip_input(struct pbuf *p, struct netif *inp)
+ 190:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+ 191:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct ip_hdr *iphdr;
+ 192:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct netif *netif;
+ 193:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   u16_t iphdr_hlen;
+ 194:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   u16_t iphdr_len;
+ 195:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_DHCP
+ 196:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   int check_ip_src=1;
+ 197:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_DHCP */
+ 198:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 199:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   IP_STATS_INC(ip.recv);
+ 200:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   snmp_inc_ipinreceives();
+ 201:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 202:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* identify the IP header */
+ 203:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   iphdr = p->payload;
+ 204:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (IPH_V(iphdr) != 4) {
+ 205:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_WARNING, ("IP packet dropped due to bad version number %"
+ 206:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     ip_debug_print(p);
+ 207:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 208:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.err);
+ 209:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.drop);
+ 210:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipinhdrerrors();
+ 211:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 212:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 213:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 214:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* obtain IP header length in number of 32-bit words */
+ 215:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   iphdr_hlen = IPH_HL(iphdr);
+ 216:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* calculate IP header length in bytes */
+ 217:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   iphdr_hlen *= 4;
+ 218:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* obtain ip length in bytes */
+ 219:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   iphdr_len = ntohs(IPH_LEN(iphdr));
+ 220:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 221:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* header length exceeds first pbuf length, or ip length exceeds total pbuf length? */
+ 222:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if ((iphdr_hlen > p->len) || (iphdr_len > p->tot_len)) {
+ 223:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (iphdr_hlen > p->len) {
+ 224:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 225:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         ("IP header (len %"U16_F") does not fit in first pbuf (len %"U16_F"), IP packet dropped.\n"
+ 226:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         iphdr_hlen, p->len));
+ 227:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 228:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (iphdr_len > p->tot_len) {
+ 229:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 230:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         ("IP (len %"U16_F") is longer than pbuf (len %"U16_F"), IP packet dropped.\n",
+ 231:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         iphdr_len, p->tot_len));
+ 232:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 233:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* free (drop) packet pbufs */
+ 234:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 235:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.lenerr);
+ 236:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.drop);
+ 237:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipindiscards();
+ 238:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 239:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 240:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 241:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* verify checksum */
+ 242:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if CHECKSUM_CHECK_IP
+ 243:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (inet_chksum(iphdr, iphdr_hlen) != 0) {
+ 244:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 245:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 246:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ("Checksum (0x%"X16_F") failed, IP packet dropped.\n", inet_chksum(iphdr, iphdr_hlen)));
+ 247:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     ip_debug_print(p);
+ 248:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 249:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.chkerr);
+ 250:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.drop);
+ 251:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipinhdrerrors();
+ 252:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 253:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 254:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif
+ 255:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 256:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Trim pbuf. This should have been done at the netif layer,
+ 257:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****    * but we'll do it anyway just to be sure that its done. */
+ 258:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   pbuf_realloc(p, iphdr_len);
+ 259:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 260:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* match packet against an interface, i.e. is this packet for us? */
+ 261:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_IGMP
+ 262:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (ip_addr_ismulticast(&(iphdr->dest))) {
+ 263:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if ((inp->flags & NETIF_FLAG_IGMP) && (igmp_lookfor_group(inp, &(iphdr->dest)))) {
+ 264:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       netif = inp;
+ 265:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     } else {
+ 266:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       netif = NULL;
+ 267:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 268:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   } else
+ 269:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_IGMP */
+ 270:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   {
+ 271:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* start trying with inp. if that's not acceptable, start walking the
+ 272:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****        list of configured netifs.
+ 273:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****        'first' is used as a boolean to mark whether we started walking the list */
+ 274:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     int first = 1;
+ 275:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     netif = inp;
+ 276:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     do {
+ 277:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG, ("ip_input: iphdr->dest 0x%"X32_F" netif->ip_addr 0x%"X32_F" (0x%"X32_F
+ 278:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           iphdr->dest.addr, netif->ip_addr.addr,
+ 279:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           iphdr->dest.addr & netif->netmask.addr,
+ 280:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           netif->ip_addr.addr & netif->netmask.addr,
+ 281:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           iphdr->dest.addr & ~(netif->netmask.addr)));
+ 282:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 283:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* interface is up and configured? */
+ 284:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if ((netif_is_up(netif)) && (!ip_addr_isany(&(netif->ip_addr)))) {
+ 285:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         /* unicast to this interface address? */
+ 286:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         if (ip_addr_cmp(&(iphdr->dest), &(netif->ip_addr)) ||
+ 287:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             /* or broadcast on this interface network address? */
+ 288:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             ip_addr_isbroadcast(&(iphdr->dest), netif)) {
+ 289:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           LWIP_DEBUGF(IP_DEBUG, ("ip_input: packet accepted on interface %c%c\n",
+ 290:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****               netif->name[0], netif->name[1]));
+ 291:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           /* break out of for loop */
+ 292:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           break;
+ 293:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         }
+ 294:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 295:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (first) {
+ 296:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         first = 0;
+ 297:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         netif = netif_list;
+ 298:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       } else {
+ 299:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         netif = netif->next;
+ 300:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 301:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (netif == inp) {
+ 302:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         netif = netif->next;
+ 303:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 304:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     } while(netif != NULL);
+ 305:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 306:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 307:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_DHCP
+ 308:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Pass DHCP messages regardless of destination address. DHCP traffic is addressed
+ 309:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****    * using link layer addressing (such as Ethernet MAC) so we must not filter on IP.
+ 310:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****    * According to RFC 1542 section 3.1.1, referred by RFC 2131).
+ 311:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****    */
+ 312:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (netif == NULL) {
+ 313:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* remote port is DHCP server? */
+ 314:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (IPH_PROTO(iphdr) == IP_PROTO_UDP) {
+ 315:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip_input: UDP packet to DHCP client port %"U16_F"\n"
+ 316:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         ntohs(((struct udp_hdr *)((u8_t *)iphdr + iphdr_hlen))->dest)));
+ 317:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (ntohs(((struct udp_hdr *)((u8_t *)iphdr + iphdr_hlen))->dest) == DHCP_CLIENT_PORT) {
+ 318:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip_input: DHCP packet accepted.\n"));
+ 319:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         netif = inp;
+ 320:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         check_ip_src = 0;
+ 321:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 322:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 323:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 324:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_DHCP */
+ 325:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 326:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* broadcast or multicast packet source address? Compliant with RFC 1122: 3.2.1.3 */
+ 327:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_DHCP
+ 328:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* DHCP servers need 0.0.0.0 to be allowed as source address (RFC 1.1.2.2: 3.2.1.3/a) */
+ 329:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (check_ip_src && (iphdr->src.addr != 0))
+ 330:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_DHCP */
+ 331:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   {  if ((ip_addr_isbroadcast(&(iphdr->src), inp)) ||
+ 332:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****          (ip_addr_ismulticast(&(iphdr->src)))) {
+ 333:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* packet source is not valid */
+ 334:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_WARNING, ("ip_input: packet source is 
+ 335:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* free (drop) packet pbufs */
+ 336:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       pbuf_free(p);
+ 337:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       IP_STATS_INC(ip.drop);
+ 338:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipinaddrerrors();
+ 339:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipindiscards();
+ 340:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       return ERR_OK;
+ 341:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 342:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 343:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 344:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* packet not for us? */
+ 345:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (netif == NULL) {
+ 346:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* packet not for us, route or discard */
+ 347:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip_input: packet not for us.\n"));
+ 348:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_FORWARD
+ 349:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* non-broadcast packet? */
+ 350:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (!ip_addr_isbroadcast(&(iphdr->dest), inp)) {
+ 351:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* try to forward IP packet on (other) interfaces */
+ 352:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ip_forward(p, iphdr, inp);
+ 353:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     } else
+ 354:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_FORWARD */
+ 355:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     {
+ 356:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipinaddrerrors();
+ 357:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipindiscards();
+ 358:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 359:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 360:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 361:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 362:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* packet consists of multiple fragments? */
+ 363:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if ((IPH_OFFSET(iphdr) & htons(IP_OFFMASK | IP_MF)) != 0) {
+ 364:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_REASSEMBLY /* packet fragment reassembly code present? */
+ 365:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG, ("IP packet is a fragment (id=0x%04"X16_F" tot_len=%"U16_F" len=%"U16_F" 
+ 366:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ntohs(IPH_ID(iphdr)), p->tot_len, ntohs(IPH_LEN(iphdr)), !!(IPH_OFFSET(iphdr) & htons(IP_MF))
+ 367:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* reassemble the packet*/
+ 368:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     p = ip_reass(p);
+ 369:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* packet not fully reassembled yet? */
+ 370:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (p == NULL) {
+ 371:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       return ERR_OK;
+ 372:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 373:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     iphdr = p->payload;
+ 374:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #else /* IP_REASSEMBLY == 0, no packet fragment reassembly code present */
+ 375:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 376:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("IP packet dropped since it was fragmented (0x%
+ 377:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ntohs(IPH_OFFSET(iphdr))));
+ 378:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.opterr);
+ 379:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.drop);
+ 380:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* unsupported protocol feature */
+ 381:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipinunknownprotos();
+ 382:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 383:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_REASSEMBLY */
+ 384:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 385:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 386:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_OPTIONS_ALLOWED == 0 /* no support for IP options in the IP header? */
+ 387:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 388:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_IGMP
+ 389:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* there is an extra "router alert" option in IGMP messages which we allow for but do not police 
+ 390:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if((iphdr_hlen > IP_HLEN &&  (IPH_PROTO(iphdr) != IP_PROTO_IGMP)) {
+ 391:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #else
+ 392:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (iphdr_hlen > IP_HLEN) {
+ 393:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_IGMP */
+ 394:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("IP packet dropped since there were IP options 
+ 395:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     pbuf_free(p);
+ 396:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.opterr);
+ 397:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.drop);
+ 398:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* unsupported protocol feature */
+ 399:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     snmp_inc_ipinunknownprotos();
+ 400:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_OK;
+ 401:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 402:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_OPTIONS_ALLOWED == 0 */
+ 403:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 404:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* send to upper layers */
+ 405:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   LWIP_DEBUGF(IP_DEBUG, ("ip_input: \n"));
+ 406:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   ip_debug_print(p);
+ 407:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   LWIP_DEBUGF(IP_DEBUG, ("ip_input: p->len %"U16_F" p->tot_len %"U16_F"\n", p->len, p->tot_len));
+ 408:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 409:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   current_netif = inp;
+ 410:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   current_header = iphdr;
+ 411:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 412:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_RAW
+ 413:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* raw input did not eat the packet? */
+ 414:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (raw_input(p, inp) == 0)
+ 415:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_RAW */
+ 416:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   {
+ 417:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 418:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     switch (IPH_PROTO(iphdr)) {
+ 419:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_UDP
+ 420:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     case IP_PROTO_UDP:
+ 421:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_UDPLITE
+ 422:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     case IP_PROTO_UDPLITE:
+ 423:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_UDPLITE */
+ 424:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipindelivers();
+ 425:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       udp_input(p, inp);
+ 426:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       break;
+ 427:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_UDP */
+ 428:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_TCP
+ 429:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     case IP_PROTO_TCP:
+ 430:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipindelivers();
+ 431:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       tcp_input(p, inp);
+ 432:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       break;
+ 433:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_TCP */
+ 434:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_ICMP
+ 435:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     case IP_PROTO_ICMP:
+ 436:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipindelivers();
+ 437:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       icmp_input(p, inp);
+ 438:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       break;
+ 439:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_ICMP */
+ 440:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_IGMP
+ 441:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     case IP_PROTO_IGMP:
+ 442:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       igmp_input(p,inp,&(iphdr->dest));
+ 443:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       break;
+ 444:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_IGMP */
+ 445:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     default:
+ 446:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if LWIP_ICMP
+ 447:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* send ICMP destination protocol unreachable unless is was a broadcast */
+ 448:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (!ip_addr_isbroadcast(&(iphdr->dest), inp) &&
+ 449:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           !ip_addr_ismulticast(&(iphdr->dest))) {
+ 450:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         p->payload = iphdr;
+ 451:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         icmp_dest_unreach(p, ICMP_DUR_PROTO);
+ 452:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 453:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* LWIP_ICMP */
+ 454:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       pbuf_free(p);
+ 455:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 456:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("Unsupported transport protocol %"U16_F"\n", 
+ 457:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 458:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       IP_STATS_INC(ip.proterr);
+ 459:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       IP_STATS_INC(ip.drop);
+ 460:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipinunknownprotos();
+ 461:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 462:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 463:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 464:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   current_netif = NULL;
+ 465:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   current_header = NULL;
+ 466:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 467:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return ERR_OK;
+ 468:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 469:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 470:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+ 471:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Sends an IP packet on a network interface. This function constructs
+ 472:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * the IP header and calculates the IP header checksum. If the source
+ 473:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * IP address is NULL, the IP address of the outgoing network
+ 474:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * interface is filled in as source address.
+ 475:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * If the destination IP address is IP_HDRINCL, p is assumed to already
+ 476:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * include an IP header and p->payload points to it instead of the data.
+ 477:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 478:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param p the packet to send (p->payload points to the data, e.g. next
+ 479:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             protocol header; if dest == IP_HDRINCL, p already includes an IP
+ 480:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             header and p->payload points to that IP header)
+ 481:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param src the source IP address to send from (if src == IP_ADDR_ANY, the
+ 482:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         IP  address of the netif used to send is used as source address)
+ 483:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param dest the destination IP address to send the packet to
+ 484:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param ttl the TTL value to be set in the IP header
+ 485:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param tos the TOS value to be set in the IP header
+ 486:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param proto the PROTOCOL to be set in the IP header
+ 487:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param netif the netif on which to send this packet
+ 488:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @return ERR_OK if the packet was sent OK
+ 489:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         ERR_BUF if p doesn't have enough space for IP/LINK headers
+ 490:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         returns errors returned by netif->output
+ 491:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 492:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @note ip_id: RFC791 "some host may be able to simply use
+ 493:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *  unique identifiers independent of destination"
+ 494:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+ 495:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** err_t
+ 496:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** ip_output_if(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+ 497:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****              u8_t ttl, u8_t tos,
+ 498:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****              u8_t proto, struct netif *netif)
+ 499:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+  19              		.loc 1 499 0
+  20 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  21              	.LCFI0:
+  22 0002 5F46     		mov	r7, fp
+  23 0004 5646     		mov	r6, sl
+  24 0006 4D46     		mov	r5, r9
+  25 0008 4446     		mov	r4, r8
+  26 000a F0B4     		push	{r4, r5, r6, r7}
+  27              	.LCFI1:
+  28              	.LVL0:
+  29 000c 061C     		mov	r6, r0
+  30 000e 8B46     		mov	fp, r1
+  31 0010 171C     		mov	r7, r2
+  32 0012 099A     		ldr	r2, [sp, #36]
+  33              	.LVL1:
+  34 0014 0A99     		ldr	r1, [sp, #40]
+  35              	.LVL2:
+  36 0016 0B98     		ldr	r0, [sp, #44]
+  37              	.LVL3:
+  38 0018 8246     		mov	sl, r0
+  39              	.LVL4:
+  40 001a 1B06     		lsl	r3, r3, #24
+  41              	.LVL5:
+  42 001c 1C0E     		lsr	r4, r3, #24
+  43              	.LVL6:
+  44 001e 1206     		lsl	r2, r2, #24
+  45 0020 120E     		lsr	r2, r2, #24
+  46 0022 9146     		mov	r9, r2
+  47              	.LVL7:
+  48 0024 0906     		lsl	r1, r1, #24
+  49 0026 090E     		lsr	r1, r1, #24
+  50 0028 8846     		mov	r8, r1
+  51              	.LVL8:
+ 500:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_OPTIONS_SEND
+ 501:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return ip_output_if_opt(p, src, dest, ttl, tos, proto, netif, NULL, 0);
+ 502:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 503:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 504:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+ 505:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Same as ip_output_if() but with the possibility to include IP options:
+ 506:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 507:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @ param ip_options pointer to the IP options, copied into the IP header
+ 508:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @ param optlen length of ip_options
+ 509:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+ 510:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** err_t ip_output_if_opt(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+ 511:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****        u8_t ttl, u8_t tos, u8_t proto, struct netif *netif, void *ip_options,
+ 512:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****        u16_t optlen)
+ 513:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+ 514:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_OPTIONS_SEND */
+ 515:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct ip_hdr *iphdr;
+ 516:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   static u16_t ip_id = 0;
+ 517:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 518:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   snmp_inc_ipoutrequests();
+ 519:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 520:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* Should the IP header be generated or is it already included in p? */
+ 521:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (dest != IP_HDRINCL) {
+  52              		.loc 1 521 0
+  53 002a 002F     		cmp	r7, #0
+  54 002c 56D0     		beq	.L2
+  55              	.LBB2:
+ 522:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     u16_t ip_hlen = IP_HLEN;
+ 523:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_OPTIONS_SEND
+ 524:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     u16_t optlen_aligned = 0;
+ 525:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (optlen != 0) {
+ 526:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* round up to a multiple of 4 */
+ 527:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       optlen_aligned = ((optlen + 3) & ~3);
+ 528:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ip_hlen += optlen_aligned;
+ 529:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       /* First write in the IP options */
+ 530:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (pbuf_header(p, optlen_aligned)) {
+ 531:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip_output_if_opt: not enough room for IP o
+ 532:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         IP_STATS_INC(ip.err);
+ 533:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         snmp_inc_ipoutdiscards();
+ 534:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         return ERR_BUF;
+ 535:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 536:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       MEMCPY(p->payload, ip_options, optlen);
+ 537:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       if (optlen < optlen_aligned) {
+ 538:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         /* zero the remaining bytes */
+ 539:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****         memset(((char*)p->payload) + optlen, 0, optlen_aligned - optlen);
+ 540:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       }
+ 541:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 542:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* IP_OPTIONS_SEND */
+ 543:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* generate IP header */
+ 544:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (pbuf_header(p, IP_HLEN)) {
+  56              		.loc 1 544 0
+  57 002e 301C     		mov	r0, r6
+  58 0030 1421     		mov	r1, #20
+  59 0032 FFF7FEFF 		bl	pbuf_header
+  60 0036 0028     		cmp	r0, #0
+  61 0038 06D0     		beq	.L3
+ 545:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip_output: not enough room for IP header in 
+ 546:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 547:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       IP_STATS_INC(ip.err);
+  62              		.loc 1 547 0
+  63 003a 3D49     		ldr	r1, .L13
+  64 003c 5C22     		mov	r2, #92
+  65 003e 8B5A     		ldrh	r3, [r1, r2]
+  66 0040 0133     		add	r3, r3, #1
+  67 0042 8B52     		strh	r3, [r1, r2]
+  68 0044 FE20     		mov	r0, #254
+  69 0046 68E0     		b	.L4
+  70              	.L3:
+ 548:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       snmp_inc_ipoutdiscards();
+ 549:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       return ERR_BUF;
+ 550:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 551:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 552:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     iphdr = p->payload;
+  71              		.loc 1 552 0
+  72 0048 7568     		ldr	r5, [r6, #4]
+  73              	.LVL9:
+ 553:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_ASSERT("check that first pbuf can hold struct ip_hdr",
+ 554:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****                (p->len >= sizeof(struct ip_hdr)));
+ 555:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 556:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_TTL_SET(iphdr, ttl);
+  74              		.loc 1 556 0
+  75 004a 2889     		ldrh	r0, [r5, #8]
+  76 004c FFF7FEFF 		bl	ntohs
+  77 0050 FF23     		mov	r3, #255
+  78 0052 1840     		and	r0, r0, r3
+  79 0054 2302     		lsl	r3, r4, #8
+  80 0056 1843     		orr	r0, r0, r3
+  81 0058 0004     		lsl	r0, r0, #16
+  82 005a 000C     		lsr	r0, r0, #16
+  83 005c FFF7FEFF 		bl	htons
+  84 0060 2881     		strh	r0, [r5, #8]
+ 557:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_PROTO_SET(iphdr, proto);
+  85              		.loc 1 557 0
+  86 0062 FFF7FEFF 		bl	ntohs
+  87 0066 0002     		lsl	r0, r0, #8
+  88 0068 000C     		lsr	r0, r0, #16
+  89 006a 0002     		lsl	r0, r0, #8
+  90 006c 4246     		mov	r2, r8
+  91 006e 1043     		orr	r0, r0, r2
+  92 0070 0004     		lsl	r0, r0, #16
+  93 0072 000C     		lsr	r0, r0, #16
+  94 0074 FFF7FEFF 		bl	htons
+  95 0078 2881     		strh	r0, [r5, #8]
+ 558:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 559:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     ip_addr_set(&(iphdr->dest), dest);
+  96              		.loc 1 559 0
+  97 007a 3B68     		ldr	r3, [r7]
+  98 007c 2B61     		str	r3, [r5, #16]
+ 560:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 561:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_VHLTOS_SET(iphdr, 4, ip_hlen / 4, tos);
+  99              		.loc 1 561 0
+ 100 007e 8A23     		mov	r3, #138
+ 101 0080 DB01     		lsl	r3, r3, #7
+ 102 0082 4846     		mov	r0, r9
+ 103 0084 1843     		orr	r0, r0, r3
+ 104 0086 0004     		lsl	r0, r0, #16
+ 105 0088 000C     		lsr	r0, r0, #16
+ 106 008a FFF7FEFF 		bl	htons
+ 107 008e 2880     		strh	r0, [r5]
+ 562:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_LEN_SET(iphdr, htons(p->tot_len));
+ 108              		.loc 1 562 0
+ 109 0090 3089     		ldrh	r0, [r6, #8]
+ 110 0092 FFF7FEFF 		bl	htons
+ 111 0096 6880     		strh	r0, [r5, #2]
+ 563:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_OFFSET_SET(iphdr, 0);
+ 112              		.loc 1 563 0
+ 113 0098 0023     		mov	r3, #0
+ 114 009a EB80     		strh	r3, [r5, #6]
+ 564:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_ID_SET(iphdr, htons(ip_id));
+ 115              		.loc 1 564 0
+ 116 009c 254C     		ldr	r4, .L13+4
+ 117              	.LVL10:
+ 118 009e 2088     		ldrh	r0, [r4]
+ 119 00a0 FFF7FEFF 		bl	htons
+ 120 00a4 A880     		strh	r0, [r5, #4]
+ 565:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     ++ip_id;
+ 121              		.loc 1 565 0
+ 122 00a6 2388     		ldrh	r3, [r4]
+ 123 00a8 0133     		add	r3, r3, #1
+ 124 00aa 2380     		strh	r3, [r4]
+ 566:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 567:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     if (ip_addr_isany(src)) {
+ 125              		.loc 1 567 0
+ 126 00ac 5B46     		mov	r3, fp
+ 127 00ae 002B     		cmp	r3, #0
+ 128 00b0 02D0     		beq	.L5
+ 129 00b2 1968     		ldr	r1, [r3]
+ 130 00b4 0029     		cmp	r1, #0
+ 131 00b6 08D1     		bne	.L6
+ 132              	.L5:
+ 568:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ip_addr_set(&(iphdr->src), &(netif->ip_addr));
+ 133              		.loc 1 568 0
+ 134 00b8 5046     		mov	r0, sl
+ 135 00ba 0430     		add	r0, r0, #4
+ 136 00bc 01D1     		bne	.L7
+ 137 00be 0023     		mov	r3, #0
+ 138 00c0 01E0     		b	.L8
+ 139              	.L7:
+ 140 00c2 5246     		mov	r2, sl
+ 141 00c4 5368     		ldr	r3, [r2, #4]
+ 142              	.L8:
+ 143 00c6 EB60     		str	r3, [r5, #12]
+ 144 00c8 00E0     		b	.L9
+ 145              	.L6:
+ 569:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     } else {
+ 570:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****       ip_addr_set(&(iphdr->src), src);
+ 146              		.loc 1 570 0
+ 147 00ca E960     		str	r1, [r5, #12]
+ 148              	.L9:
+ 571:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     }
+ 572:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 573:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_CHKSUM_SET(iphdr, 0);
+ 149              		.loc 1 573 0
+ 150 00cc 0023     		mov	r3, #0
+ 151 00ce 6B81     		strh	r3, [r5, #10]
+ 574:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if CHECKSUM_GEN_IP
+ 575:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IPH_CHKSUM_SET(iphdr, inet_chksum(iphdr, ip_hlen));
+ 152              		.loc 1 575 0
+ 153 00d0 281C     		mov	r0, r5
+ 154 00d2 1421     		mov	r1, #20
+ 155 00d4 FFF7FEFF 		bl	inet_chksum
+ 156 00d8 6881     		strh	r0, [r5, #10]
+ 157 00da 02E0     		b	.L10
+ 158              	.LVL11:
+ 159              	.L2:
+ 160              	.LBE2:
+ 576:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif
+ 577:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   } else {
+ 578:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* IP header already included in p */
+ 579:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     iphdr = p->payload;
+ 580:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     dest = &(iphdr->dest);
+ 161              		.loc 1 580 0
+ 162 00dc 7368     		ldr	r3, [r6, #4]
+ 163 00de 1F1C     		mov	r7, r3
+ 164 00e0 1037     		add	r7, r7, #16
+ 165              	.LVL12:
+ 166              	.L10:
+ 581:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 582:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 583:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   IP_STATS_INC(ip.xmit);
+ 167              		.loc 1 583 0
+ 168 00e2 1349     		ldr	r1, .L13
+ 169 00e4 4822     		mov	r2, #72
+ 170 00e6 8B5A     		ldrh	r3, [r1, r2]
+ 171 00e8 0133     		add	r3, r3, #1
+ 172 00ea 8B52     		strh	r3, [r1, r2]
+ 584:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 585:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   LWIP_DEBUGF(IP_DEBUG, ("ip_output_if: %c%c%"U16_F"\n", netif->name[0], netif->name[1], netif->num
+ 586:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   ip_debug_print(p);
+ 587:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 588:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if ENABLE_LOOPBACK
+ 589:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (ip_addr_cmp(dest, &netif->ip_addr)) {
+ 590:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     /* Packet to self, enqueue it for loopback */
+ 591:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG, ("netif_loop_output()"));
+ 592:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return netif_loop_output(netif, p, dest);
+ 593:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 594:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif /* ENABLE_LOOPBACK */
+ 595:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #if IP_FRAG
+ 596:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   /* don't fragment if interface has mtu set to 0 [loopif] */
+ 597:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if (netif->mtu && (p->tot_len > netif->mtu)) {
+ 173              		.loc 1 597 0
+ 174 00ec 5346     		mov	r3, sl
+ 175 00ee 9A8C     		ldrh	r2, [r3, #36]
+ 176 00f0 002A     		cmp	r2, #0
+ 177 00f2 0AD0     		beq	.L11
+ 178 00f4 3389     		ldrh	r3, [r6, #8]
+ 179 00f6 9342     		cmp	r3, r2
+ 180 00f8 07D9     		bls	.L11
+ 598:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ip_frag(p,netif,dest);
+ 181              		.loc 1 598 0
+ 182 00fa 301C     		mov	r0, r6
+ 183 00fc 5146     		mov	r1, sl
+ 184 00fe 3A1C     		mov	r2, r7
+ 185 0100 FFF7FEFF 		bl	ip_frag
+ 186 0104 0006     		lsl	r0, r0, #24
+ 187 0106 000E     		lsr	r0, r0, #24
+ 188 0108 07E0     		b	.L4
+ 189              	.L11:
+ 599:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 600:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** #endif
+ 601:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 602:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   LWIP_DEBUGF(IP_DEBUG, ("netif->output()"));
+ 603:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return netif->output(netif, p, dest);
+ 190              		.loc 1 603 0
+ 191 010a 5046     		mov	r0, sl
+ 192 010c 4369     		ldr	r3, [r0, #20]
+ 193 010e 311C     		mov	r1, r6
+ 194 0110 3A1C     		mov	r2, r7
+ 195 0112 00F0A1F9 		bl	.L15
+ 196 0116 0006     		lsl	r0, r0, #24
+ 197 0118 000E     		lsr	r0, r0, #24
+ 198              	.L4:
+ 199 011a 0006     		lsl	r0, r0, #24
+ 200 011c 0016     		asr	r0, r0, #24
+ 604:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 201              		.loc 1 604 0
+ 202              		@ sp needed for prologue
+ 203              	.LVL13:
+ 204              	.LVL14:
+ 205              	.LVL15:
+ 206              	.LVL16:
+ 207              	.LVL17:
+ 208              	.LVL18:
+ 209              	.LVL19:
+ 210              	.LVL20:
+ 211 011e 3CBC     		pop	{r2, r3, r4, r5}
+ 212 0120 9046     		mov	r8, r2
+ 213 0122 9946     		mov	r9, r3
+ 214 0124 A246     		mov	sl, r4
+ 215 0126 AB46     		mov	fp, r5
+ 216 0128 F0BC     		pop	{r4, r5, r6, r7}
+ 217 012a 02BC     		pop	{r1}
+ 218 012c 0847     		bx	r1
+ 219              	.L14:
+ 220 012e C046     		.align	2
+ 221              	.L13:
+ 222 0130 00000000 		.word	lwip_stats
+ 223 0134 00000000 		.word	ip_id.5756
+ 224              	.LFE292:
+ 226              		.align	2
+ 227              		.global	ip_route
+ 228              		.code	16
+ 229              		.thumb_func
+ 231              	ip_route:
+ 232              	.LFB290:
+ 233              		.loc 1 83 0
+ 234 0138 30B5     		push	{r4, r5, lr}
+ 235              	.LCFI2:
+ 236              	.LVL21:
+ 237 013a 051C     		mov	r5, r0
+ 238              		.loc 1 87 0
+ 239 013c 134B     		ldr	r3, .L26
+ 240 013e 1C68     		ldr	r4, [r3]
+ 241              	.LVL22:
+ 242 0140 002C     		cmp	r4, #0
+ 243 0142 0DD0     		beq	.L17
+ 244              	.LVL23:
+ 245              	.L24:
+ 246              		.loc 1 89 0
+ 247 0144 201C     		mov	r0, r4
+ 248 0146 FFF7FEFF 		bl	netif_is_up
+ 249 014a 0028     		cmp	r0, #0
+ 250 014c 05D0     		beq	.L18
+ 251              		.loc 1 90 0
+ 252 014e 6368     		ldr	r3, [r4, #4]
+ 253 0150 2A68     		ldr	r2, [r5]
+ 254 0152 5340     		eor	r3, r3, r2
+ 255 0154 A268     		ldr	r2, [r4, #8]
+ 256 0156 1342     		tst	r3, r2
+ 257 0158 13D0     		beq	.L19
+ 258              	.L18:
+ 259              		.loc 1 87 0
+ 260 015a 2468     		ldr	r4, [r4]
+ 261 015c 002C     		cmp	r4, #0
+ 262 015e F1D1     		bne	.L24
+ 263              	.LVL24:
+ 264              	.L17:
+ 265              		.loc 1 96 0
+ 266 0160 0B4B     		ldr	r3, .L26+4
+ 267 0162 1868     		ldr	r0, [r3]
+ 268 0164 0028     		cmp	r0, #0
+ 269 0166 03D0     		beq	.L21
+ 270 0168 FFF7FEFF 		bl	netif_is_up
+ 271 016c 0028     		cmp	r0, #0
+ 272 016e 06D1     		bne	.L22
+ 273              	.L21:
+ 274              		.loc 1 98 0
+ 275 0170 0849     		ldr	r1, .L26+8
+ 276 0172 5622     		mov	r2, #86
+ 277 0174 8B5A     		ldrh	r3, [r1, r2]
+ 278 0176 0133     		add	r3, r3, #1
+ 279 0178 8B52     		strh	r3, [r1, r2]
+ 280 017a 0024     		mov	r4, #0
+ 281 017c 01E0     		b	.L19
+ 282              	.L22:
+ 283              		.loc 1 103 0
+ 284 017e 044B     		ldr	r3, .L26+4
+ 285 0180 1C68     		ldr	r4, [r3]
+ 286              	.L19:
+ 287              		.loc 1 104 0
+ 288 0182 201C     		mov	r0, r4
+ 289              		@ sp needed for prologue
+ 290              	.LVL25:
+ 291              	.LVL26:
+ 292 0184 30BC     		pop	{r4, r5}
+ 293 0186 02BC     		pop	{r1}
+ 294 0188 0847     		bx	r1
+ 295              	.L27:
+ 296 018a C046     		.align	2
+ 297              	.L26:
+ 298 018c 00000000 		.word	netif_list
+ 299 0190 00000000 		.word	netif_default
+ 300 0194 00000000 		.word	lwip_stats
+ 301              	.LFE290:
+ 303              		.align	2
+ 304              		.global	ip_output
+ 305              		.code	16
+ 306              		.thumb_func
+ 308              	ip_output:
+ 309              	.LFB293:
+ 605:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 606:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** /**
+ 607:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * Simple interface to ip_output_if. It finds the outgoing network
+ 608:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * interface and calls upon ip_output_if to do the actual work.
+ 609:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 610:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param p the packet to send (p->payload points to the data, e.g. next
+ 611:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             protocol header; if dest == IP_HDRINCL, p already includes an IP
+ 612:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****             header and p->payload points to that IP header)
+ 613:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param src the source IP address to send from (if src == IP_ADDR_ANY, the
+ 614:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         IP  address of the netif used to send is used as source address)
+ 615:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param dest the destination IP address to send the packet to
+ 616:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param ttl the TTL value to be set in the IP header
+ 617:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param tos the TOS value to be set in the IP header
+ 618:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @param proto the PROTOCOL to be set in the IP header
+ 619:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *
+ 620:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  * @return ERR_RTE if no route is found
+ 621:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  *         see ip_output_if() for more return values
+ 622:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****  */
+ 623:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** err_t
+ 624:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+ 625:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****           u8_t ttl, u8_t tos, u8_t proto)
+ 626:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** {
+ 310              		.loc 1 626 0
+ 311 0198 F0B5     		push	{r4, r5, r6, r7, lr}
+ 312              	.LCFI3:
+ 313 019a 5746     		mov	r7, sl
+ 314 019c 4646     		mov	r6, r8
+ 315 019e C0B4     		push	{r6, r7}
+ 316              	.LCFI4:
+ 317              	.LVL27:
+ 318 01a0 83B0     		sub	sp, sp, #12
+ 319              	.LCFI5:
+ 320 01a2 8046     		mov	r8, r0
+ 321 01a4 8A46     		mov	sl, r1
+ 322 01a6 161C     		mov	r6, r2
+ 323 01a8 0A9A     		ldr	r2, [sp, #40]
+ 324              	.LVL28:
+ 325 01aa 0B99     		ldr	r1, [sp, #44]
+ 326              	.LVL29:
+ 327 01ac 1B06     		lsl	r3, r3, #24
+ 328              	.LVL30:
+ 329 01ae 1F0E     		lsr	r7, r3, #24
+ 330              	.LVL31:
+ 331 01b0 1206     		lsl	r2, r2, #24
+ 332 01b2 150E     		lsr	r5, r2, #24
+ 333              	.LVL32:
+ 334 01b4 0906     		lsl	r1, r1, #24
+ 335 01b6 0C0E     		lsr	r4, r1, #24
+ 336              	.LVL33:
+ 627:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   struct netif *netif;
+ 628:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 629:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   if ((netif = ip_route(dest)) == NULL) {
+ 337              		.loc 1 629 0
+ 338 01b8 301C     		mov	r0, r6
+ 339              	.LVL34:
+ 340 01ba FFF7FEFF 		bl	ip_route
+ 341 01be 0028     		cmp	r0, #0
+ 342 01c0 06D1     		bne	.L29
+ 343              	.LVL35:
+ 630:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     LWIP_DEBUGF(IP_DEBUG, ("ip_output: No route to 0x%"X32_F"\n", dest->addr));
+ 631:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     IP_STATS_INC(ip.rterr);
+ 344              		.loc 1 631 0
+ 345 01c2 0D49     		ldr	r1, .L32
+ 346 01c4 5622     		mov	r2, #86
+ 347 01c6 8B5A     		ldrh	r3, [r1, r2]
+ 348 01c8 0133     		add	r3, r3, #1
+ 349 01ca 8B52     		strh	r3, [r1, r2]
+ 350 01cc FC20     		mov	r0, #252
+ 351              	.LVL36:
+ 352 01ce 0AE0     		b	.L30
+ 353              	.LVL37:
+ 354              	.L29:
+ 632:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****     return ERR_RTE;
+ 633:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   }
+ 634:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** 
+ 635:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c ****   return ip_output_if(p, src, dest, ttl, tos, proto, netif);
+ 355              		.loc 1 635 0
+ 356 01d0 0095     		str	r5, [sp]
+ 357 01d2 0194     		str	r4, [sp, #4]
+ 358 01d4 0290     		str	r0, [sp, #8]
+ 359 01d6 4046     		mov	r0, r8
+ 360              	.LVL38:
+ 361 01d8 5146     		mov	r1, sl
+ 362 01da 321C     		mov	r2, r6
+ 363 01dc 3B1C     		mov	r3, r7
+ 364 01de FFF7FEFF 		bl	ip_output_if
+ 365 01e2 0006     		lsl	r0, r0, #24
+ 366 01e4 000E     		lsr	r0, r0, #24
+ 367              	.L30:
+ 368 01e6 0006     		lsl	r0, r0, #24
+ 369 01e8 0016     		asr	r0, r0, #24
+ 636:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip.c **** }
+ 370              		.loc 1 636 0
+ 371 01ea 03B0     		add	sp, sp, #12
+ 372              		@ sp needed for prologue
+ 373              	.LVL39:
+ 374              	.LVL40:
+ 375              	.LVL41:
+ 376              	.LVL42:
+ 377              	.LVL43:
+ 378              	.LVL44:
+ 379 01ec 0CBC     		pop	{r2, r3}
+ 380 01ee 9046     		mov	r8, r2
+ 381 01f0 9A46     		mov	sl, r3
+ 382 01f2 F0BC     		pop	{r4, r5, r6, r7}
+ 383 01f4 02BC     		pop	{r1}
+ 384 01f6 0847     		bx	r1
+ 385              	.L33:
+ 386              		.align	2
+ 387              	.L32:
+ 388 01f8 00000000 		.word	lwip_stats
+ 389              	.LFE293:
+ 391              		.align	2
+ 392              		.global	ip_input
+ 393              		.code	16
+ 394              		.thumb_func
+ 396              	ip_input:
+ 397              	.LFB291:
+ 398              		.loc 1 190 0
+ 399 01fc F0B5     		push	{r4, r5, r6, r7, lr}
+ 400              	.LCFI6:
+ 401 01fe 5F46     		mov	r7, fp
+ 402 0200 5646     		mov	r6, sl
+ 403 0202 4D46     		mov	r5, r9
+ 404 0204 4446     		mov	r4, r8
+ 405 0206 F0B4     		push	{r4, r5, r6, r7}
+ 406              	.LCFI7:
+ 407              	.LVL45:
+ 408 0208 81B0     		sub	sp, sp, #4
+ 409              	.LCFI8:
+ 410 020a 061C     		mov	r6, r0
+ 411 020c 8846     		mov	r8, r1
+ 412              		.loc 1 199 0
+ 413 020e 8D49     		ldr	r1, .L62
+ 414              	.LVL46:
+ 415 0210 4A22     		mov	r2, #74
+ 416 0212 8B5A     		ldrh	r3, [r1, r2]
+ 417 0214 0133     		add	r3, r3, #1
+ 418 0216 8B52     		strh	r3, [r1, r2]
+ 419              		.loc 1 203 0
+ 420 0218 4568     		ldr	r5, [r0, #4]
+ 421              	.LVL47:
+ 422              		.loc 1 204 0
+ 423 021a 2888     		ldrh	r0, [r5]
+ 424              	.LVL48:
+ 425 021c FFF7FEFF 		bl	ntohs
+ 426 0220 0001     		lsl	r0, r0, #4
+ 427 0222 000C     		lsr	r0, r0, #16
+ 428 0224 0428     		cmp	r0, #4
+ 429 0226 0CD0     		beq	.L35
+ 430              		.loc 1 207 0
+ 431 0228 301C     		mov	r0, r6
+ 432 022a FFF7FEFF 		bl	pbuf_free
+ 433              		.loc 1 208 0
+ 434 022e 854A     		ldr	r2, .L62
+ 435 0230 5C21     		mov	r1, #92
+ 436 0232 535A     		ldrh	r3, [r2, r1]
+ 437 0234 0133     		add	r3, r3, #1
+ 438 0236 5352     		strh	r3, [r2, r1]
+ 439              		.loc 1 209 0
+ 440 0238 4E21     		mov	r1, #78
+ 441 023a 535A     		ldrh	r3, [r2, r1]
+ 442 023c 0133     		add	r3, r3, #1
+ 443 023e 5352     		strh	r3, [r2, r1]
+ 444 0240 F5E0     		b	.L36
+ 445              	.L35:
+ 446              		.loc 1 215 0
+ 447 0242 2888     		ldrh	r0, [r5]
+ 448 0244 FFF7FEFF 		bl	ntohs
+ 449              		.loc 1 217 0
+ 450 0248 0005     		lsl	r0, r0, #20
+ 451 024a 000F     		lsr	r0, r0, #28
+ 452 024c 8000     		lsl	r0, r0, #2
+ 453 024e 8246     		mov	sl, r0
+ 454              	.LVL49:
+ 455              		.loc 1 219 0
+ 456 0250 6888     		ldrh	r0, [r5, #2]
+ 457 0252 FFF7FEFF 		bl	ntohs
+ 458 0256 041C     		mov	r4, r0
+ 459              	.LVL50:
+ 460              		.loc 1 222 0
+ 461 0258 7389     		ldrh	r3, [r6, #10]
+ 462 025a 5345     		cmp	r3, sl
+ 463 025c 02D3     		bcc	.L37
+ 464 025e 3389     		ldrh	r3, [r6, #8]
+ 465 0260 A342     		cmp	r3, r4
+ 466 0262 0CD2     		bcs	.L38
+ 467              	.L37:
+ 468              		.loc 1 234 0
+ 469 0264 301C     		mov	r0, r6
+ 470 0266 FFF7FEFF 		bl	pbuf_free
+ 471              		.loc 1 235 0
+ 472 026a 764A     		ldr	r2, .L62
+ 473 026c 5221     		mov	r1, #82
+ 474 026e 535A     		ldrh	r3, [r2, r1]
+ 475 0270 0133     		add	r3, r3, #1
+ 476 0272 5352     		strh	r3, [r2, r1]
+ 477              		.loc 1 236 0
+ 478 0274 4E21     		mov	r1, #78
+ 479 0276 535A     		ldrh	r3, [r2, r1]
+ 480 0278 0133     		add	r3, r3, #1
+ 481 027a 5352     		strh	r3, [r2, r1]
+ 482 027c D7E0     		b	.L36
+ 483              	.L38:
+ 484              		.loc 1 243 0
+ 485 027e 281C     		mov	r0, r5
+ 486 0280 5146     		mov	r1, sl
+ 487 0282 FFF7FEFF 		bl	inet_chksum
+ 488 0286 0028     		cmp	r0, #0
+ 489 0288 0CD0     		beq	.L39
+ 490              		.loc 1 248 0
+ 491 028a 301C     		mov	r0, r6
+ 492 028c FFF7FEFF 		bl	pbuf_free
+ 493              		.loc 1 249 0
+ 494 0290 6C4A     		ldr	r2, .L62
+ 495 0292 5021     		mov	r1, #80
+ 496 0294 535A     		ldrh	r3, [r2, r1]
+ 497 0296 0133     		add	r3, r3, #1
+ 498 0298 5352     		strh	r3, [r2, r1]
+ 499              		.loc 1 250 0
+ 500 029a 4E21     		mov	r1, #78
+ 501 029c 535A     		ldrh	r3, [r2, r1]
+ 502 029e 0133     		add	r3, r3, #1
+ 503 02a0 5352     		strh	r3, [r2, r1]
+ 504 02a2 C4E0     		b	.L36
+ 505              	.L39:
+ 506              		.loc 1 258 0
+ 507 02a4 301C     		mov	r0, r6
+ 508 02a6 211C     		mov	r1, r4
+ 509 02a8 FFF7FEFF 		bl	pbuf_realloc
+ 510              	.LBB3:
+ 511              		.loc 1 286 0
+ 512 02ac 2A1C     		mov	r2, r5
+ 513 02ae 1032     		add	r2, r2, #16
+ 514 02b0 0092     		str	r2, [sp]
+ 515 02b2 4446     		mov	r4, r8
+ 516              	.LVL51:
+ 517 02b4 0127     		mov	r7, #1
+ 518              	.LVL52:
+ 519              		.loc 1 297 0
+ 520 02b6 644B     		ldr	r3, .L62+4
+ 521 02b8 9946     		mov	r9, r3
+ 522              		.loc 1 304 0
+ 523 02ba 0022     		mov	r2, #0
+ 524 02bc 9346     		mov	fp, r2
+ 525              	.LVL53:
+ 526              	.L46:
+ 527              		.loc 1 284 0
+ 528 02be 201C     		mov	r0, r4
+ 529 02c0 FFF7FEFF 		bl	netif_is_up
+ 530 02c4 0028     		cmp	r0, #0
+ 531 02c6 0DD0     		beq	.L40
+ 532 02c8 231D     		add	r3, r4, #4
+ 533 02ca 0BD0     		beq	.L40
+ 534 02cc 6268     		ldr	r2, [r4, #4]
+ 535 02ce 002A     		cmp	r2, #0
+ 536 02d0 08D0     		beq	.L40
+ 537              		.loc 1 286 0
+ 538 02d2 2B69     		ldr	r3, [r5, #16]
+ 539 02d4 9A42     		cmp	r2, r3
+ 540 02d6 14D0     		beq	.L41
+ 541 02d8 0098     		ldr	r0, [sp]
+ 542 02da 211C     		mov	r1, r4
+ 543 02dc FFF7FEFF 		bl	ip_addr_isbroadcast
+ 544 02e0 0028     		cmp	r0, #0
+ 545 02e2 0ED1     		bne	.L41
+ 546              	.L40:
+ 547              		.loc 1 295 0
+ 548 02e4 002F     		cmp	r7, #0
+ 549 02e6 02D0     		beq	.L42
+ 550              	.LVL54:
+ 551              		.loc 1 297 0
+ 552 02e8 4A46     		mov	r2, r9
+ 553 02ea 1768     		ldr	r7, [r2]
+ 554              	.LVL55:
+ 555 02ec 00E0     		b	.L43
+ 556              	.LVL56:
+ 557              	.L42:
+ 558              		.loc 1 299 0
+ 559 02ee 2768     		ldr	r7, [r4]
+ 560              	.LVL57:
+ 561              	.L43:
+ 562              		.loc 1 301 0
+ 563 02f0 4745     		cmp	r7, r8
+ 564 02f2 01D1     		bne	.L44
+ 565              		.loc 1 302 0
+ 566 02f4 4346     		mov	r3, r8
+ 567 02f6 1F68     		ldr	r7, [r3]
+ 568              	.L44:
+ 569              		.loc 1 304 0
+ 570 02f8 002F     		cmp	r7, #0
+ 571 02fa 04D0     		beq	.L45
+ 572 02fc 3C1C     		mov	r4, r7
+ 573 02fe 5F46     		mov	r7, fp
+ 574              	.LVL58:
+ 575 0300 DDE7     		b	.L46
+ 576              	.L41:
+ 577              	.LBE3:
+ 578              		.loc 1 312 0
+ 579 0302 271E     		sub	r7, r4, #0
+ 580 0304 0DD1     		bne	.L47
+ 581              	.LVL59:
+ 582              	.L45:
+ 583              		.loc 1 314 0
+ 584 0306 2889     		ldrh	r0, [r5, #8]
+ 585 0308 FFF7FEFF 		bl	ntohs
+ 586 030c FF23     		mov	r3, #255
+ 587 030e 1840     		and	r0, r0, r3
+ 588 0310 1128     		cmp	r0, #17
+ 589 0312 06D1     		bne	.L47
+ 590              		.loc 1 317 0
+ 591 0314 5246     		mov	r2, sl
+ 592 0316 AB18     		add	r3, r5, r2
+ 593 0318 5888     		ldrh	r0, [r3, #2]
+ 594 031a FFF7FEFF 		bl	ntohs
+ 595 031e 4428     		cmp	r0, #68
+ 596 0320 21D0     		beq	.L48
+ 597              	.L47:
+ 598              		.loc 1 329 0
+ 599 0322 EB68     		ldr	r3, [r5, #12]
+ 600 0324 002B     		cmp	r3, #0
+ 601 0326 1FD0     		beq	.L49
+ 602              		.loc 1 331 0
+ 603 0328 281C     		mov	r0, r5
+ 604 032a 0C30     		add	r0, r0, #12
+ 605 032c 4146     		mov	r1, r8
+ 606 032e FFF7FEFF 		bl	ip_addr_isbroadcast
+ 607 0332 0028     		cmp	r0, #0
+ 608 0334 0ED1     		bne	.L50
+ 609 0336 EB68     		ldr	r3, [r5, #12]
+ 610 0338 9A46     		mov	sl, r3
+ 611              	.LVL60:
+ 612 033a F020     		mov	r0, #240
+ 613 033c 0006     		lsl	r0, r0, #24
+ 614 033e FFF7FEFF 		bl	ntohl
+ 615 0342 041C     		mov	r4, r0
+ 616 0344 E020     		mov	r0, #224
+ 617 0346 0006     		lsl	r0, r0, #24
+ 618 0348 FFF7FEFF 		bl	ntohl
+ 619 034c 5246     		mov	r2, sl
+ 620 034e 1440     		and	r4, r4, r2
+ 621 0350 8442     		cmp	r4, r0
+ 622 0352 09D1     		bne	.L49
+ 623              	.LVL61:
+ 624              	.L50:
+ 625              		.loc 1 336 0
+ 626 0354 301C     		mov	r0, r6
+ 627 0356 FFF7FEFF 		bl	pbuf_free
+ 628              		.loc 1 337 0
+ 629 035a 3A49     		ldr	r1, .L62
+ 630 035c 4E22     		mov	r2, #78
+ 631 035e 8B5A     		ldrh	r3, [r1, r2]
+ 632 0360 0133     		add	r3, r3, #1
+ 633 0362 8B52     		strh	r3, [r1, r2]
+ 634 0364 63E0     		b	.L36
+ 635              	.L48:
+ 636              		.loc 1 340 0
+ 637 0366 4746     		mov	r7, r8
+ 638              	.LVL62:
+ 639              	.L49:
+ 640              		.loc 1 345 0
+ 641 0368 002F     		cmp	r7, #0
+ 642 036a 03D1     		bne	.L51
+ 643              		.loc 1 359 0
+ 644 036c 301C     		mov	r0, r6
+ 645 036e FFF7FEFF 		bl	pbuf_free
+ 646 0372 5CE0     		b	.L36
+ 647              	.L51:
+ 648              		.loc 1 363 0
+ 649 0374 EC88     		ldrh	r4, [r5, #6]
+ 650 0376 3548     		ldr	r0, .L62+8
+ 651 0378 FFF7FEFF 		bl	htons
+ 652 037c 2042     		tst	r0, r4
+ 653 037e 06D0     		beq	.L52
+ 654              		.loc 1 368 0
+ 655 0380 301C     		mov	r0, r6
+ 656 0382 FFF7FEFF 		bl	ip_reass
+ 657 0386 061C     		mov	r6, r0
+ 658              		.loc 1 370 0
+ 659 0388 0028     		cmp	r0, #0
+ 660 038a 50D0     		beq	.L36
+ 661              	.LVL63:
+ 662              		.loc 1 373 0
+ 663 038c 4568     		ldr	r5, [r0, #4]
+ 664              	.LVL64:
+ 665              	.L52:
+ 666              		.loc 1 409 0
+ 667 038e 304B     		ldr	r3, .L62+12
+ 668 0390 4246     		mov	r2, r8
+ 669 0392 1A60     		str	r2, [r3]
+ 670              		.loc 1 410 0
+ 671 0394 2F4B     		ldr	r3, .L62+16
+ 672 0396 1D60     		str	r5, [r3]
+ 673              		.loc 1 414 0
+ 674 0398 301C     		mov	r0, r6
+ 675 039a 4146     		mov	r1, r8
+ 676 039c FFF7FEFF 		bl	raw_input
+ 677 03a0 0028     		cmp	r0, #0
+ 678 03a2 3FD1     		bne	.L53
+ 679              		.loc 1 418 0
+ 680 03a4 2889     		ldrh	r0, [r5, #8]
+ 681 03a6 FFF7FEFF 		bl	ntohs
+ 682 03aa FF23     		mov	r3, #255
+ 683 03ac 1840     		and	r0, r0, r3
+ 684 03ae 0628     		cmp	r0, #6
+ 685 03b0 09D0     		beq	.L56
+ 686 03b2 1128     		cmp	r0, #17
+ 687 03b4 02D0     		beq	.L57
+ 688 03b6 0128     		cmp	r0, #1
+ 689 03b8 0FD1     		bne	.L60
+ 690 03ba 09E0     		b	.L61
+ 691              	.L57:
+ 692              		.loc 1 425 0
+ 693 03bc 301C     		mov	r0, r6
+ 694 03be 4146     		mov	r1, r8
+ 695 03c0 FFF7FEFF 		bl	udp_input
+ 696 03c4 2EE0     		b	.L53
+ 697              	.L56:
+ 698              		.loc 1 431 0
+ 699 03c6 301C     		mov	r0, r6
+ 700 03c8 4146     		mov	r1, r8
+ 701 03ca FFF7FEFF 		bl	tcp_input
+ 702 03ce 29E0     		b	.L53
+ 703              	.L61:
+ 704              		.loc 1 437 0
+ 705 03d0 301C     		mov	r0, r6
+ 706 03d2 4146     		mov	r1, r8
+ 707 03d4 FFF7FEFF 		bl	icmp_input
+ 708 03d8 24E0     		b	.L53
+ 709              	.L60:
+ 710              		.loc 1 448 0
+ 711 03da 281C     		mov	r0, r5
+ 712 03dc 1030     		add	r0, r0, #16
+ 713 03de 4146     		mov	r1, r8
+ 714 03e0 FFF7FEFF 		bl	ip_addr_isbroadcast
+ 715 03e4 0028     		cmp	r0, #0
+ 716 03e6 11D1     		bne	.L58
+ 717 03e8 2F69     		ldr	r7, [r5, #16]
+ 718              	.LVL65:
+ 719 03ea F020     		mov	r0, #240
+ 720 03ec 0006     		lsl	r0, r0, #24
+ 721 03ee FFF7FEFF 		bl	ntohl
+ 722 03f2 041C     		mov	r4, r0
+ 723 03f4 E020     		mov	r0, #224
+ 724 03f6 0006     		lsl	r0, r0, #24
+ 725 03f8 FFF7FEFF 		bl	ntohl
+ 726 03fc 3C40     		and	r4, r4, r7
+ 727 03fe 8442     		cmp	r4, r0
+ 728 0400 04D0     		beq	.L58
+ 729              		.loc 1 450 0
+ 730 0402 7560     		str	r5, [r6, #4]
+ 731              		.loc 1 451 0
+ 732 0404 301C     		mov	r0, r6
+ 733 0406 0221     		mov	r1, #2
+ 734 0408 FFF7FEFF 		bl	icmp_dest_unreach
+ 735              	.LVL66:
+ 736              	.L58:
+ 737              		.loc 1 454 0
+ 738 040c 301C     		mov	r0, r6
+ 739 040e FFF7FEFF 		bl	pbuf_free
+ 740              		.loc 1 458 0
+ 741 0412 0C4A     		ldr	r2, .L62
+ 742 0414 5821     		mov	r1, #88
+ 743 0416 535A     		ldrh	r3, [r2, r1]
+ 744 0418 0133     		add	r3, r3, #1
+ 745 041a 5352     		strh	r3, [r2, r1]
+ 746              		.loc 1 459 0
+ 747 041c 4E21     		mov	r1, #78
+ 748 041e 535A     		ldrh	r3, [r2, r1]
+ 749 0420 0133     		add	r3, r3, #1
+ 750 0422 5352     		strh	r3, [r2, r1]
+ 751              	.L53:
+ 752              		.loc 1 464 0
+ 753 0424 0A4B     		ldr	r3, .L62+12
+ 754 0426 0022     		mov	r2, #0
+ 755 0428 1A60     		str	r2, [r3]
+ 756              		.loc 1 465 0
+ 757 042a 0A4B     		ldr	r3, .L62+16
+ 758 042c 1A60     		str	r2, [r3]
+ 759              	.LVL67:
+ 760              	.L36:
+ 761              		.loc 1 468 0
+ 762 042e 0020     		mov	r0, #0
+ 763 0430 01B0     		add	sp, sp, #4
+ 764              		@ sp needed for prologue
+ 765              	.LVL68:
+ 766              	.LVL69:
+ 767              	.LVL70:
+ 768              	.LVL71:
+ 769              	.LVL72:
+ 770              	.LVL73:
+ 771              	.LVL74:
+ 772 0432 3CBC     		pop	{r2, r3, r4, r5}
+ 773 0434 9046     		mov	r8, r2
+ 774 0436 9946     		mov	r9, r3
+ 775 0438 A246     		mov	sl, r4
+ 776 043a AB46     		mov	fp, r5
+ 777 043c F0BC     		pop	{r4, r5, r6, r7}
+ 778 043e 02BC     		pop	{r1}
+ 779 0440 0847     		bx	r1
+ 780              	.L63:
+ 781 0442 C046     		.align	2
+ 782              	.L62:
+ 783 0444 00000000 		.word	lwip_stats
+ 784 0448 00000000 		.word	netif_list
+ 785 044c FF3F0000 		.word	16383
+ 786 0450 00000000 		.word	current_netif
+ 787 0454 00000000 		.word	current_header
+ 788              	.LFE291:
+ 790              		.bss
+ 791              		.align	1
+ 792              	ip_id.5756:
+ 793 0000 0000     		.space	2
+ 794              		.comm	current_netif,4,4
+ 795              		.comm	current_header,4,4
+ 936              	.Letext0:
+ 3630              		.code 16
+ 3631              		.align	1
+ 3632              	.L15:
+ 3633 0458 1847C046 		bx	r3
+DEFINED SYMBOLS
+                            *ABS*:00000000 ip.c
+     /tmp/ccNGpNe0.s:1      .text:00000000 $t
+     /tmp/ccNGpNe0.s:16     .text:00000000 ip_output_if
+     /tmp/ccNGpNe0.s:222    .text:00000130 $d
+     /tmp/ccNGpNe0.s:792    .bss:00000000 ip_id.5756
+     /tmp/ccNGpNe0.s:231    .text:00000138 ip_route
+     /tmp/ccNGpNe0.s:228    .text:00000138 $t
+     /tmp/ccNGpNe0.s:298    .text:0000018c $d
+     /tmp/ccNGpNe0.s:308    .text:00000198 ip_output
+     /tmp/ccNGpNe0.s:305    .text:00000198 $t
+     /tmp/ccNGpNe0.s:388    .text:000001f8 $d
+     /tmp/ccNGpNe0.s:396    .text:000001fc ip_input
+     /tmp/ccNGpNe0.s:393    .text:000001fc $t
+     /tmp/ccNGpNe0.s:783    .text:00000444 $d
+                            *COM*:00000004 current_netif
+                            *COM*:00000004 current_header
+     /tmp/ccNGpNe0.s:3630   .text:00000458 $t
+
+UNDEFINED SYMBOLS
+pbuf_header
+ntohs
+htons
+inet_chksum
+ip_frag
+lwip_stats
+netif_is_up
+netif_list
+netif_default
+pbuf_free
+pbuf_realloc
+ip_addr_isbroadcast
+ntohl
+ip_reass
+raw_input
+udp_input
+tcp_input
+icmp_input
+icmp_dest_unreach

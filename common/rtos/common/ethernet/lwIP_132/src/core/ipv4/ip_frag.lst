@@ -1,0 +1,2168 @@
+   1              		.code	16
+   2              		.file	"ip_frag.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	ip_frag
+  13              		.code	16
+  14              		.thumb_func
+  16              	ip_frag:
+  17              	.LFB9:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * This is the IPv4 packet segmentation and reassembly implementation.
+   4:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * All rights reserved. 
+  10:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 
+  11:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Redistribution and use in source and binary forms, with or without modification, 
+  12:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *    derived from this software without specific prior written permission. 
+  21:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED 
+  23:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+  24:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+  25:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+  26:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+  27:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+  28:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+  29:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
+  30:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+  31:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 
+  35:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Author: Jani Monoses <jani@iv.ro> 
+  36:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *         Simon Goldschmidt
+  37:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * original reassembly code by Adam Dunkels <adam@sics.se>
+  38:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * 
+  39:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+  40:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  41:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/opt.h"
+  42:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/ip_frag.h"
+  43:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/ip.h"
+  44:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/inet.h"
+  45:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/inet_chksum.h"
+  46:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/netif.h"
+  47:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/snmp.h"
+  48:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/stats.h"
+  49:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include "lwip/icmp.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  51:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #include <string.h>
+  52:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  53:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASSEMBLY
+  54:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+  55:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * The IP reassembly code currently has the following limitations:
+  56:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * - IP header options are not supported
+  57:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * - fragments must not overlap (e.g. due to different routes),
+  58:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *   currently, overlapping or duplicate fragments are thrown away
+  59:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *   if IP_REASS_CHECK_OVERLAP=1 (the default)!
+  60:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+  61:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @todo: work with IP header options
+  62:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+  63:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  64:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /** Setting this to 0, you can turn off checking the fragments for overlapping
+  65:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * regions. The code gets a little smaller. Only use this if you know that
+  66:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * overlapping won't occur on your network! */
+  67:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #ifndef IP_REASS_CHECK_OVERLAP
+  68:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #define IP_REASS_CHECK_OVERLAP 1
+  69:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+  70:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  71:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /** Set to 0 to prevent freeing the oldest datagram when the reassembly buffer is
+  72:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * full (IP_REASS_MAX_PBUFS pbufs are enqueued). The code gets a little smaller.
+  73:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Datagrams will be freed by timeout only. Especially useful when MEMP_NUM_REASSDATA
+  74:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * is set to 1, so one datagram can be reassembled at a time, only. */
+  75:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #ifndef IP_REASS_FREE_OLDEST
+  76:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #define IP_REASS_FREE_OLDEST 1
+  77:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_FREE_OLDEST */
+  78:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  79:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #define IP_REASS_FLAG_LASTFRAG 0x01
+  80:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+  81:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /** This is a helper struct which holds the starting
+  82:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * offset and the ending offset of this fragment to
+  83:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * easily chain the fragments.
+  84:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * It has to be packed since it has to fit inside the IP header.
+  85:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+  86:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+  87:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #  include "arch/bpstruct.h"
+  88:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif
+  89:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** PACK_STRUCT_BEGIN
+  90:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** struct ip_reass_helper {
+  91:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   PACK_STRUCT_FIELD(struct pbuf *next_pbuf);
+  92:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   PACK_STRUCT_FIELD(u16_t start);
+  93:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   PACK_STRUCT_FIELD(u16_t end);
+  94:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** } PACK_STRUCT_STRUCT;
+  95:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** PACK_STRUCT_END
+  96:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #ifdef PACK_STRUCT_USE_INCLUDES
+  97:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #  include "arch/epstruct.h"
+  98:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif
+  99:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 100:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #define IP_ADDRESSES_AND_ID_MATCH(iphdrA, iphdrB)  \
+ 101:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   (ip_addr_cmp(&(iphdrA)->src, &(iphdrB)->src) && \
+ 102:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    ip_addr_cmp(&(iphdrA)->dest, &(iphdrB)->dest) && \
+ 103:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    IPH_ID(iphdrA) == IPH_ID(iphdrB)) ? 1 : 0
+ 104:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 105:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /* global variables */
+ 106:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static struct ip_reassdata *reassdatagrams;
+ 107:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static u16_t ip_reass_pbufcount;
+ 108:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 109:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /* function prototypes */
+ 110:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static void ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev);
+ 111:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static int ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev);
+ 112:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 113:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 114:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Reassembly timer base function
+ 115:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * for both NO_SYS == 0 and 1 (!).
+ 116:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 117:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Should be called every 1000 msec (defined by IP_TMR_INTERVAL).
+ 118:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 119:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** void
+ 120:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_tmr(void)
+ 121:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 122:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reassdata *r, *prev = NULL;
+ 123:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 124:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   r = reassdatagrams;
+ 125:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   while (r != NULL) {
+ 126:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Decrement the timer. Once it reaches 0,
+ 127:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * clean up the incomplete fragment assembly */
+ 128:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (r->timer > 0) {
+ 129:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       r->timer--;
+ 130:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer dec %"U16_F"\n",(u16_t)r->timer));
+ 131:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       prev = r;
+ 132:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       r = r->next;
+ 133:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else {
+ 134:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* reassembly timed out */
+ 135:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       struct ip_reassdata *tmp;
+ 136:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer timed out\n"));
+ 137:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       tmp = r;
+ 138:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* get the next pointer before freeing */
+ 139:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       r = r->next;
+ 140:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* free the helper struct and all enqueued pbufs */
+ 141:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       ip_reass_free_complete_datagram(tmp, prev);
+ 142:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      }
+ 143:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    }
+ 144:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 145:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 146:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 147:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Free a datagram (struct ip_reassdata) and all its pbufs.
+ 148:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Updates the total count of enqueued pbufs (ip_reass_pbufcount),
+ 149:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * SNMP counters and sends an ICMP time exceeded packet.
+ 150:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 151:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param ipr datagram to free
+ 152:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param prev the previous datagram in the linked list
+ 153:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return the number of pbufs freed
+ 154:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 155:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static int
+ 156:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev)
+ 157:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 158:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   int pbufs_freed = 0;
+ 159:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *p;
+ 160:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reass_helper *iprh;
+ 161:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 162:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   LWIP_ASSERT("prev != ipr", prev != ipr);
+ 163:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (prev != NULL) {
+ 164:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_ASSERT("prev->next == ipr", prev->next == ipr);
+ 165:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 166:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 167:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   snmp_inc_ipreasmfails();
+ 168:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if LWIP_ICMP
+ 169:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iprh = (struct ip_reass_helper *)ipr->p->payload;
+ 170:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (iprh->start == 0) {
+ 171:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* The first fragment was received, send ICMP time exceeded. */
+ 172:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* First, de-queue the first pbuf from r->p. */
+ 173:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     p = ipr->p;
+ 174:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr->p = iprh->next_pbuf;
+ 175:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Then, copy the original header into it. */
+ 176:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     SMEMCPY(p->payload, &ipr->iphdr, IP_HLEN);
+ 177:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     icmp_time_exceeded(p, ICMP_TE_FRAG);
+ 178:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pbufs_freed += pbuf_clen(p);
+ 179:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pbuf_free(p);
+ 180:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 181:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* LWIP_ICMP */
+ 182:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 183:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* First, free all received pbufs.  The individual pbufs need to be released 
+ 184:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      separately as they have not yet been chained */
+ 185:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   p = ipr->p;
+ 186:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   while (p != NULL) {
+ 187:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     struct pbuf *pcur;
+ 188:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     iprh = (struct ip_reass_helper *)p->payload;
+ 189:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pcur = p;
+ 190:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* get the next pointer before freeing */
+ 191:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     p = iprh->next_pbuf;
+ 192:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pbufs_freed += pbuf_clen(pcur);
+ 193:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pbuf_free(pcur);    
+ 194:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 195:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Then, unchain the struct ip_reassdata from the list and free it. */
+ 196:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ip_reass_dequeue_datagram(ipr, prev);
+ 197:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   LWIP_ASSERT("ip_reass_pbufcount >= clen", ip_reass_pbufcount >= pbufs_freed);
+ 198:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ip_reass_pbufcount -= pbufs_freed;
+ 199:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 200:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return pbufs_freed;
+ 201:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 202:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 203:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_FREE_OLDEST
+ 204:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 205:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Free the oldest datagram to make room for enqueueing new fragments.
+ 206:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * The datagram 'fraghdr' belongs to is not freed!
+ 207:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 208:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param fraghdr IP header of the current fragment
+ 209:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param pbufs_needed number of pbufs needed to enqueue
+ 210:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *        (used for freeing other datagrams if not enough space)
+ 211:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return the number of pbufs freed
+ 212:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 213:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static int
+ 214:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_remove_oldest_datagram(struct ip_hdr *fraghdr, int pbufs_needed)
+ 215:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 216:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* @todo Can't we simply remove the last datagram in the
+ 217:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    *       linked list behind reassdatagrams?
+ 218:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    */
+ 219:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reassdata *r, *oldest, *prev;
+ 220:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   int pbufs_freed = 0, pbufs_freed_current;
+ 221:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   int other_datagrams;
+ 222:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 223:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Free datagrams until being allowed to enqueue 'pbufs_needed' pbufs,
+ 224:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * but don't free the datagram that 'fraghdr' belongs to! */
+ 225:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   do {
+ 226:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     oldest = NULL;
+ 227:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     prev = NULL;
+ 228:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     other_datagrams = 0;
+ 229:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     r = reassdatagrams;
+ 230:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     while (r != NULL) {
+ 231:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (!IP_ADDRESSES_AND_ID_MATCH(&r->iphdr, fraghdr)) {
+ 232:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         /* Not the same datagram as fraghdr */
+ 233:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         other_datagrams++;
+ 234:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         if (oldest == NULL) {
+ 235:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           oldest = r;
+ 236:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         } else if (r->timer <= oldest->timer) {
+ 237:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           /* older than the previous oldest */
+ 238:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           oldest = r;
+ 239:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         }
+ 240:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 241:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (r->next != NULL) {
+ 242:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         prev = r;
+ 243:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 244:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       r = r->next;
+ 245:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 246:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (oldest != NULL) {
+ 247:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbufs_freed_current = ip_reass_free_complete_datagram(oldest, prev);
+ 248:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbufs_freed += pbufs_freed_current;
+ 249:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 250:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   } while ((pbufs_freed < pbufs_needed) && (other_datagrams > 1));
+ 251:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return pbufs_freed;
+ 252:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 253:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_FREE_OLDEST */
+ 254:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 255:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 256:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Enqueues a new fragment into the fragment queue
+ 257:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param fraghdr points to the new fragments IP hdr
+ 258:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param clen number of pbufs needed to enqueue (used for freeing other datagrams if not enough sp
+ 259:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return A pointer to the queue location into which the fragment was enqueued
+ 260:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 261:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static struct ip_reassdata*
+ 262:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_enqueue_new_datagram(struct ip_hdr *fraghdr, int clen)
+ 263:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 264:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reassdata* ipr;
+ 265:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* No matching previous fragment found, allocate a new reassdata struct */
+ 266:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ipr = memp_malloc(MEMP_REASSDATA);
+ 267:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (ipr == NULL) {
+ 268:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_FREE_OLDEST
+ 269:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (ip_reass_remove_oldest_datagram(fraghdr, clen) >= clen) {
+ 270:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       ipr = memp_malloc(MEMP_REASSDATA);
+ 271:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 272:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (ipr == NULL)
+ 273:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_FREE_OLDEST */
+ 274:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     {
+ 275:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       IPFRAG_STATS_INC(ip_frag.memerr);
+ 276:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG,("Failed to alloc reassdata struct\n"));
+ 277:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       return NULL;
+ 278:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 279:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 280:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   memset(ipr, 0, sizeof(struct ip_reassdata));
+ 281:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ipr->timer = IP_REASS_MAXAGE;
+ 282:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 283:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* enqueue the new structure to the front of the list */
+ 284:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ipr->next = reassdatagrams;
+ 285:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   reassdatagrams = ipr;
+ 286:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* copy the ip header for later tests and input */
+ 287:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* @todo: no ip options supported? */
+ 288:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   SMEMCPY(&(ipr->iphdr), fraghdr, IP_HLEN);
+ 289:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return ipr;
+ 290:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 291:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 292:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 293:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Dequeues a datagram from the datagram queue. Doesn't deallocate the pbufs.
+ 294:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param ipr points to the queue entry to dequeue
+ 295:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 296:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static void
+ 297:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev)
+ 298:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 299:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   
+ 300:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* dequeue the reass struct  */
+ 301:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (reassdatagrams == ipr) {
+ 302:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* it was the first in the list */
+ 303:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     reassdatagrams = ipr->next;
+ 304:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   } else {
+ 305:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* it wasn't the first, so it must have a valid 'prev' */
+ 306:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_ASSERT("sanity check linked list", prev != NULL);
+ 307:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     prev->next = ipr->next;
+ 308:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 309:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 310:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* now we can free the ip_reass struct */
+ 311:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   memp_free(MEMP_REASSDATA, ipr);
+ 312:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 313:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 314:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 315:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Chain a new pbuf into the pbuf list that composes the datagram.  The pbuf list
+ 316:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * will grow over time as  new pbufs are rx.
+ 317:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Also checks that the datagram passes basic continuity checks (if the last
+ 318:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * fragment was received at least once).
+ 319:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param root_p points to the 'root' pbuf for the current datagram being assembled.
+ 320:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param new_p points to the pbuf for the current fragment
+ 321:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return 0 if invalid, >0 otherwise
+ 322:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 323:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static int
+ 324:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass_chain_frag_into_datagram_and_validate(struct ip_reassdata *ipr, struct pbuf *new_p)
+ 325:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 326:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reass_helper *iprh, *iprh_tmp, *iprh_prev=NULL;
+ 327:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *q;
+ 328:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t offset,len;
+ 329:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_hdr *fraghdr;
+ 330:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   int valid = 1;
+ 331:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 332:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Extract length and fragment offset from current fragment */
+ 333:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   fraghdr = (struct ip_hdr*)new_p->payload; 
+ 334:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   len = ntohs(IPH_LEN(fraghdr)) - IPH_HL(fraghdr) * 4;
+ 335:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   offset = (ntohs(IPH_OFFSET(fraghdr)) & IP_OFFMASK) * 8;
+ 336:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 337:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* overwrite the fragment's ip header from the pbuf with our helper struct,
+ 338:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * and setup the embedded helper structure. */
+ 339:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* make sure the struct ip_reass_helper fits into the IP header */
+ 340:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   LWIP_ASSERT("sizeof(struct ip_reass_helper) <= IP_HLEN",
+ 341:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****               sizeof(struct ip_reass_helper) <= IP_HLEN);
+ 342:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iprh = (struct ip_reass_helper*)new_p->payload;
+ 343:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iprh->next_pbuf = NULL;
+ 344:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iprh->start = offset;
+ 345:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iprh->end = offset + len;
+ 346:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 347:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Iterate through until we either get to the end of the list (append),
+ 348:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * or we find on with a larger offset (insert). */
+ 349:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   for (q = ipr->p; q != NULL;) {
+ 350:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     iprh_tmp = (struct ip_reass_helper*)q->payload;
+ 351:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (iprh->start < iprh_tmp->start) {
+ 352:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* the new pbuf should be inserted before this */
+ 353:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       iprh->next_pbuf = q;
+ 354:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (iprh_prev != NULL) {
+ 355:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         /* not the fragment with the lowest offset */
+ 356:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_CHECK_OVERLAP
+ 357:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         if ((iprh->start < iprh_prev->end) || (iprh->end > iprh_tmp->start)) {
+ 358:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           /* fragment overlaps with previous or following, throw away */
+ 359:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           goto freepbuf;
+ 360:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         }
+ 361:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+ 362:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         iprh_prev->next_pbuf = new_p;
+ 363:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       } else {
+ 364:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         /* fragment with the lowest offset */
+ 365:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         ipr->p = new_p;
+ 366:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 367:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       break;
+ 368:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else if(iprh->start == iprh_tmp->start) {
+ 369:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* received the same datagram twice: no need to keep the datagram */
+ 370:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       goto freepbuf;
+ 371:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_CHECK_OVERLAP
+ 372:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else if(iprh->start < iprh_tmp->end) {
+ 373:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* overlap: no need to keep the new datagram */
+ 374:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       goto freepbuf;
+ 375:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+ 376:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else {
+ 377:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* Check if the fragments received so far have no wholes. */
+ 378:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (iprh_prev != NULL) {
+ 379:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         if (iprh_prev->end != iprh_tmp->start) {
+ 380:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           /* There is a fragment missing between the current
+ 381:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****            * and the previous fragment */
+ 382:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           valid = 0;
+ 383:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         }
+ 384:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 385:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 386:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     q = iprh_tmp->next_pbuf;
+ 387:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     iprh_prev = iprh_tmp;
+ 388:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 389:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 390:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* If q is NULL, then we made it to the end of the list. Determine what to do now */
+ 391:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (q == NULL) {
+ 392:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (iprh_prev != NULL) {
+ 393:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* this is (for now), the fragment with the highest offset:
+ 394:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        * chain it to the last fragment */
+ 395:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_CHECK_OVERLAP
+ 396:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_ASSERT("check fragments don't overlap", iprh_prev->end <= iprh->start);
+ 397:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+ 398:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       iprh_prev->next_pbuf = new_p;
+ 399:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (iprh_prev->end != iprh->start) {
+ 400:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         valid = 0;
+ 401:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 402:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else {
+ 403:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_CHECK_OVERLAP
+ 404:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_ASSERT("no previous fragment, this must be the first fragment!",
+ 405:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         ipr->p == NULL);
+ 406:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+ 407:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* this is the first fragment we ever received for this ip datagram */
+ 408:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       ipr->p = new_p;
+ 409:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 410:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 411:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 412:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* At this point, the validation part begins: */
+ 413:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* If we already received the last fragment */
+ 414:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if ((ipr->flags & IP_REASS_FLAG_LASTFRAG) != 0) {
+ 415:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* and had no wholes so far */
+ 416:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (valid) {
+ 417:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* then check if the rest of the fragments is here */
+ 418:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* Check if the queue starts with the first datagram */
+ 419:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (((struct ip_reass_helper*)ipr->p->payload)->start != 0) {
+ 420:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         valid = 0;
+ 421:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       } else {
+ 422:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         /* and check that there are no wholes after this datagram */
+ 423:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         iprh_prev = iprh;
+ 424:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         q = iprh->next_pbuf;
+ 425:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         while (q != NULL) {
+ 426:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           iprh = (struct ip_reass_helper*)q->payload;
+ 427:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           if (iprh_prev->end != iprh->start) {
+ 428:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****             valid = 0;
+ 429:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****             break;
+ 430:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           }
+ 431:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           iprh_prev = iprh;
+ 432:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           q = iprh->next_pbuf;
+ 433:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         }
+ 434:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         /* if still valid, all fragments are received
+ 435:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****          * (because to the MF==0 already arrived */
+ 436:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         if (valid) {
+ 437:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           LWIP_ASSERT("sanity check", ipr->p != NULL);
+ 438:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           LWIP_ASSERT("sanity check",
+ 439:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****             ((struct ip_reass_helper*)ipr->p->payload) != iprh);
+ 440:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           LWIP_ASSERT("validate_datagram:next_pbuf!=NULL",
+ 441:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****             iprh->next_pbuf == NULL);
+ 442:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****           LWIP_ASSERT("validate_datagram:datagram end!=datagram len",
+ 443:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****             iprh->end == ipr->datagram_len);
+ 444:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         }
+ 445:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 446:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 447:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* If valid is 0 here, there are some fragments missing in the middle
+ 448:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * (since MF == 0 has already arrived). Such datagrams simply time out if
+ 449:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * no more fragments are received... */
+ 450:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     return valid;
+ 451:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 452:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* If we come here, not all fragments were received, yet! */
+ 453:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return 0; /* not yet valid! */
+ 454:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_CHECK_OVERLAP
+ 455:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** freepbuf:
+ 456:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ip_reass_pbufcount -= pbuf_clen(new_p);
+ 457:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   pbuf_free(new_p);
+ 458:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return 0;
+ 459:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_CHECK_OVERLAP */
+ 460:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 461:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 462:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 463:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Reassembles incoming IP fragments into an IP datagram.
+ 464:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 465:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param p points to a pbuf chain of the fragment
+ 466:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return NULL if reassembly is incomplete, ? otherwise
+ 467:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 468:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** struct pbuf *
+ 469:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_reass(struct pbuf *p)
+ 470:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+ 471:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *r;
+ 472:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_hdr *fraghdr;
+ 473:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reassdata *ipr;
+ 474:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reass_helper *iprh;
+ 475:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t offset, len;
+ 476:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u8_t clen;
+ 477:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_reassdata *ipr_prev = NULL;
+ 478:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 479:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   IPFRAG_STATS_INC(ip_frag.recv);
+ 480:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   snmp_inc_ipreasmreqds();
+ 481:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   fraghdr = (struct ip_hdr*)p->payload;
+ 483:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 484:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if ((IPH_HL(fraghdr) * 4) != IP_HLEN) {
+ 485:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_DEBUGF(IP_REASS_DEBUG,("ip_reass: IP options currently not supported!\n"));
+ 486:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPFRAG_STATS_INC(ip_frag.err);
+ 487:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     goto nullreturn;
+ 488:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 489:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 490:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   offset = (ntohs(IPH_OFFSET(fraghdr)) & IP_OFFMASK) * 8;
+ 491:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   len = ntohs(IPH_LEN(fraghdr)) - IPH_HL(fraghdr) * 4;
+ 492:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 493:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Check if we are allowed to enqueue more datagrams. */
+ 494:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   clen = pbuf_clen(p);
+ 495:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if ((ip_reass_pbufcount + clen) > IP_REASS_MAX_PBUFS) {
+ 496:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_REASS_FREE_OLDEST
+ 497:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (!ip_reass_remove_oldest_datagram(fraghdr, clen) ||
+ 498:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         ((ip_reass_pbufcount + clen) > IP_REASS_MAX_PBUFS))
+ 499:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASS_FREE_OLDEST */
+ 500:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     {
+ 501:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* No datagram could be freed and still too many pbufs enqueued */
+ 502:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG,("ip_reass: Overflow condition: pbufct=%d, clen=%d, MAX=%d\n",
+ 503:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         ip_reass_pbufcount, clen, IP_REASS_MAX_PBUFS));
+ 504:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       IPFRAG_STATS_INC(ip_frag.memerr);
+ 505:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* @todo: send ICMP time exceeded here? */
+ 506:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* drop this pbuf */
+ 507:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       goto nullreturn;
+ 508:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 509:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 510:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 511:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Look for the datagram the fragment belongs to in the current datagram queue,
+ 512:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * remembering the previous in the queue for later dequeueing. */
+ 513:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   for (ipr = reassdatagrams; ipr != NULL; ipr = ipr->next) {
+ 514:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Check if the incoming fragment matches the one currently present
+ 515:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        in the reassembly buffer. If so, we proceed with copying the
+ 516:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        fragment into the buffer. */
+ 517:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (IP_ADDRESSES_AND_ID_MATCH(&ipr->iphdr, fraghdr)) {
+ 518:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass: matching previous fragment ID=%"X16_F"\n",
+ 519:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         ntohs(IPH_ID(fraghdr))));
+ 520:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       IPFRAG_STATS_INC(ip_frag.cachehit);
+ 521:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       break;
+ 522:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 523:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr_prev = ipr;
+ 524:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 525:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 526:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (ipr == NULL) {
+ 527:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Enqueue a new datagram into the datagram queue */
+ 528:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr = ip_reass_enqueue_new_datagram(fraghdr, clen);
+ 529:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Bail if unable to enqueue */
+ 530:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if(ipr == NULL) {
+ 531:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       goto nullreturn;
+ 532:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 533:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   } else {
+ 534:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (((ntohs(IPH_OFFSET(fraghdr)) & IP_OFFMASK) == 0) && 
+ 535:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       ((ntohs(IPH_OFFSET(&ipr->iphdr)) & IP_OFFMASK) != 0)) {
+ 536:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* ipr->iphdr is not the header from the first fragment, but fraghdr is
+ 537:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        * -> copy fraghdr into ipr->iphdr since we want to have the header
+ 538:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        * of the first fragment (for ICMP time exceeded and later, for copying
+ 539:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        * all options, if supported)*/
+ 540:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       SMEMCPY(&ipr->iphdr, fraghdr, IP_HLEN);
+ 541:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 542:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 543:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Track the current number of pbufs current 'in-flight', in order to limit 
+ 544:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   the number of fragments that may be enqueued at any one time */
+ 545:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ip_reass_pbufcount += clen;
+ 546:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 547:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* At this point, we have either created a new entry or pointing 
+ 548:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * to an existing one */
+ 549:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 550:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* check for 'no more fragments', and update queue entry*/
+ 551:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if ((ntohs(IPH_OFFSET(fraghdr)) & IP_MF) == 0) {
+ 552:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr->flags |= IP_REASS_FLAG_LASTFRAG;
+ 553:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr->datagram_len = offset + len;
+ 554:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_DEBUGF(IP_REASS_DEBUG,
+ 555:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      ("ip_reass: last fragment seen, total len %"S16_F"\n",
+ 556:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       ipr->datagram_len));
+ 557:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 558:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* find the right place to insert this pbuf */
+ 559:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* @todo: trim pbufs if fragments are overlapping */
+ 560:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (ip_reass_chain_frag_into_datagram_and_validate(ipr, p)) {
+ 561:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* the totally last fragment (flag more fragments = 0) was received at least
+ 562:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * once AND all fragments are received */
+ 563:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ipr->datagram_len += IP_HLEN;
+ 564:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 565:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* save the second pbuf before copying the header over the pointer */
+ 566:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     r = ((struct ip_reass_helper*)ipr->p->payload)->next_pbuf;
+ 567:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 568:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* copy the original ip header back to the first pbuf */
+ 569:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     fraghdr = (struct ip_hdr*)(ipr->p->payload);
+ 570:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     SMEMCPY(fraghdr, &ipr->iphdr, IP_HLEN);
+ 571:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_LEN_SET(fraghdr, htons(ipr->datagram_len));
+ 572:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_OFFSET_SET(fraghdr, 0);
+ 573:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_CHKSUM_SET(fraghdr, 0);
+ 574:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* @todo: do we need to set calculate the correct checksum? */
+ 575:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_CHKSUM_SET(fraghdr, inet_chksum(fraghdr, IP_HLEN));
+ 576:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 577:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     p = ipr->p;
+ 578:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 579:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* chain together the pbufs contained within the reass_data list. */
+ 580:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     while(r != NULL) {
+ 581:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       iprh = (struct ip_reass_helper*)r->payload;
+ 582:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 583:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* hide the ip header for every succeding fragment */
+ 584:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_header(r, -IP_HLEN);
+ 585:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_cat(p, r);
+ 586:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       r = iprh->next_pbuf;
+ 587:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 588:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* release the sources allocate for the fragment queue entry */
+ 589:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ip_reass_dequeue_datagram(ipr, ipr_prev);
+ 590:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 591:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* and adjust the number of pbufs currently queued for reassembly. */
+ 592:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ip_reass_pbufcount -= pbuf_clen(p);
+ 593:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 594:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Return the pbuf chain */
+ 595:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     return p;
+ 596:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 597:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* the datagram is not (yet?) reassembled completely */
+ 598:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   LWIP_DEBUGF(IP_REASS_DEBUG,("ip_reass_pbufcount: %d out\n", ip_reass_pbufcount));
+ 599:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return NULL;
+ 600:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 601:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** nullreturn:
+ 602:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   LWIP_DEBUGF(IP_REASS_DEBUG,("ip_reass: nullreturn\n"));
+ 603:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   IPFRAG_STATS_INC(ip_frag.drop);
+ 604:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   pbuf_free(p);
+ 605:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return NULL;
+ 606:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 607:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_REASSEMBLY */
+ 608:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 609:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG
+ 610:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 611:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** static u8_t buf[LWIP_MEM_ALIGN_SIZE(IP_FRAG_MAX_MTU + MEM_ALIGNMENT - 1)];
+ 612:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_FRAG_USES_STATIC_BUF */
+ 613:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 614:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** /**
+ 615:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Fragment an IP datagram if too large for the netif.
+ 616:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 617:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * Chop the datagram in MTU sized chunks and send them in order
+ 618:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * by using a fixed size static memory buffer (PBUF_REF) or
+ 619:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * point PBUF_REFs into p (depending on IP_FRAG_USES_STATIC_BUF).
+ 620:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 621:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param p ip packet to send
+ 622:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param netif the netif on which to send
+ 623:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @param dest destination ip address to which to send
+ 624:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  *
+ 625:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  * @return ERR_OK if sent successfully, err_t otherwise
+ 626:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****  */
+ 627:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** err_t 
+ 628:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** ip_frag(struct pbuf *p, struct netif *netif, struct ip_addr *dest)
+ 629:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** {
+  19              		.loc 1 629 0
+  20 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+  21              	.LCFI0:
+  22 0002 5F46     		mov	r7, fp
+  23 0004 5646     		mov	r6, sl
+  24 0006 4D46     		mov	r5, r9
+  25 0008 4446     		mov	r4, r8
+  26 000a F0B4     		push	{r4, r5, r6, r7}
+  27              	.LCFI1:
+  28              	.LVL0:
+  29 000c 8CB0     		sub	sp, sp, #48
+  30              	.LCFI2:
+  31 000e 0890     		str	r0, [sp, #32]
+  32 0010 0791     		str	r1, [sp, #28]
+  33 0012 0692     		str	r2, [sp, #24]
+ 630:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *rambuf;
+ 631:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 632:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *header;
+ 633:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #else
+ 634:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct pbuf *newpbuf;
+ 635:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_hdr *original_iphdr;
+ 636:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif
+ 637:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   struct ip_hdr *iphdr;
+ 638:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t nfb;
+ 639:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t left, cop;
+ 640:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t mtu = netif->mtu;
+  34              		.loc 1 640 0
+  35 0014 8C8C     		ldrh	r4, [r1, #36]
+  36              	.LVL1:
+ 641:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t ofo, omf;
+ 642:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t last;
+ 643:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t poff = IP_HLEN;
+ 644:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t tmp;
+ 645:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if !IP_FRAG_USES_STATIC_BUF
+ 646:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t newpbuflen = 0;
+ 647:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   u16_t left_to_copy;
+ 648:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif
+ 649:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 650:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Get a RAM based MTU sized pbuf */
+ 651:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 652:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* When using a static buffer, we use a PBUF_REF, which we will
+ 653:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * use to reference the packet (without link header).
+ 654:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    * Layer and length is irrelevant.
+ 655:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****    */
+ 656:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   rambuf = pbuf_alloc(PBUF_LINK, 0, PBUF_REF);
+  37              		.loc 1 656 0
+  38 0016 0220     		mov	r0, #2
+  39              	.LVL2:
+  40 0018 0021     		mov	r1, #0
+  41              	.LVL3:
+  42 001a 0222     		mov	r2, #2
+  43              	.LVL4:
+  44 001c FFF7FEFF 		bl	pbuf_alloc
+  45 0020 8346     		mov	fp, r0
+  46              	.LVL5:
+ 657:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   if (rambuf == NULL) {
+  47              		.loc 1 657 0
+  48 0022 0028     		cmp	r0, #0
+  49 0024 01D1     		bne	.L2
+  50 0026 FF20     		mov	r0, #255
+  51 0028 A9E0     		b	.L3
+  52              	.L2:
+ 658:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_frag: pbuf_alloc(PBUF_LINK, 0, PBUF_REF) failed\n"));
+ 659:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     return ERR_MEM;
+ 660:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 661:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   rambuf->tot_len = rambuf->len = mtu;
+  53              		.loc 1 661 0
+  54 002a 5946     		mov	r1, fp
+  55 002c 4C81     		strh	r4, [r1, #10]
+  56 002e 5A46     		mov	r2, fp
+  57 0030 1481     		strh	r4, [r2, #8]
+ 662:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   rambuf->payload = LWIP_MEM_ALIGN((void *)buf);
+  58              		.loc 1 662 0
+  59 0032 584B     		ldr	r3, .L11
+  60 0034 0322     		mov	r2, #3
+  61 0036 9343     		bic	r3, r3, r2
+  62 0038 4B60     		str	r3, [r1, #4]
+ 663:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 664:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Copy the IP header in it */
+ 665:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iphdr = rambuf->payload;
+  63              		.loc 1 665 0
+  64 003a 1F1C     		mov	r7, r3
+  65              	.LVL6:
+ 666:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   SMEMCPY(iphdr, p->payload, IP_HLEN);
+  66              		.loc 1 666 0
+  67 003c 089A     		ldr	r2, [sp, #32]
+  68 003e 5168     		ldr	r1, [r2, #4]
+  69 0040 181C     		mov	r0, r3
+  70 0042 1422     		mov	r2, #20
+  71 0044 FFF7FEFF 		bl	memcpy
+ 667:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #else /* IP_FRAG_USES_STATIC_BUF */
+ 668:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   original_iphdr = p->payload;
+ 669:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   iphdr = original_iphdr;
+ 670:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_FRAG_USES_STATIC_BUF */
+ 671:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 672:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   /* Save original offset */
+ 673:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   tmp = ntohs(IPH_OFFSET(iphdr));
+  72              		.loc 1 673 0
+  73 0048 F888     		ldrh	r0, [r7, #6]
+  74 004a FFF7FEFF 		bl	ntohs
+ 674:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   ofo = tmp & IP_OFFMASK;
+ 675:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   omf = tmp & IP_MF;
+  75              		.loc 1 675 0
+  76 004e 8023     		mov	r3, #128
+  77 0050 9B01     		lsl	r3, r3, #6
+  78 0052 011C     		mov	r1, r0
+  79              	.LVL7:
+  80 0054 1940     		and	r1, r1, r3
+  81              	.LVL8:
+ 676:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 677:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   left = p->tot_len - IP_HLEN;
+  82              		.loc 1 677 0
+  83 0056 089A     		ldr	r2, [sp, #32]
+  84 0058 1389     		ldrh	r3, [r2, #8]
+  85 005a 143B     		sub	r3, r3, #20
+  86 005c 1B04     		lsl	r3, r3, #16
+  87 005e 1D0C     		lsr	r5, r3, #16
+  88              	.LVL9:
+ 678:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 679:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   nfb = (mtu - IP_HLEN) / 8;
+  89              		.loc 1 679 0
+  90 0060 143C     		sub	r4, r4, #20
+  91              	.LVL10:
+  92 0062 0994     		str	r4, [sp, #36]
+  93 0064 E317     		asr	r3, r4, #31
+  94 0066 5B0F     		lsr	r3, r3, #29
+  95 0068 1B19     		add	r3, r3, r4
+  96 006a 5B03     		lsl	r3, r3, #13
+  97 006c 1B0C     		lsr	r3, r3, #16
+  98 006e 0B93     		str	r3, [sp, #44]
+  99              	.LVL11:
+ 680:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 681:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   while (left) {
+ 100              		.loc 1 681 0
+ 101 0070 002D     		cmp	r5, #0
+ 102 0072 00D1     		bne	.LCB72
+ 103 0074 7FE0     		b	.L4	@long jump
+ 104              	.LCB72:
+ 105              	.LVL12:
+ 106              		.loc 1 674 0
+ 107 0076 484B     		ldr	r3, .L11+4
+ 108 0078 1840     		and	r0, r0, r3
+ 109              	.LVL13:
+ 110 007a 8146     		mov	r9, r0
+ 111              	.LVL14:
+ 682:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     last = (left <= mtu - IP_HLEN);
+ 683:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 684:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Set new offset and MF flag */
+ 685:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     tmp = omf | (IP_OFFMASK & (ofo));
+ 686:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (!last)
+ 687:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       tmp = tmp | IP_MF;
+ 688:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 689:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Fill this fragment */
+ 690:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     cop = last ? left : nfb * 8;
+ 112              		.loc 1 690 0
+ 113 007c 0B9B     		ldr	r3, [sp, #44]
+ 114 007e DA04     		lsl	r2, r3, #19
+ 115 0080 1423     		mov	r3, #20
+ 116 0082 9A46     		mov	sl, r3
+ 117              	.LVL15:
+ 118              		.loc 1 682 0
+ 119 0084 E317     		asr	r3, r4, #31
+ 120 0086 0593     		str	r3, [sp, #20]
+ 121              		.loc 1 685 0
+ 122 0088 434B     		ldr	r3, .L11+4
+ 123 008a 0493     		str	r3, [sp, #16]
+ 124 008c 6B46     		mov	r3, sp
+ 125 008e 9981     		strh	r1, [r3, #12]
+ 126              		.loc 1 687 0
+ 127 0090 8023     		mov	r3, #128
+ 128 0092 9B01     		lsl	r3, r3, #6
+ 129 0094 6946     		mov	r1, sp
+ 130              	.LVL16:
+ 131 0096 0B81     		strh	r3, [r1, #8]
+ 132 0098 120C     		lsr	r2, r2, #16
+ 133 009a 0192     		str	r2, [sp, #4]
+ 691:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 692:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 693:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     poff += pbuf_copy_partial(p, (u8_t*)iphdr + IP_HLEN, cop, poff);
+ 134              		.loc 1 693 0
+ 135 009c 3A1C     		mov	r2, r7
+ 136 009e 1432     		add	r2, r2, #20
+ 137 00a0 0092     		str	r2, [sp]
+ 138              	.LVL17:
+ 139              	.L9:
+ 140              		.loc 1 682 0
+ 141 00a2 EB0F     		lsr	r3, r5, #31
+ 142 00a4 0599     		ldr	r1, [sp, #20]
+ 143 00a6 099A     		ldr	r2, [sp, #36]
+ 144 00a8 AA42     		cmp	r2, r5
+ 145 00aa 5941     		adc	r1, r1, r3
+ 146 00ac 8846     		mov	r8, r1
+ 147              		.loc 1 685 0
+ 148 00ae 4B46     		mov	r3, r9
+ 149 00b0 0499     		ldr	r1, [sp, #16]
+ 150 00b2 0B40     		and	r3, r3, r1
+ 151 00b4 6A46     		mov	r2, sp
+ 152 00b6 9289     		ldrh	r2, [r2, #12]
+ 153 00b8 1343     		orr	r3, r3, r2
+ 154 00ba 1B04     		lsl	r3, r3, #16
+ 155 00bc 1C0C     		lsr	r4, r3, #16
+ 156              	.LVL18:
+ 157              		.loc 1 686 0
+ 158 00be 4346     		mov	r3, r8
+ 159 00c0 002B     		cmp	r3, #0
+ 160 00c2 01D0     		beq	.L5
+ 161 00c4 2E1C     		mov	r6, r5
+ 162              	.LVL19:
+ 163 00c6 05E0     		b	.L6
+ 164              	.L5:
+ 165              		.loc 1 687 0
+ 166 00c8 6946     		mov	r1, sp
+ 167 00ca 0B89     		ldrh	r3, [r1, #8]
+ 168 00cc 2343     		orr	r3, r3, r4
+ 169 00ce 1B04     		lsl	r3, r3, #16
+ 170 00d0 1C0C     		lsr	r4, r3, #16
+ 171              	.LVL20:
+ 172 00d2 019E     		ldr	r6, [sp, #4]
+ 173              	.L6:
+ 174              		.loc 1 693 0
+ 175 00d4 0898     		ldr	r0, [sp, #32]
+ 176 00d6 0099     		ldr	r1, [sp]
+ 177 00d8 321C     		mov	r2, r6
+ 178 00da 5346     		mov	r3, sl
+ 179 00dc FFF7FEFF 		bl	pbuf_copy_partial
+ 180 00e0 0A90     		str	r0, [sp, #40]
+ 694:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #else /* IP_FRAG_USES_STATIC_BUF */
+ 695:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* When not using a static buffer, create a chain of pbufs.
+ 696:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * The first will be a PBUF_RAM holding the link and IP header.
+ 697:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * The rest will be PBUF_REFs mirroring the pbuf chain to be fragged,
+ 698:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * but limited to the size of an mtu.
+ 699:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      */
+ 700:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     rambuf = pbuf_alloc(PBUF_LINK, IP_HLEN, PBUF_RAM);
+ 701:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (rambuf == NULL) {
+ 702:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       return ERR_MEM;
+ 703:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 704:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     LWIP_ASSERT("this needs a pbuf in one piece!",
+ 705:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****                 (p->len >= (IP_HLEN)));
+ 706:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     SMEMCPY(rambuf->payload, original_iphdr, IP_HLEN);
+ 707:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     iphdr = rambuf->payload;
+ 708:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 709:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Can just adjust p directly for needed offset. */
+ 710:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     p->payload = (u8_t *)p->payload + poff;
+ 711:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     p->len -= poff;
+ 712:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 713:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     left_to_copy = cop;
+ 714:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     while (left_to_copy) {
+ 715:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       newpbuflen = (left_to_copy < p->len) ? left_to_copy : p->len;
+ 716:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* Is this pbuf already empty? */
+ 717:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (!newpbuflen) {
+ 718:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         p = p->next;
+ 719:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         continue;
+ 720:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 721:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       newpbuf = pbuf_alloc(PBUF_RAW, 0, PBUF_REF);
+ 722:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (newpbuf == NULL) {
+ 723:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         pbuf_free(rambuf);
+ 724:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         return ERR_MEM;
+ 725:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       }
+ 726:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* Mirror this pbuf, although we might not need all of it. */
+ 727:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       newpbuf->payload = p->payload;
+ 728:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       newpbuf->len = newpbuf->tot_len = newpbuflen;
+ 729:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       /* Add it to end of rambuf's chain, but using pbuf_cat, not pbuf_chain
+ 730:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        * so that it is removed when pbuf_dechain is later called on rambuf.
+ 731:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****        */
+ 732:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_cat(rambuf, newpbuf);
+ 733:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       left_to_copy -= newpbuflen;
+ 734:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       if (left_to_copy)
+ 735:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****         p = p->next;
+ 736:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 737:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     poff = newpbuflen;
+ 738:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_FRAG_USES_STATIC_BUF */
+ 739:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 740:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Correct header */
+ 741:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_OFFSET_SET(iphdr, htons(tmp));
+ 181              		.loc 1 741 0
+ 182 00e2 201C     		mov	r0, r4
+ 183 00e4 FFF7FEFF 		bl	htons
+ 184 00e8 F880     		strh	r0, [r7, #6]
+ 742:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_LEN_SET(iphdr, htons(cop + IP_HLEN));
+ 185              		.loc 1 742 0
+ 186 00ea 301C     		mov	r0, r6
+ 187 00ec 1430     		add	r0, r0, #20
+ 188 00ee 0004     		lsl	r0, r0, #16
+ 189 00f0 000C     		lsr	r0, r0, #16
+ 190 00f2 FFF7FEFF 		bl	htons
+ 191 00f6 7880     		strh	r0, [r7, #2]
+ 743:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_CHKSUM_SET(iphdr, 0);
+ 192              		.loc 1 743 0
+ 193 00f8 0023     		mov	r3, #0
+ 194 00fa 7B81     		strh	r3, [r7, #10]
+ 744:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPH_CHKSUM_SET(iphdr, inet_chksum(iphdr, IP_HLEN));
+ 195              		.loc 1 744 0
+ 196 00fc 381C     		mov	r0, r7
+ 197 00fe 1421     		mov	r1, #20
+ 198 0100 FFF7FEFF 		bl	inet_chksum
+ 199 0104 7881     		strh	r0, [r7, #10]
+ 745:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 746:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 747:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (last)
+ 200              		.loc 1 747 0
+ 201 0106 4246     		mov	r2, r8
+ 202 0108 002A     		cmp	r2, #0
+ 203 010a 06D0     		beq	.L7
+ 748:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_realloc(rambuf, left + IP_HLEN);
+ 204              		.loc 1 748 0
+ 205 010c 291C     		mov	r1, r5
+ 206 010e 1431     		add	r1, r1, #20
+ 207 0110 0904     		lsl	r1, r1, #16
+ 208 0112 090C     		lsr	r1, r1, #16
+ 209 0114 5846     		mov	r0, fp
+ 210 0116 FFF7FEFF 		bl	pbuf_realloc
+ 211              	.L7:
+ 749:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 750:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* This part is ugly: we alloc a RAM based pbuf for 
+ 751:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * the link level header for each chunk and then 
+ 752:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * free it.A PBUF_ROM style pbuf for which pbuf_header
+ 753:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * worked would make things simpler.
+ 754:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      */
+ 755:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     header = pbuf_alloc(PBUF_LINK, 0, PBUF_RAM);
+ 212              		.loc 1 755 0
+ 213 011a 0220     		mov	r0, #2
+ 214 011c 0021     		mov	r1, #0
+ 215 011e 0022     		mov	r2, #0
+ 216 0120 FFF7FEFF 		bl	pbuf_alloc
+ 217 0124 041C     		mov	r4, r0
+ 218              	.LVL21:
+ 756:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     if (header != NULL) {
+ 219              		.loc 1 756 0
+ 220 0126 0028     		cmp	r0, #0
+ 221 0128 20D0     		beq	.L8
+ 222              	.LVL22:
+ 757:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_chain(header, rambuf);
+ 223              		.loc 1 757 0
+ 224 012a 5946     		mov	r1, fp
+ 225 012c FFF7FEFF 		bl	pbuf_chain
+ 226              	.LVL23:
+ 758:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       netif->output(netif, header, dest);
+ 227              		.loc 1 758 0
+ 228 0130 0799     		ldr	r1, [sp, #28]
+ 229 0132 4B69     		ldr	r3, [r1, #20]
+ 230 0134 081C     		mov	r0, r1
+ 231 0136 211C     		mov	r1, r4
+ 232 0138 069A     		ldr	r2, [sp, #24]
+ 233 013a 00F08DFA 		bl	.L13
+ 759:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       IPFRAG_STATS_INC(ip_frag.xmit);
+ 234              		.loc 1 759 0
+ 235 013e 174A     		ldr	r2, .L11+8
+ 236 0140 138E     		ldrh	r3, [r2, #48]
+ 237 0142 0133     		add	r3, r3, #1
+ 238 0144 1386     		strh	r3, [r2, #48]
+ 760:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       snmp_inc_ipfragcreates();
+ 761:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_free(header);
+ 239              		.loc 1 761 0
+ 240 0146 201C     		mov	r0, r4
+ 241 0148 FFF7FEFF 		bl	pbuf_free
+ 762:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     } else {
+ 763:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_frag: pbuf_alloc() for header failed\n"));
+ 764:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       pbuf_free(rambuf);
+ 765:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****       return ERR_MEM;
+ 766:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     }
+ 767:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #else /* IP_FRAG_USES_STATIC_BUF */
+ 768:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* No need for separate header pbuf - we allowed room for it in rambuf
+ 769:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * when allocated.
+ 770:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      */
+ 771:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     netif->output(netif, rambuf, dest);
+ 772:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     IPFRAG_STATS_INC(ip_frag.xmit);
+ 773:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** 
+ 774:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     /* Unfortunately we can't reuse rambuf - the hardware may still be
+ 775:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * using the buffer. Instead we free it (and the ensuing chain) and
+ 776:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * recreate it next time round the loop. If we're lucky the hardware
+ 777:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * will have already sent the packet, the free will really free, and
+ 778:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      * there will be zero memory penalty.
+ 779:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****      */
+ 780:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     
+ 781:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     pbuf_free(rambuf);
+ 782:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_FRAG_USES_STATIC_BUF */
+ 783:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     left -= cop;
+ 242              		.loc 1 783 0
+ 243 014c AB1B     		sub	r3, r5, r6
+ 244 014e 1B04     		lsl	r3, r3, #16
+ 245 0150 1D0C     		lsr	r5, r3, #16
+ 246              	.LVL24:
+ 247              		.loc 1 681 0
+ 248 0152 002D     		cmp	r5, #0
+ 249 0154 0FD0     		beq	.L4
+ 250              	.LVL25:
+ 251              		.loc 1 693 0
+ 252 0156 0A9B     		ldr	r3, [sp, #40]
+ 253 0158 5344     		add	r3, r3, sl
+ 254 015a 1B04     		lsl	r3, r3, #16
+ 255 015c 1B0C     		lsr	r3, r3, #16
+ 256 015e 9A46     		mov	sl, r3
+ 257              	.LVL26:
+ 784:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****     ofo += nfb;
+ 258              		.loc 1 784 0
+ 259 0160 0B9B     		ldr	r3, [sp, #44]
+ 260 0162 4B44     		add	r3, r3, r9
+ 261 0164 1B04     		lsl	r3, r3, #16
+ 262 0166 1B0C     		lsr	r3, r3, #16
+ 263 0168 9946     		mov	r9, r3
+ 264              	.LVL27:
+ 265 016a 9AE7     		b	.L9
+ 266              	.LVL28:
+ 267              	.L8:
+ 268              		.loc 1 764 0
+ 269 016c 5846     		mov	r0, fp
+ 270              	.LVL29:
+ 271 016e FFF7FEFF 		bl	pbuf_free
+ 272 0172 FF20     		mov	r0, #255
+ 273 0174 03E0     		b	.L3
+ 274              	.LVL30:
+ 275              	.L4:
+ 785:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   }
+ 786:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #if IP_FRAG_USES_STATIC_BUF
+ 787:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   pbuf_free(rambuf);
+ 276              		.loc 1 787 0
+ 277 0176 5846     		mov	r0, fp
+ 278              	.LVL31:
+ 279 0178 FFF7FEFF 		bl	pbuf_free
+ 280              	.LVL32:
+ 281 017c 0020     		mov	r0, #0
+ 282              	.LVL33:
+ 283              	.L3:
+ 284 017e 0006     		lsl	r0, r0, #24
+ 285 0180 0016     		asr	r0, r0, #24
+ 788:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** #endif /* IP_FRAG_USES_STATIC_BUF */
+ 789:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   snmp_inc_ipfragoks();
+ 790:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c ****   return ERR_OK;
+ 791:rtos/common/ethernet/lwIP_132/src/core/ipv4/ip_frag.c **** }
+ 286              		.loc 1 791 0
+ 287 0182 0CB0     		add	sp, sp, #48
+ 288              		@ sp needed for prologue
+ 289              	.LVL34:
+ 290              	.LVL35:
+ 291              	.LVL36:
+ 292              	.LVL37:
+ 293              	.LVL38:
+ 294              	.LVL39:
+ 295              	.LVL40:
+ 296              	.LVL41:
+ 297 0184 3CBC     		pop	{r2, r3, r4, r5}
+ 298 0186 9046     		mov	r8, r2
+ 299 0188 9946     		mov	r9, r3
+ 300 018a A246     		mov	sl, r4
+ 301 018c AB46     		mov	fp, r5
+ 302 018e F0BC     		pop	{r4, r5, r6, r7}
+ 303 0190 02BC     		pop	{r1}
+ 304 0192 0847     		bx	r1
+ 305              	.L12:
+ 306              		.align	2
+ 307              	.L11:
+ 308 0194 09000000 		.word	buf+3
+ 309 0198 FF1F0000 		.word	8191
+ 310 019c 00000000 		.word	lwip_stats
+ 311              	.LFE9:
+ 313              		.align	2
+ 314              		.code	16
+ 315              		.thumb_func
+ 317              	ip_reass_dequeue_datagram:
+ 318              	.LFB6:
+ 319              		.loc 1 298 0
+ 320 01a0 10B5     		push	{r4, lr}
+ 321              	.LCFI3:
+ 322              	.LVL42:
+ 323 01a2 041C     		mov	r4, r0
+ 324              		.loc 1 301 0
+ 325 01a4 084B     		ldr	r3, .L18
+ 326 01a6 1B68     		ldr	r3, [r3]
+ 327 01a8 A342     		cmp	r3, r4
+ 328 01aa 03D1     		bne	.L15
+ 329              	.LVL43:
+ 330              		.loc 1 303 0
+ 331 01ac 064A     		ldr	r2, .L18
+ 332 01ae 1B68     		ldr	r3, [r3]
+ 333 01b0 1360     		str	r3, [r2]
+ 334 01b2 01E0     		b	.L16
+ 335              	.L15:
+ 336              		.loc 1 307 0
+ 337 01b4 0368     		ldr	r3, [r0]
+ 338 01b6 0B60     		str	r3, [r1]
+ 339              	.LVL44:
+ 340              	.L16:
+ 341              		.loc 1 311 0
+ 342 01b8 0520     		mov	r0, #5
+ 343              	.LVL45:
+ 344 01ba 211C     		mov	r1, r4
+ 345              	.LVL46:
+ 346 01bc FFF7FEFF 		bl	memp_free
+ 347              		.loc 1 312 0
+ 348              		@ sp needed for prologue
+ 349              	.LVL47:
+ 350 01c0 10BC     		pop	{r4}
+ 351 01c2 01BC     		pop	{r0}
+ 352 01c4 0047     		bx	r0
+ 353              	.L19:
+ 354 01c6 C046     		.align	2
+ 355              	.L18:
+ 356 01c8 00000000 		.word	reassdatagrams
+ 357              	.LFE6:
+ 359              		.align	2
+ 360              		.code	16
+ 361              		.thumb_func
+ 363              	ip_reass_free_complete_datagram:
+ 364              	.LFB3:
+ 365              		.loc 1 157 0
+ 366 01cc F0B5     		push	{r4, r5, r6, r7, lr}
+ 367              	.LCFI4:
+ 368 01ce 4746     		mov	r7, r8
+ 369 01d0 80B4     		push	{r7}
+ 370              	.LCFI5:
+ 371              	.LVL48:
+ 372 01d2 071C     		mov	r7, r0
+ 373 01d4 8846     		mov	r8, r1
+ 374              		.loc 1 169 0
+ 375 01d6 4468     		ldr	r4, [r0, #4]
+ 376 01d8 6268     		ldr	r2, [r4, #4]
+ 377              	.LVL49:
+ 378              		.loc 1 170 0
+ 379 01da 9388     		ldrh	r3, [r2, #4]
+ 380 01dc 002B     		cmp	r3, #0
+ 381 01de 01D0     		beq	.L21
+ 382              	.LVL50:
+ 383 01e0 0026     		mov	r6, #0
+ 384              	.LVL51:
+ 385 01e2 12E0     		b	.L22
+ 386              	.LVL52:
+ 387              	.L21:
+ 388              		.loc 1 174 0
+ 389 01e4 1368     		ldr	r3, [r2]
+ 390 01e6 4360     		str	r3, [r0, #4]
+ 391              		.loc 1 176 0
+ 392 01e8 6068     		ldr	r0, [r4, #4]
+ 393              	.LVL53:
+ 394 01ea 391C     		mov	r1, r7
+ 395 01ec 0831     		add	r1, r1, #8
+ 396 01ee 1422     		mov	r2, #20
+ 397              	.LVL54:
+ 398 01f0 FFF7FEFF 		bl	memcpy
+ 399              		.loc 1 177 0
+ 400 01f4 201C     		mov	r0, r4
+ 401 01f6 0121     		mov	r1, #1
+ 402 01f8 FFF7FEFF 		bl	icmp_time_exceeded
+ 403              		.loc 1 178 0
+ 404 01fc 201C     		mov	r0, r4
+ 405 01fe FFF7FEFF 		bl	pbuf_clen
+ 406 0202 061C     		mov	r6, r0
+ 407              	.LVL55:
+ 408              		.loc 1 179 0
+ 409 0204 201C     		mov	r0, r4
+ 410 0206 FFF7FEFF 		bl	pbuf_free
+ 411              	.LVL56:
+ 412              	.L22:
+ 413              		.loc 1 185 0
+ 414 020a 7C68     		ldr	r4, [r7, #4]
+ 415              	.LVL57:
+ 416              		.loc 1 186 0
+ 417 020c 002C     		cmp	r4, #0
+ 418 020e 0CD0     		beq	.L23
+ 419              	.LVL58:
+ 420              	.L26:
+ 421              	.LBB2:
+ 422              		.loc 1 188 0
+ 423 0210 6368     		ldr	r3, [r4, #4]
+ 424              	.LVL59:
+ 425              		.loc 1 191 0
+ 426 0212 1D68     		ldr	r5, [r3]
+ 427              	.LVL60:
+ 428              		.loc 1 192 0
+ 429 0214 201C     		mov	r0, r4
+ 430 0216 FFF7FEFF 		bl	pbuf_clen
+ 431              	.LVL61:
+ 432 021a 3618     		add	r6, r6, r0
+ 433              		.loc 1 193 0
+ 434 021c 201C     		mov	r0, r4
+ 435 021e FFF7FEFF 		bl	pbuf_free
+ 436              	.LBE2:
+ 437              		.loc 1 186 0
+ 438 0222 002D     		cmp	r5, #0
+ 439 0224 01D0     		beq	.L23
+ 440 0226 2C1C     		mov	r4, r5
+ 441 0228 F2E7     		b	.L26
+ 442              	.LVL62:
+ 443              	.L23:
+ 444              		.loc 1 196 0
+ 445 022a 381C     		mov	r0, r7
+ 446 022c 4146     		mov	r1, r8
+ 447 022e FFF7B7FF 		bl	ip_reass_dequeue_datagram
+ 448              	.LVL63:
+ 449              		.loc 1 198 0
+ 450 0232 054A     		ldr	r2, .L27
+ 451 0234 1388     		ldrh	r3, [r2]
+ 452 0236 9B1B     		sub	r3, r3, r6
+ 453 0238 1380     		strh	r3, [r2]
+ 454              		.loc 1 201 0
+ 455 023a 301C     		mov	r0, r6
+ 456              		@ sp needed for prologue
+ 457              	.LVL64:
+ 458              	.LVL65:
+ 459              	.LVL66:
+ 460              	.LVL67:
+ 461              	.LVL68:
+ 462 023c 04BC     		pop	{r2}
+ 463 023e 9046     		mov	r8, r2
+ 464 0240 F0BC     		pop	{r4, r5, r6, r7}
+ 465 0242 02BC     		pop	{r1}
+ 466 0244 0847     		bx	r1
+ 467              	.L28:
+ 468 0246 C046     		.align	2
+ 469              	.L27:
+ 470 0248 04000000 		.word	ip_reass_pbufcount
+ 471              	.LFE3:
+ 473              		.align	2
+ 474              		.code	16
+ 475              		.thumb_func
+ 477              	ip_reass_remove_oldest_datagram:
+ 478              	.LFB4:
+ 479              		.loc 1 215 0
+ 480 024c F0B5     		push	{r4, r5, r6, r7, lr}
+ 481              	.LCFI6:
+ 482 024e 5F46     		mov	r7, fp
+ 483 0250 5646     		mov	r6, sl
+ 484 0252 4D46     		mov	r5, r9
+ 485 0254 4446     		mov	r4, r8
+ 486 0256 F0B4     		push	{r4, r5, r6, r7}
+ 487              	.LCFI7:
+ 488              	.LVL69:
+ 489 0258 071C     		mov	r7, r0
+ 490 025a 8B46     		mov	fp, r1
+ 491              		.loc 1 215 0
+ 492 025c 0023     		mov	r3, #0
+ 493 025e 9846     		mov	r8, r3
+ 494              	.LVL70:
+ 495              		.loc 1 229 0
+ 496 0260 1B4B     		ldr	r3, .L41
+ 497 0262 9946     		mov	r9, r3
+ 498              		.loc 1 231 0
+ 499 0264 0023     		mov	r3, #0
+ 500 0266 9A46     		mov	sl, r3
+ 501              	.LVL71:
+ 502              	.L37:
+ 503              		.loc 1 229 0
+ 504 0268 4B46     		mov	r3, r9
+ 505              	.LVL72:
+ 506 026a 1968     		ldr	r1, [r3]
+ 507              	.LVL73:
+ 508              		.loc 1 230 0
+ 509 026c 0029     		cmp	r1, #0
+ 510 026e 26D0     		beq	.L30
+ 511              		.loc 1 231 0
+ 512 0270 FD68     		ldr	r5, [r7, #12]
+ 513 0272 5046     		mov	r0, sl
+ 514              	.LVL74:
+ 515 0274 5646     		mov	r6, sl
+ 516 0276 5446     		mov	r4, sl
+ 517              	.LVL75:
+ 518              	.L35:
+ 519 0278 4B69     		ldr	r3, [r1, #20]
+ 520 027a AB42     		cmp	r3, r5
+ 521 027c 07D1     		bne	.L31
+ 522 027e 8A69     		ldr	r2, [r1, #24]
+ 523 0280 3B69     		ldr	r3, [r7, #16]
+ 524 0282 9A42     		cmp	r2, r3
+ 525 0284 03D1     		bne	.L31
+ 526 0286 8A89     		ldrh	r2, [r1, #12]
+ 527 0288 BB88     		ldrh	r3, [r7, #4]
+ 528 028a 9A42     		cmp	r2, r3
+ 529 028c 07D0     		beq	.L32
+ 530              	.L31:
+ 531              		.loc 1 233 0
+ 532 028e 0134     		add	r4, r4, #1
+ 533              		.loc 1 234 0
+ 534 0290 0028     		cmp	r0, #0
+ 535 0292 03D0     		beq	.L33
+ 536              	.LVL76:
+ 537              		.loc 1 236 0
+ 538 0294 CA7F     		ldrb	r2, [r1, #31]
+ 539 0296 C37F     		ldrb	r3, [r0, #31]
+ 540 0298 9A42     		cmp	r2, r3
+ 541 029a 00D8     		bhi	.L32
+ 542              	.L33:
+ 543 029c 081C     		mov	r0, r1
+ 544              	.LVL77:
+ 545              	.L32:
+ 546              		.loc 1 241 0
+ 547 029e 0B68     		ldr	r3, [r1]
+ 548              	.LVL78:
+ 549 02a0 002B     		cmp	r3, #0
+ 550 02a2 02D0     		beq	.L34
+ 551 02a4 0E1C     		mov	r6, r1
+ 552 02a6 191C     		mov	r1, r3
+ 553 02a8 E6E7     		b	.L35
+ 554              	.LVL79:
+ 555              	.L34:
+ 556              		.loc 1 246 0
+ 557 02aa 0028     		cmp	r0, #0
+ 558 02ac 03D0     		beq	.L36
+ 559              		.loc 1 247 0
+ 560 02ae 311C     		mov	r1, r6
+ 561 02b0 FFF78CFF 		bl	ip_reass_free_complete_datagram
+ 562              	.LVL80:
+ 563              		.loc 1 248 0
+ 564 02b4 8044     		add	r8, r8, r0
+ 565              	.LVL81:
+ 566              	.L36:
+ 567              		.loc 1 250 0
+ 568 02b6 D845     		cmp	r8, fp
+ 569 02b8 01DA     		bge	.L30
+ 570 02ba 012C     		cmp	r4, #1
+ 571 02bc D4DC     		bgt	.L37
+ 572              	.LVL82:
+ 573              	.L30:
+ 574              		.loc 1 252 0
+ 575 02be 4046     		mov	r0, r8
+ 576              	.LVL83:
+ 577              		@ sp needed for prologue
+ 578              	.LVL84:
+ 579              	.LVL85:
+ 580              	.LVL86:
+ 581              	.LVL87:
+ 582              	.LVL88:
+ 583              	.LVL89:
+ 584 02c0 3CBC     		pop	{r2, r3, r4, r5}
+ 585 02c2 9046     		mov	r8, r2
+ 586 02c4 9946     		mov	r9, r3
+ 587 02c6 A246     		mov	sl, r4
+ 588 02c8 AB46     		mov	fp, r5
+ 589 02ca F0BC     		pop	{r4, r5, r6, r7}
+ 590 02cc 02BC     		pop	{r1}
+ 591 02ce 0847     		bx	r1
+ 592              	.L42:
+ 593              		.align	2
+ 594              	.L41:
+ 595 02d0 00000000 		.word	reassdatagrams
+ 596              	.LFE4:
+ 598              		.align	2
+ 599              		.global	ip_reass_tmr
+ 600              		.code	16
+ 601              		.thumb_func
+ 603              	ip_reass_tmr:
+ 604              	.LFB2:
+ 605              		.loc 1 121 0
+ 606 02d4 30B5     		push	{r4, r5, lr}
+ 607              	.LCFI8:
+ 608              		.loc 1 124 0
+ 609 02d6 0C4B     		ldr	r3, .L49
+ 610 02d8 1868     		ldr	r0, [r3]
+ 611              	.LVL90:
+ 612              		.loc 1 125 0
+ 613 02da 0028     		cmp	r0, #0
+ 614 02dc 10D0     		beq	.L48
+ 615 02de 0025     		mov	r5, #0
+ 616              	.LVL91:
+ 617              	.L47:
+ 618              		.loc 1 128 0
+ 619 02e0 C37F     		ldrb	r3, [r0, #31]
+ 620 02e2 002B     		cmp	r3, #0
+ 621 02e4 04D0     		beq	.L45
+ 622              		.loc 1 129 0
+ 623 02e6 013B     		sub	r3, r3, #1
+ 624 02e8 C377     		strb	r3, [r0, #31]
+ 625              		.loc 1 132 0
+ 626 02ea 0468     		ldr	r4, [r0]
+ 627              	.LVL92:
+ 628 02ec 051C     		mov	r5, r0
+ 629 02ee 03E0     		b	.L46
+ 630              	.LVL93:
+ 631              	.L45:
+ 632              	.LBB3:
+ 633              		.loc 1 139 0
+ 634 02f0 0468     		ldr	r4, [r0]
+ 635              	.LVL94:
+ 636              		.loc 1 141 0
+ 637 02f2 291C     		mov	r1, r5
+ 638 02f4 FFF76AFF 		bl	ip_reass_free_complete_datagram
+ 639              	.LVL95:
+ 640              	.L46:
+ 641              	.LBE3:
+ 642              		.loc 1 125 0
+ 643 02f8 002C     		cmp	r4, #0
+ 644 02fa 01D0     		beq	.L48
+ 645 02fc 201C     		mov	r0, r4
+ 646 02fe EFE7     		b	.L47
+ 647              	.LVL96:
+ 648              	.L48:
+ 649              		.loc 1 144 0
+ 650              		@ sp needed for prologue
+ 651              	.LVL97:
+ 652 0300 30BC     		pop	{r4, r5}
+ 653 0302 01BC     		pop	{r0}
+ 654 0304 0047     		bx	r0
+ 655              	.L50:
+ 656 0306 C046     		.align	2
+ 657              	.L49:
+ 658 0308 00000000 		.word	reassdatagrams
+ 659              	.LFE2:
+ 661              		.align	2
+ 662              		.global	ip_reass
+ 663              		.code	16
+ 664              		.thumb_func
+ 666              	ip_reass:
+ 667              	.LFB8:
+ 668              		.loc 1 470 0
+ 669 030c F0B5     		push	{r4, r5, r6, r7, lr}
+ 670              	.LCFI9:
+ 671 030e 5F46     		mov	r7, fp
+ 672 0310 5646     		mov	r6, sl
+ 673 0312 4D46     		mov	r5, r9
+ 674 0314 4446     		mov	r4, r8
+ 675 0316 F0B4     		push	{r4, r5, r6, r7}
+ 676              	.LCFI10:
+ 677              	.LVL98:
+ 678 0318 81B0     		sub	sp, sp, #4
+ 679              	.LCFI11:
+ 680 031a 8046     		mov	r8, r0
+ 681              		.loc 1 479 0
+ 682 031c B34A     		ldr	r2, .L94
+ 683 031e 538E     		ldrh	r3, [r2, #50]
+ 684 0320 0133     		add	r3, r3, #1
+ 685 0322 5386     		strh	r3, [r2, #50]
+ 686              		.loc 1 482 0
+ 687 0324 4468     		ldr	r4, [r0, #4]
+ 688              	.LVL99:
+ 689              		.loc 1 484 0
+ 690 0326 2088     		ldrh	r0, [r4]
+ 691              	.LVL100:
+ 692 0328 FFF7FEFF 		bl	ntohs
+ 693 032c 0005     		lsl	r0, r0, #20
+ 694 032e 000F     		lsr	r0, r0, #28
+ 695 0330 0528     		cmp	r0, #5
+ 696 0332 05D0     		beq	.L52
+ 697              		.loc 1 486 0
+ 698 0334 AD49     		ldr	r1, .L94
+ 699 0336 4422     		mov	r2, #68
+ 700 0338 8B5A     		ldrh	r3, [r1, r2]
+ 701 033a 0133     		add	r3, r3, #1
+ 702 033c 8B52     		strh	r3, [r1, r2]
+ 703 033e 3EE1     		b	.L53
+ 704              	.L52:
+ 705              		.loc 1 490 0
+ 706 0340 E088     		ldrh	r0, [r4, #6]
+ 707 0342 FFF7FEFF 		bl	ntohs
+ 708 0346 0090     		str	r0, [sp]
+ 709              		.loc 1 491 0
+ 710 0348 6088     		ldrh	r0, [r4, #2]
+ 711 034a FFF7FEFF 		bl	ntohs
+ 712 034e 8346     		mov	fp, r0
+ 713 0350 2088     		ldrh	r0, [r4]
+ 714 0352 FFF7FEFF 		bl	ntohs
+ 715 0356 8146     		mov	r9, r0
+ 716              		.loc 1 494 0
+ 717 0358 4046     		mov	r0, r8
+ 718 035a FFF7FEFF 		bl	pbuf_clen
+ 719 035e 051C     		mov	r5, r0
+ 720              	.LVL101:
+ 721              		.loc 1 495 0
+ 722 0360 061C     		mov	r6, r0
+ 723 0362 A34B     		ldr	r3, .L94+4
+ 724 0364 1B88     		ldrh	r3, [r3]
+ 725 0366 C318     		add	r3, r0, r3
+ 726 0368 0A2B     		cmp	r3, #10
+ 727 036a 0FDD     		ble	.L54
+ 728              	.LVL102:
+ 729              		.loc 1 497 0
+ 730 036c 201C     		mov	r0, r4
+ 731              	.LVL103:
+ 732 036e 291C     		mov	r1, r5
+ 733              	.LVL104:
+ 734 0370 FFF76CFF 		bl	ip_reass_remove_oldest_datagram
+ 735 0374 0028     		cmp	r0, #0
+ 736 0376 04D0     		beq	.L55
+ 737 0378 9D4B     		ldr	r3, .L94+4
+ 738 037a 1B88     		ldrh	r3, [r3]
+ 739 037c EB18     		add	r3, r5, r3
+ 740 037e 0A2B     		cmp	r3, #10
+ 741 0380 04DD     		ble	.L54
+ 742              	.L55:
+ 743              		.loc 1 504 0
+ 744 0382 9A4A     		ldr	r2, .L94
+ 745 0384 938F     		ldrh	r3, [r2, #60]
+ 746 0386 0133     		add	r3, r3, #1
+ 747 0388 9387     		strh	r3, [r2, #60]
+ 748 038a 18E1     		b	.L53
+ 749              	.LVL105:
+ 750              	.L54:
+ 751              		.loc 1 513 0
+ 752 038c 994B     		ldr	r3, .L94+8
+ 753 038e 1F68     		ldr	r7, [r3]
+ 754              	.LVL106:
+ 755 0390 002F     		cmp	r7, #0
+ 756 0392 02D1     		bne	.L56
+ 757 0394 0020     		mov	r0, #0
+ 758              	.LVL107:
+ 759 0396 8246     		mov	sl, r0
+ 760              	.LVL108:
+ 761 0398 31E1     		b	.L57
+ 762              	.LVL109:
+ 763              	.L56:
+ 764              		.loc 1 517 0
+ 765 039a E168     		ldr	r1, [r4, #12]
+ 766 039c 0022     		mov	r2, #0
+ 767 039e 9246     		mov	sl, r2
+ 768              	.LVL110:
+ 769              	.L62:
+ 770 03a0 7B69     		ldr	r3, [r7, #20]
+ 771 03a2 8B42     		cmp	r3, r1
+ 772 03a4 13D1     		bne	.L58
+ 773 03a6 BA69     		ldr	r2, [r7, #24]
+ 774 03a8 2369     		ldr	r3, [r4, #16]
+ 775 03aa 9A42     		cmp	r2, r3
+ 776 03ac 0FD1     		bne	.L58
+ 777 03ae BA89     		ldrh	r2, [r7, #12]
+ 778 03b0 A388     		ldrh	r3, [r4, #4]
+ 779 03b2 9A42     		cmp	r2, r3
+ 780 03b4 0BD1     		bne	.L58
+ 781 03b6 3E1C     		mov	r6, r7
+ 782              		.loc 1 520 0
+ 783 03b8 8C49     		ldr	r1, .L94
+ 784 03ba 4622     		mov	r2, #70
+ 785 03bc 8B5A     		ldrh	r3, [r1, r2]
+ 786 03be 0133     		add	r3, r3, #1
+ 787 03c0 8B52     		strh	r3, [r1, r2]
+ 788              		.loc 1 534 0
+ 789 03c2 E088     		ldrh	r0, [r4, #6]
+ 790              	.LVL111:
+ 791 03c4 FFF7FEFF 		bl	ntohs
+ 792 03c8 C304     		lsl	r3, r0, #19
+ 793 03ca 3DD1     		bne	.L60
+ 794              	.LVL112:
+ 795 03cc 30E0     		b	.L91
+ 796              	.LVL113:
+ 797              	.L58:
+ 798              		.loc 1 513 0
+ 799 03ce 3B68     		ldr	r3, [r7]
+ 800              	.LVL114:
+ 801 03d0 002B     		cmp	r3, #0
+ 802 03d2 00D1     		bne	.LCB748
+ 803 03d4 12E1     		b	.L61	@long jump
+ 804              	.LCB748:
+ 805 03d6 BA46     		mov	sl, r7
+ 806 03d8 1F1C     		mov	r7, r3
+ 807 03da E1E7     		b	.L62
+ 808              	.LVL115:
+ 809              	.L93:
+ 810              	.LBB8:
+ 811              		.loc 1 269 0
+ 812 03dc 201C     		mov	r0, r4
+ 813              	.LVL116:
+ 814 03de 311C     		mov	r1, r6
+ 815 03e0 FFF734FF 		bl	ip_reass_remove_oldest_datagram
+ 816              	.LBB10:
+ 817 03e4 8642     		cmp	r6, r0
+ 818 03e6 05DC     		bgt	.L63
+ 819              	.LBE10:
+ 820              		.loc 1 270 0
+ 821 03e8 0520     		mov	r0, #5
+ 822 03ea FFF7FEFF 		bl	memp_malloc
+ 823 03ee 071C     		mov	r7, r0
+ 824              	.LBB9:
+ 825              		.loc 1 272 0
+ 826 03f0 0028     		cmp	r0, #0
+ 827 03f2 04D1     		bne	.L64
+ 828              	.L63:
+ 829              		.loc 1 275 0
+ 830 03f4 7D4A     		ldr	r2, .L94
+ 831 03f6 938F     		ldrh	r3, [r2, #60]
+ 832 03f8 0133     		add	r3, r3, #1
+ 833 03fa 9387     		strh	r3, [r2, #60]
+ 834 03fc DFE0     		b	.L53
+ 835              	.LVL117:
+ 836              	.L64:
+ 837              		.loc 1 280 0
+ 838 03fe 0022     		mov	r2, #0
+ 839 0400 3B1C     		mov	r3, r7
+ 840 0402 04C3     		stmia	r3!, {r2}
+ 841 0404 04C3     		stmia	r3!, {r2}
+ 842 0406 04C3     		stmia	r3!, {r2}
+ 843 0408 04C3     		stmia	r3!, {r2}
+ 844 040a 04C3     		stmia	r3!, {r2}
+ 845 040c 04C3     		stmia	r3!, {r2}
+ 846 040e 04C3     		stmia	r3!, {r2}
+ 847 0410 1A60     		str	r2, [r3]
+ 848              		.loc 1 281 0
+ 849 0412 0323     		mov	r3, #3
+ 850 0414 FB77     		strb	r3, [r7, #31]
+ 851              		.loc 1 284 0
+ 852 0416 774A     		ldr	r2, .L94+8
+ 853 0418 1368     		ldr	r3, [r2]
+ 854 041a 3B60     		str	r3, [r7]
+ 855              		.loc 1 285 0
+ 856 041c 1760     		str	r7, [r2]
+ 857              		.loc 1 288 0
+ 858 041e 0826     		mov	r6, #8
+ 859 0420 F619     		add	r6, r6, r7
+ 860 0422 321C     		mov	r2, r6
+ 861 0424 211C     		mov	r1, r4
+ 862 0426 49C9     		ldmia	r1!, {r0, r3, r6}
+ 863 0428 49C2     		stmia	r2!, {r0, r3, r6}
+ 864              	.LVL118:
+ 865 042a 09C9     		ldmia	r1!, {r0, r3}
+ 866 042c 09C2     		stmia	r2!, {r0, r3}
+ 867 042e 0BE0     		b	.L60
+ 868              	.LVL119:
+ 869              	.L91:
+ 870              	.LBE9:
+ 871              	.LBE8:
+ 872              		.loc 1 534 0
+ 873 0430 F889     		ldrh	r0, [r7, #14]
+ 874 0432 FFF7FEFF 		bl	ntohs
+ 875 0436 C104     		lsl	r1, r0, #19
+ 876 0438 06D0     		beq	.L60
+ 877              	.LVL120:
+ 878              		.loc 1 540 0
+ 879 043a 0836     		add	r6, r6, #8
+ 880              	.LVL121:
+ 881 043c 321C     		mov	r2, r6
+ 882              	.LVL122:
+ 883 043e 211C     		mov	r1, r4
+ 884 0440 49C9     		ldmia	r1!, {r0, r3, r6}
+ 885 0442 49C2     		stmia	r2!, {r0, r3, r6}
+ 886              	.LVL123:
+ 887 0444 48C9     		ldmia	r1!, {r3, r6}
+ 888 0446 48C2     		stmia	r2!, {r3, r6}
+ 889              	.LVL124:
+ 890              	.L60:
+ 891              		.loc 1 545 0
+ 892 0448 694A     		ldr	r2, .L94+4
+ 893 044a 1388     		ldrh	r3, [r2]
+ 894 044c EB18     		add	r3, r5, r3
+ 895 044e 1380     		strh	r3, [r2]
+ 896              		.loc 1 551 0
+ 897 0450 E088     		ldrh	r0, [r4, #6]
+ 898 0452 FFF7FEFF 		bl	ntohs
+ 899              	.LVL125:
+ 900 0456 8104     		lsl	r1, r0, #18
+ 901 0458 0ED4     		bmi	.L65
+ 902              		.loc 1 552 0
+ 903 045a BB7F     		ldrb	r3, [r7, #30]
+ 904 045c 0122     		mov	r2, #1
+ 905 045e 1343     		orr	r3, r3, r2
+ 906 0460 BB77     		strb	r3, [r7, #30]
+ 907              		.loc 1 553 0
+ 908 0462 654B     		ldr	r3, .L94+12
+ 909 0464 009A     		ldr	r2, [sp]
+ 910 0466 1340     		and	r3, r3, r2
+ 911 0468 DB00     		lsl	r3, r3, #3
+ 912 046a 4E46     		mov	r6, r9
+ 913 046c 3205     		lsl	r2, r6, #20
+ 914 046e 120F     		lsr	r2, r2, #28
+ 915 0470 9200     		lsl	r2, r2, #2
+ 916 0472 5B44     		add	r3, r3, fp
+ 917 0474 9B1A     		sub	r3, r3, r2
+ 918 0476 BB83     		strh	r3, [r7, #28]
+ 919              	.LVL126:
+ 920              	.L65:
+ 921              	.LBB12:
+ 922              	.LBB14:
+ 923              		.loc 1 333 0
+ 924 0478 4046     		mov	r0, r8
+ 925 047a 4568     		ldr	r5, [r0, #4]
+ 926              	.LVL127:
+ 927              	.LBE14:
+ 928              		.loc 1 334 0
+ 929 047c 6888     		ldrh	r0, [r5, #2]
+ 930 047e FFF7FEFF 		bl	ntohs
+ 931 0482 061C     		mov	r6, r0
+ 932 0484 2888     		ldrh	r0, [r5]
+ 933 0486 FFF7FEFF 		bl	ntohs
+ 934 048a 041C     		mov	r4, r0
+ 935              	.LVL128:
+ 936              		.loc 1 335 0
+ 937 048c E888     		ldrh	r0, [r5, #6]
+ 938 048e FFF7FEFF 		bl	ntohs
+ 939              	.LBB15:
+ 940 0492 C004     		lsl	r0, r0, #19
+ 941 0494 000C     		lsr	r0, r0, #16
+ 942              	.LVL129:
+ 943              		.loc 1 342 0
+ 944 0496 4146     		mov	r1, r8
+ 945 0498 4968     		ldr	r1, [r1, #4]
+ 946 049a 8C46     		mov	ip, r1
+ 947              	.LVL130:
+ 948              		.loc 1 343 0
+ 949 049c 0023     		mov	r3, #0
+ 950 049e 0B60     		str	r3, [r1]
+ 951              		.loc 1 344 0
+ 952 04a0 8880     		strh	r0, [r1, #4]
+ 953              		.loc 1 345 0
+ 954 04a2 2405     		lsl	r4, r4, #20
+ 955 04a4 240F     		lsr	r4, r4, #28
+ 956 04a6 A400     		lsl	r4, r4, #2
+ 957 04a8 8019     		add	r0, r0, r6
+ 958              	.LVL131:
+ 959 04aa 001B     		sub	r0, r0, r4
+ 960 04ac C880     		strh	r0, [r1, #6]
+ 961              		.loc 1 349 0
+ 962 04ae 7A68     		ldr	r2, [r7, #4]
+ 963              	.LVL132:
+ 964 04b0 002A     		cmp	r2, #0
+ 965 04b2 3CD0     		beq	.L66
+ 966              		.loc 1 350 0
+ 967 04b4 5068     		ldr	r0, [r2, #4]
+ 968              	.LVL133:
+ 969              		.loc 1 351 0
+ 970 04b6 8C88     		ldrh	r4, [r1, #4]
+ 971 04b8 8388     		ldrh	r3, [r0, #4]
+ 972 04ba 9C42     		cmp	r4, r3
+ 973 04bc 00D2     		bcs	.LCB926
+ 974 04be C8E0     		b	.L67	@long jump
+ 975              	.LCB926:
+ 976              		.loc 1 368 0
+ 977 04c0 9C42     		cmp	r4, r3
+ 978 04c2 55D0     		beq	.L68
+ 979              		.loc 1 372 0
+ 980 04c4 C388     		ldrh	r3, [r0, #6]
+ 981 04c6 A342     		cmp	r3, r4
+ 982 04c8 52D8     		bhi	.L68
+ 983 04ca 0125     		mov	r5, #1
+ 984              	.LVL134:
+ 985              		.loc 1 379 0
+ 986 04cc 0026     		mov	r6, #0
+ 987              	.LVL135:
+ 988 04ce 21E0     		b	.L69
+ 989              	.LVL136:
+ 990              	.L74:
+ 991              		.loc 1 350 0
+ 992 04d0 5968     		ldr	r1, [r3, #4]
+ 993              	.LVL137:
+ 994              		.loc 1 351 0
+ 995 04d2 8A88     		ldrh	r2, [r1, #4]
+ 996 04d4 9442     		cmp	r4, r2
+ 997 04d6 11D2     		bcs	.L70
+ 998              		.loc 1 353 0
+ 999 04d8 6646     		mov	r6, ip
+ 1000              	.LVL138:
+ 1001 04da 3360     		str	r3, [r6]
+ 1002              		.loc 1 354 0
+ 1003 04dc 0028     		cmp	r0, #0
+ 1004 04de 0AD0     		beq	.L71
+ 1005              	.LVL139:
+ 1006              		.loc 1 357 0
+ 1007 04e0 B288     		ldrh	r2, [r6, #4]
+ 1008 04e2 C388     		ldrh	r3, [r0, #6]
+ 1009              	.LVL140:
+ 1010 04e4 9A42     		cmp	r2, r3
+ 1011 04e6 43D3     		bcc	.L68
+ 1012 04e8 F288     		ldrh	r2, [r6, #6]
+ 1013 04ea 8B88     		ldrh	r3, [r1, #4]
+ 1014 04ec 9A42     		cmp	r2, r3
+ 1015 04ee 3FD8     		bhi	.L68
+ 1016              	.LVL141:
+ 1017              		.loc 1 362 0
+ 1018 04f0 4146     		mov	r1, r8
+ 1019              	.LVL142:
+ 1020 04f2 0160     		str	r1, [r0]
+ 1021 04f4 1EE0     		b	.L72
+ 1022              	.LVL143:
+ 1023              	.L71:
+ 1024              		.loc 1 365 0
+ 1025 04f6 4246     		mov	r2, r8
+ 1026 04f8 7A60     		str	r2, [r7, #4]
+ 1027 04fa 1BE0     		b	.L72
+ 1028              	.LVL144:
+ 1029              	.L70:
+ 1030              		.loc 1 368 0
+ 1031 04fc 9442     		cmp	r4, r2
+ 1032 04fe 37D0     		beq	.L68
+ 1033              		.loc 1 372 0
+ 1034 0500 CB88     		ldrh	r3, [r1, #6]
+ 1035              	.LVL145:
+ 1036 0502 A342     		cmp	r3, r4
+ 1037 0504 34D8     		bhi	.L68
+ 1038              		.loc 1 378 0
+ 1039 0506 0028     		cmp	r0, #0
+ 1040 0508 03D0     		beq	.L73
+ 1041              	.LVL146:
+ 1042              		.loc 1 379 0
+ 1043 050a C388     		ldrh	r3, [r0, #6]
+ 1044 050c 9342     		cmp	r3, r2
+ 1045 050e 00D0     		beq	.L73
+ 1046 0510 351C     		mov	r5, r6
+ 1047              	.L73:
+ 1048 0512 081C     		mov	r0, r1
+ 1049              	.LVL147:
+ 1050              	.L69:
+ 1051              		.loc 1 386 0
+ 1052 0514 0368     		ldr	r3, [r0]
+ 1053              	.LVL148:
+ 1054              		.loc 1 349 0
+ 1055 0516 002B     		cmp	r3, #0
+ 1056 0518 DAD1     		bne	.L74
+ 1057 051a 78E0     		b	.L92
+ 1058              	.L83:
+ 1059              		.loc 1 398 0
+ 1060 051c 4346     		mov	r3, r8
+ 1061              	.LVL149:
+ 1062 051e 0360     		str	r3, [r0]
+ 1063              		.loc 1 399 0
+ 1064 0520 C288     		ldrh	r2, [r0, #6]
+ 1065 0522 6646     		mov	r6, ip
+ 1066              	.LVL150:
+ 1067 0524 B388     		ldrh	r3, [r6, #4]
+ 1068 0526 9A42     		cmp	r2, r3
+ 1069 0528 04D0     		beq	.L72
+ 1070              	.LVL151:
+ 1071 052a 0025     		mov	r5, #0
+ 1072 052c 02E0     		b	.L72
+ 1073              	.LVL152:
+ 1074              	.L66:
+ 1075 052e 0125     		mov	r5, #1
+ 1076              	.LVL153:
+ 1077              	.L84:
+ 1078              		.loc 1 408 0
+ 1079 0530 4046     		mov	r0, r8
+ 1080 0532 7860     		str	r0, [r7, #4]
+ 1081              	.LVL154:
+ 1082              	.L72:
+ 1083              	.LBE15:
+ 1084              		.loc 1 414 0
+ 1085 0534 BB7F     		ldrb	r3, [r7, #30]
+ 1086              	.LVL155:
+ 1087 0536 D907     		lsl	r1, r3, #31
+ 1088 0538 4BD5     		bpl	.L76
+ 1089              	.LBB16:
+ 1090              		.loc 1 416 0
+ 1091 053a 002D     		cmp	r5, #0
+ 1092 053c 49D0     		beq	.L76
+ 1093              		.loc 1 419 0
+ 1094 053e 7B68     		ldr	r3, [r7, #4]
+ 1095 0540 5B68     		ldr	r3, [r3, #4]
+ 1096 0542 9B88     		ldrh	r3, [r3, #4]
+ 1097 0544 002B     		cmp	r3, #0
+ 1098 0546 44D1     		bne	.L76
+ 1099              		.loc 1 424 0
+ 1100 0548 6246     		mov	r2, ip
+ 1101              	.LVL156:
+ 1102 054a 1368     		ldr	r3, [r2]
+ 1103              	.LVL157:
+ 1104              		.loc 1 425 0
+ 1105 054c 002B     		cmp	r3, #0
+ 1106 054e 62D0     		beq	.L77
+ 1107              		.loc 1 426 0
+ 1108 0550 5968     		ldr	r1, [r3, #4]
+ 1109              	.LVL158:
+ 1110              		.loc 1 427 0
+ 1111 0552 D288     		ldrh	r2, [r2, #6]
+ 1112 0554 8B88     		ldrh	r3, [r1, #4]
+ 1113              	.LVL159:
+ 1114 0556 9A42     		cmp	r2, r3
+ 1115 0558 06D0     		beq	.L90
+ 1116 055a 3AE0     		b	.L76
+ 1117              	.LVL160:
+ 1118              	.L79:
+ 1119              		.loc 1 426 0
+ 1120 055c 5868     		ldr	r0, [r3, #4]
+ 1121              	.LVL161:
+ 1122              		.loc 1 427 0
+ 1123 055e CA88     		ldrh	r2, [r1, #6]
+ 1124 0560 8388     		ldrh	r3, [r0, #4]
+ 1125              	.LVL162:
+ 1126 0562 9A42     		cmp	r2, r3
+ 1127 0564 35D1     		bne	.L76
+ 1128 0566 011C     		mov	r1, r0
+ 1129              	.LVL163:
+ 1130              	.L90:
+ 1131              		.loc 1 432 0
+ 1132 0568 0B68     		ldr	r3, [r1]
+ 1133              	.LVL164:
+ 1134              		.loc 1 425 0
+ 1135 056a 002B     		cmp	r3, #0
+ 1136 056c F6D1     		bne	.L79
+ 1137 056e 52E0     		b	.L77
+ 1138              	.LVL165:
+ 1139              	.L68:
+ 1140              		.loc 1 456 0
+ 1141 0570 1F4D     		ldr	r5, .L94+4
+ 1142              	.LVL166:
+ 1143 0572 2C88     		ldrh	r4, [r5]
+ 1144              	.LBE16:
+ 1145 0574 4046     		mov	r0, r8
+ 1146              	.LVL167:
+ 1147 0576 FFF7FEFF 		bl	pbuf_clen
+ 1148              	.LVL168:
+ 1149              	.LBB17:
+ 1150 057a 241A     		sub	r4, r4, r0
+ 1151 057c 2C80     		strh	r4, [r5]
+ 1152              		.loc 1 457 0
+ 1153 057e 4046     		mov	r0, r8
+ 1154 0580 FFF7FEFF 		bl	pbuf_free
+ 1155 0584 0023     		mov	r3, #0
+ 1156 0586 9846     		mov	r8, r3
+ 1157              	.LVL169:
+ 1158 0588 25E0     		b	.L80
+ 1159              	.LVL170:
+ 1160              	.L81:
+ 1161              	.LBE17:
+ 1162              	.LBE12:
+ 1163              		.loc 1 584 0
+ 1164 058a 1426     		mov	r6, #20
+ 1165 058c 7642     		neg	r6, r6
+ 1166              	.L87:
+ 1167              		.loc 1 581 0
+ 1168 058e 6C68     		ldr	r4, [r5, #4]
+ 1169              	.LVL171:
+ 1170              		.loc 1 584 0
+ 1171 0590 281C     		mov	r0, r5
+ 1172 0592 311C     		mov	r1, r6
+ 1173 0594 FFF7FEFF 		bl	pbuf_header
+ 1174              		.loc 1 585 0
+ 1175 0598 4046     		mov	r0, r8
+ 1176 059a 291C     		mov	r1, r5
+ 1177 059c FFF7FEFF 		bl	pbuf_cat
+ 1178              		.loc 1 586 0
+ 1179 05a0 2568     		ldr	r5, [r4]
+ 1180              		.loc 1 580 0
+ 1181 05a2 002D     		cmp	r5, #0
+ 1182 05a4 F3D1     		bne	.L87
+ 1183              	.L85:
+ 1184              		.loc 1 589 0
+ 1185 05a6 381C     		mov	r0, r7
+ 1186 05a8 5146     		mov	r1, sl
+ 1187 05aa FFF7F9FD 		bl	ip_reass_dequeue_datagram
+ 1188              		.loc 1 592 0
+ 1189 05ae 104D     		ldr	r5, .L94+4
+ 1190              	.LVL172:
+ 1191 05b0 2C88     		ldrh	r4, [r5]
+ 1192              	.LVL173:
+ 1193 05b2 4046     		mov	r0, r8
+ 1194 05b4 FFF7FEFF 		bl	pbuf_clen
+ 1195 05b8 241A     		sub	r4, r4, r0
+ 1196 05ba 2C80     		strh	r4, [r5]
+ 1197 05bc 0BE0     		b	.L80
+ 1198              	.LVL174:
+ 1199              	.L53:
+ 1200              		.loc 1 603 0
+ 1201 05be 0B4A     		ldr	r2, .L94
+ 1202 05c0 D38E     		ldrh	r3, [r2, #54]
+ 1203 05c2 0133     		add	r3, r3, #1
+ 1204 05c4 D386     		strh	r3, [r2, #54]
+ 1205              		.loc 1 604 0
+ 1206 05c6 4046     		mov	r0, r8
+ 1207 05c8 FFF7FEFF 		bl	pbuf_free
+ 1208 05cc 0026     		mov	r6, #0
+ 1209 05ce B046     		mov	r8, r6
+ 1210              	.LVL175:
+ 1211 05d0 01E0     		b	.L80
+ 1212              	.LVL176:
+ 1213              	.L76:
+ 1214              		.loc 1 605 0
+ 1215 05d2 0020     		mov	r0, #0
+ 1216 05d4 8046     		mov	r8, r0
+ 1217              	.LVL177:
+ 1218              	.L80:
+ 1219              		.loc 1 606 0
+ 1220 05d6 4046     		mov	r0, r8
+ 1221 05d8 01B0     		add	sp, sp, #4
+ 1222              		@ sp needed for prologue
+ 1223              	.LVL178:
+ 1224              	.LVL179:
+ 1225              	.LVL180:
+ 1226              	.LVL181:
+ 1227              	.LVL182:
+ 1228              	.LVL183:
+ 1229 05da 3CBC     		pop	{r2, r3, r4, r5}
+ 1230 05dc 9046     		mov	r8, r2
+ 1231 05de 9946     		mov	r9, r3
+ 1232 05e0 A246     		mov	sl, r4
+ 1233 05e2 AB46     		mov	fp, r5
+ 1234 05e4 F0BC     		pop	{r4, r5, r6, r7}
+ 1235 05e6 02BC     		pop	{r1}
+ 1236 05e8 0847     		bx	r1
+ 1237              	.L95:
+ 1238 05ea C046     		.align	2
+ 1239              	.L94:
+ 1240 05ec 00000000 		.word	lwip_stats
+ 1241 05f0 04000000 		.word	ip_reass_pbufcount
+ 1242 05f4 00000000 		.word	reassdatagrams
+ 1243 05f8 FF1F0000 		.word	8191
+ 1244              	.LVL184:
+ 1245              	.L61:
+ 1246              		.loc 1 605 0
+ 1247 05fc BA46     		mov	sl, r7
+ 1248              	.LVL185:
+ 1249              	.L57:
+ 1250              	.LBB19:
+ 1251              		.loc 1 266 0
+ 1252 05fe 0520     		mov	r0, #5
+ 1253 0600 FFF7FEFF 		bl	memp_malloc
+ 1254 0604 071C     		mov	r7, r0
+ 1255              	.LBB11:
+ 1256              		.loc 1 267 0
+ 1257 0606 0028     		cmp	r0, #0
+ 1258 0608 00D0     		beq	.LCB1237
+ 1259 060a F8E6     		b	.L64	@long jump
+ 1260              	.LCB1237:
+ 1261              	.LVL186:
+ 1262 060c E6E6     		b	.L93
+ 1263              	.LVL187:
+ 1264              	.L92:
+ 1265              	.LBE11:
+ 1266              	.LBE19:
+ 1267              	.LBB20:
+ 1268              	.LBB13:
+ 1269              		.loc 1 392 0
+ 1270 060e 0028     		cmp	r0, #0
+ 1271 0610 00D0     		beq	.LCB1254
+ 1272 0612 83E7     		b	.L83	@long jump
+ 1273              	.LCB1254:
+ 1274 0614 8CE7     		b	.L84
+ 1275              	.LVL188:
+ 1276              	.L77:
+ 1277              	.LBE13:
+ 1278              	.LBE20:
+ 1279              		.loc 1 563 0
+ 1280 0616 BB8B     		ldrh	r3, [r7, #28]
+ 1281              	.LVL189:
+ 1282 0618 1433     		add	r3, r3, #20
+ 1283 061a BB83     		strh	r3, [r7, #28]
+ 1284              		.loc 1 566 0
+ 1285 061c 7B68     		ldr	r3, [r7, #4]
+ 1286 061e 5C68     		ldr	r4, [r3, #4]
+ 1287 0620 2568     		ldr	r5, [r4]
+ 1288              	.LVL190:
+ 1289              		.loc 1 570 0
+ 1290 0622 3B1C     		mov	r3, r7
+ 1291 0624 0833     		add	r3, r3, #8
+ 1292 0626 221C     		mov	r2, r4
+ 1293              	.LVL191:
+ 1294 0628 43CB     		ldmia	r3!, {r0, r1, r6}
+ 1295 062a 43C2     		stmia	r2!, {r0, r1, r6}
+ 1296              	.LVL192:
+ 1297 062c 42CB     		ldmia	r3!, {r1, r6}
+ 1298 062e 42C2     		stmia	r2!, {r1, r6}
+ 1299              		.loc 1 571 0
+ 1300 0630 B88B     		ldrh	r0, [r7, #28]
+ 1301 0632 FFF7FEFF 		bl	htons
+ 1302              	.LVL193:
+ 1303 0636 6080     		strh	r0, [r4, #2]
+ 1304              		.loc 1 572 0
+ 1305 0638 0023     		mov	r3, #0
+ 1306 063a E380     		strh	r3, [r4, #6]
+ 1307              		.loc 1 573 0
+ 1308 063c 6381     		strh	r3, [r4, #10]
+ 1309              		.loc 1 575 0
+ 1310 063e 201C     		mov	r0, r4
+ 1311 0640 1421     		mov	r1, #20
+ 1312 0642 FFF7FEFF 		bl	inet_chksum
+ 1313 0646 6081     		strh	r0, [r4, #10]
+ 1314              		.loc 1 577 0
+ 1315 0648 7868     		ldr	r0, [r7, #4]
+ 1316 064a 8046     		mov	r8, r0
+ 1317              	.LVL194:
+ 1318              		.loc 1 580 0
+ 1319 064c 002D     		cmp	r5, #0
+ 1320 064e 9CD1     		bne	.L81
+ 1321 0650 A9E7     		b	.L85
+ 1322              	.LVL195:
+ 1323              	.L67:
+ 1324              	.LBB21:
+ 1325              	.LBB18:
+ 1326              		.loc 1 353 0
+ 1327 0652 0A60     		str	r2, [r1]
+ 1328 0654 0125     		mov	r5, #1
+ 1329              	.LVL196:
+ 1330 0656 4EE7     		b	.L71
+ 1331              	.LBE18:
+ 1332              	.LBE21:
+ 1333              	.LFE8:
+ 1335              		.bss
+ 1336              		.align	2
+ 1337              	reassdatagrams:
+ 1338 0000 00000000 		.space	4
+ 1339              		.align	1
+ 1340              	ip_reass_pbufcount:
+ 1341 0004 0000     		.space	2
+ 1342              	buf:
+ 1343 0006 00000000 		.space	1504
+ 1343      00000000 
+ 1343      00000000 
+ 1343      00000000 
+ 1343      00000000 
+ 1532              	.Letext0:
+ 4951              		.code 16
+ 4952              		.align	1
+ 4953              	.L13:
+ 4954 0658 1847C046 		bx	r3
+DEFINED SYMBOLS
+                            *ABS*:00000000 ip_frag.c
+     /tmp/ccvjSo7t.s:1      .text:00000000 $t
+     /tmp/ccvjSo7t.s:16     .text:00000000 ip_frag
+     /tmp/ccvjSo7t.s:308    .text:00000194 $d
+     /tmp/ccvjSo7t.s:1342   .bss:00000006 buf
+     /tmp/ccvjSo7t.s:314    .text:000001a0 $t
+     /tmp/ccvjSo7t.s:317    .text:000001a0 ip_reass_dequeue_datagram
+     /tmp/ccvjSo7t.s:356    .text:000001c8 $d
+     /tmp/ccvjSo7t.s:1337   .bss:00000000 reassdatagrams
+     /tmp/ccvjSo7t.s:360    .text:000001cc $t
+     /tmp/ccvjSo7t.s:363    .text:000001cc ip_reass_free_complete_datagram
+     /tmp/ccvjSo7t.s:470    .text:00000248 $d
+     /tmp/ccvjSo7t.s:1340   .bss:00000004 ip_reass_pbufcount
+     /tmp/ccvjSo7t.s:474    .text:0000024c $t
+     /tmp/ccvjSo7t.s:477    .text:0000024c ip_reass_remove_oldest_datagram
+     /tmp/ccvjSo7t.s:595    .text:000002d0 $d
+     /tmp/ccvjSo7t.s:603    .text:000002d4 ip_reass_tmr
+     /tmp/ccvjSo7t.s:600    .text:000002d4 $t
+     /tmp/ccvjSo7t.s:658    .text:00000308 $d
+     /tmp/ccvjSo7t.s:666    .text:0000030c ip_reass
+     /tmp/ccvjSo7t.s:663    .text:0000030c $t
+     /tmp/ccvjSo7t.s:1240   .text:000005ec $d
+     /tmp/ccvjSo7t.s:1247   .text:000005fc $t
+                             .bss:00000000 $d
+     /tmp/ccvjSo7t.s:1536   .debug_loc:00000000 $d
+
+UNDEFINED SYMBOLS
+pbuf_alloc
+memcpy
+ntohs
+pbuf_copy_partial
+htons
+inet_chksum
+pbuf_realloc
+pbuf_chain
+pbuf_free
+lwip_stats
+memp_free
+icmp_time_exceeded
+pbuf_clen
+memp_malloc
+pbuf_header
+pbuf_cat

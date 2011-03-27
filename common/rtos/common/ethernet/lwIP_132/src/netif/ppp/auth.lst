@@ -1,0 +1,2860 @@
+   1              		.code	16
+   2              		.file	"auth.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	check_passwd
+  13              		.code	16
+  14              		.thumb_func
+  16              	check_passwd:
+  17              	.LFB302:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c"
+   1:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*****************************************************************************
+   2:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * auth.c - Network Authentication and Phase Control program file.
+   3:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *
+   4:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * Copyright (c) 2003 by Marc Boucher, Services Informatiques (MBSI) inc.
+   5:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * Copyright (c) 1997 by Global Election Systems Inc.  All rights reserved.
+   6:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *
+   7:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * The authors hereby grant permission to use, copy, modify, distribute,
+   8:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * and license this software and its documentation for any purpose, provided
+   9:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * that existing copyright notices are retained in all copies and that this
+  10:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * notice and the following disclaimer are included verbatim in any
+  11:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * distributions. No written agreement, license, or royalty fee is required
+  12:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * for any of the authorized uses.
+  13:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *
+  14:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * THIS SOFTWARE IS PROVIDED BY THE CONTRIBUTORS *AS IS* AND ANY EXPRESS OR
+  15:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  16:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+  17:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  18:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+  19:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  20:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  21:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  22:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+  23:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  24:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *
+  25:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** ******************************************************************************
+  26:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * REVISION HISTORY
+  27:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *
+  28:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * 03-01-01 Marc Boucher <marc@mbsi.ca>
+  29:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *   Ported to lwIP.
+  30:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** * 97-12-08 Guy Lancaster <lancasterg@acm.org>, Global Election Systems Inc.
+  31:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *   Ported from public pppd code.
+  32:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** *****************************************************************************/
+  33:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+  34:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * auth.c - PPP authentication and phase control.
+  35:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+  36:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Copyright (c) 1993 The Australian National University.
+  37:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * All rights reserved.
+  38:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+  39:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Redistribution and use in source and binary forms are permitted
+  40:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * provided that the above copyright notice and this paragraph are
+  41:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * duplicated in all such forms and that any documentation,
+  42:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * advertising materials, and other materials related to such
+  43:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * distribution and use acknowledge that the software was developed
+  44:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * by the Australian National University.  The name of the University
+  45:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * may not be used to endorse or promote products derived from this
+  46:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * software without specific prior written permission.
+  47:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  48:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  49:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  50:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+  51:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Copyright (c) 1989 Carnegie Mellon University.
+  52:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * All rights reserved.
+  53:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+  54:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Redistribution and use in source and binary forms are permitted
+  55:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * provided that the above copyright notice and this paragraph are
+  56:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * duplicated in all such forms and that any documentation,
+  57:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * advertising materials, and other materials related to such
+  58:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * distribution and use acknowledge that the software was developed
+  59:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * by Carnegie Mellon University.  The name of the
+  60:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * University may not be used to endorse or promote products derived
+  61:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * from this software without specific prior written permission.
+  62:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+  63:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+  64:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  65:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+  66:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  67:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "lwip/opt.h"
+  68:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  69:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
+  70:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  71:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "ppp.h"
+  72:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "pppdebug.h"
+  73:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  74:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "fsm.h"
+  75:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "lcp.h"
+  76:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "pap.h"
+  77:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "chap.h"
+  78:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "auth.h"
+  79:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "ipcp.h"
+  80:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  81:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CBCP_SUPPORT
+  82:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include "cbcp.h"
+  83:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CBCP_SUPPORT */
+  84:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  85:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #include <string.h>
+  86:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  87:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*************************/
+  88:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** LOCAL DEFINITIONS ***/
+  89:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*************************/
+  90:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  91:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Bits in auth_pending[] */
+  92:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #define PAP_WITHPEER    1
+  93:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #define PAP_PEER        2
+  94:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #define CHAP_WITHPEER   4
+  95:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #define CHAP_PEER       8
+  96:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  97:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+  98:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /************************/
+  99:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** LOCAL DATA TYPES ***/
+ 100:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /************************/
+ 101:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Used for storing a sequence of words.  Usually malloced. */
+ 102:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** struct wordlist {
+ 103:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct wordlist *next;
+ 104:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   char        word[1];
+ 105:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** };
+ 106:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 107:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 108:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /***********************************/
+ 109:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** LOCAL FUNCTION DECLARATIONS ***/
+ 110:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /***********************************/
+ 111:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** extern char *crypt (const char *, const char *);
+ 112:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 113:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Prototypes for procedures local to this file. */
+ 114:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 115:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void network_phase (int);
+ 116:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void check_idle (void *);
+ 117:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void connect_time_expired (void *);
+ 118:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0
+ 119:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  login (char *, char *, char **, int *);
+ 120:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 121:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void logout (void);
+ 122:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  null_login (int);
+ 123:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  get_pap_passwd (int, char *, char *);
+ 124:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  have_pap_secret (void);
+ 125:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  have_chap_secret (char *, char *, u32_t);
+ 126:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int  ip_addr_check (u32_t, struct wordlist *);
+ 127:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0 /* PAP_SUPPORT || CHAP_SUPPORT */
+ 128:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void set_allowed_addrs(int unit, struct wordlist *addrs);
+ 129:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void free_wordlist (struct wordlist *);
+ 130:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* 0 */ /* PAP_SUPPORT || CHAP_SUPPORT */
+ 131:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CBCP_SUPPORT
+ 132:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void callback_phase (int);
+ 133:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CBCP_SUPPORT */
+ 134:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 135:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 136:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /******************************/
+ 137:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** PUBLIC DATA STRUCTURES ***/
+ 138:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /******************************/
+ 139:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 140:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 141:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*****************************/
+ 142:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** LOCAL DATA STRUCTURES ***/
+ 143:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*****************************/
+ 144:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT || CHAP_SUPPORT
+ 145:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* The name by which the peer authenticated itself to us. */
+ 146:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static char peer_authname[MAXNAMELEN];
+ 147:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT || CHAP_SUPPORT */
+ 148:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 149:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Records which authentication operations haven't completed yet. */
+ 150:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int auth_pending[NUM_PPP];
+ 151:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 152:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Set if we have successfully called login() */
+ 153:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int logged_in;
+ 154:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 155:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Set if we have run the /etc/ppp/auth-up script. */
+ 156:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int did_authup;
+ 157:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 158:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* List of addresses which the peer may use. */
+ 159:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static struct wordlist *addresses[NUM_PPP];
+ 160:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 161:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Number of network protocols which we have opened. */
+ 162:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int num_np_open;
+ 163:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 164:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Number of network protocols which have come up. */
+ 165:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int num_np_up;
+ 166:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 167:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT || CHAP_SUPPORT
+ 168:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* Set if we got the contents of passwd[] from the pap-secrets file. */
+ 169:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int passwd_from_file;
+ 170:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT || CHAP_SUPPORT */
+ 171:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 172:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 173:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /***********************************/
+ 174:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** PUBLIC FUNCTION DEFINITIONS ***/
+ 175:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /***********************************/
+ 176:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 177:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * An Open on LCP has requested a change from Dead to Establish phase.
+ 178:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Do what's necessary to bring the physical layer up.
+ 179:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 180:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 181:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** link_required(int unit)
+ 182:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 183:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 184:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 185:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "link_required: %d\n", unit));
+ 186:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 187:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 188:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 189:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * LCP has terminated the link; go to the Dead phase and take the
+ 190:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * physical layer down.
+ 191:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 192:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 193:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** link_terminated(int unit)
+ 194:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 195:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "link_terminated: %d\n", unit));
+ 196:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (lcp_phase[unit] == PHASE_DEAD) {
+ 197:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return;
+ 198:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 199:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (logged_in) {
+ 200:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     logout();
+ 201:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 202:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_phase[unit] = PHASE_DEAD;
+ 203:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_NOTICE, "Connection terminated.\n"));
+ 204:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   pppLinkTerminated(unit);
+ 205:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 206:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 207:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 208:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * LCP has gone down; it will either die or try to re-establish.
+ 209:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 210:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 211:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** link_down(int unit)
+ 212:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 213:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int i;
+ 214:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct protent *protp;
+ 215:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 216:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "link_down: %d\n", unit));
+ 217:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (did_authup) {
+ 218:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /* XXX Do link down processing. */
+ 219:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     did_authup = 0;
+ 220:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 221:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   for (i = 0; (protp = ppp_protocols[i]) != NULL; ++i) {
+ 222:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (!protp->enabled_flag) {
+ 223:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       continue;
+ 224:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 225:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (protp->protocol != PPP_LCP && protp->lowerdown != NULL) {
+ 226:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       (*protp->lowerdown)(unit);
+ 227:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 228:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (protp->protocol < 0xC000 && protp->close != NULL) {
+ 229:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       (*protp->close)(unit, "LCP down");
+ 230:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 231:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 232:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   num_np_open = 0;
+ 233:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   num_np_up = 0;
+ 234:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (lcp_phase[unit] != PHASE_DEAD) {
+ 235:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     lcp_phase[unit] = PHASE_TERMINATE;
+ 236:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 237:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   pppLinkDown(unit);
+ 238:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 239:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 240:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 241:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * The link is established.
+ 242:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Proceed to the Dead, Authenticate or Network phase as appropriate.
+ 243:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 244:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 245:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** link_established(int unit)
+ 246:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 247:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int auth;
+ 248:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int i;
+ 249:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct protent *protp;
+ 250:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *wo = &lcp_wantoptions[unit];
+ 251:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *go = &lcp_gotoptions[unit];
+ 252:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT || CHAP_SUPPORT
+ 253:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *ho = &lcp_hisoptions[unit];
+ 254:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT || CHAP_SUPPORT */
+ 255:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 256:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "link_established: %d\n", unit));
+ 257:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 258:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * Tell higher-level protocols that LCP is up.
+ 259:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 260:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   for (i = 0; (protp = ppp_protocols[i]) != NULL; ++i) {
+ 261:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (protp->protocol != PPP_LCP && protp->enabled_flag && protp->lowerup != NULL) {
+ 262:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       (*protp->lowerup)(unit);
+ 263:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 264:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 265:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ppp_settings.auth_required && !(go->neg_chap || go->neg_upap)) {
+ 266:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /*
+ 267:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * We wanted the peer to authenticate itself, and it refused:
+ 268:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * treat it as though it authenticated with PAP using a username
+ 269:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * of "" and a password of "".  If that's not OK, boot it out.
+ 270:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      */
+ 271:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (!wo->neg_upap || !null_login(unit)) {
+ 272:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       AUTHDEBUG((LOG_WARNING, "peer refused to authenticate\n"));
+ 273:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       lcp_close(unit, "peer refused to authenticate");
+ 274:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       return;
+ 275:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 276:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 277:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 278:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_phase[unit] = PHASE_AUTHENTICATE;
+ 279:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   auth = 0;
+ 280:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CHAP_SUPPORT
+ 281:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (go->neg_chap) {
+ 282:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     ChapAuthPeer(unit, ppp_settings.our_name, go->chap_mdtype);
+ 283:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     auth |= CHAP_PEER;
+ 284:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 285:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CHAP_SUPPORT */
+ 286:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT && CHAP_SUPPORT
+ 287:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   else
+ 288:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT && CHAP_SUPPORT */
+ 289:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT
+ 290:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (go->neg_upap) {
+ 291:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     upap_authpeer(unit);
+ 292:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     auth |= PAP_PEER;
+ 293:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 294:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT */
+ 295:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CHAP_SUPPORT
+ 296:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ho->neg_chap) {
+ 297:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     ChapAuthWithPeer(unit, ppp_settings.user, ho->chap_mdtype);
+ 298:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     auth |= CHAP_WITHPEER;
+ 299:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 300:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CHAP_SUPPORT */
+ 301:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT && CHAP_SUPPORT
+ 302:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   else
+ 303:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT && CHAP_SUPPORT */
+ 304:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT
+ 305:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ho->neg_upap) {
+ 306:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (ppp_settings.passwd[0] == 0) {
+ 307:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       passwd_from_file = 1;
+ 308:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       if (!get_pap_passwd(unit, ppp_settings.user, ppp_settings.passwd)) {
+ 309:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         AUTHDEBUG((LOG_ERR, "No secret found for PAP login\n"));
+ 310:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       }
+ 311:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 312:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     upap_authwithpeer(unit, ppp_settings.user, ppp_settings.passwd);
+ 313:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     auth |= PAP_WITHPEER;
+ 314:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 315:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT */
+ 316:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   auth_pending[unit] = auth;
+ 317:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 318:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (!auth) {
+ 319:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     network_phase(unit);
+ 320:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 321:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 322:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 323:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 324:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * The peer has failed to authenticate himself using `protocol'.
+ 325:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 326:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 327:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_peer_fail(int unit, u16_t protocol)
+ 328:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 329:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(protocol);
+ 330:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 331:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "auth_peer_fail: %d proto=%X\n", unit, protocol));
+ 332:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 333:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * Authentication failure: take the link down
+ 334:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 335:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_close(unit, "Authentication failed");
+ 336:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 337:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 338:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 339:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT || CHAP_SUPPORT
+ 340:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 341:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * The peer has been successfully authenticated using `protocol'.
+ 342:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 343:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 344:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_peer_success(int unit, u16_t protocol, char *name, int namelen)
+ 345:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 346:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int pbit;
+ 347:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 348:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "auth_peer_success: %d proto=%X\n", unit, protocol));
+ 349:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   switch (protocol) {
+ 350:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     case PPP_CHAP:
+ 351:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       pbit = CHAP_PEER;
+ 352:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       break;
+ 353:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     case PPP_PAP:
+ 354:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       pbit = PAP_PEER;
+ 355:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       break;
+ 356:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     default:
+ 357:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       AUTHDEBUG((LOG_WARNING, "auth_peer_success: unknown protocol %x\n", protocol));
+ 358:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       return;
+ 359:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 360:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 361:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 362:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * Save the authenticated name of the peer for later.
+ 363:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 364:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (namelen > sizeof(peer_authname) - 1) {
+ 365:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     namelen = sizeof(peer_authname) - 1;
+ 366:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 367:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BCOPY(name, peer_authname, namelen);
+ 368:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   peer_authname[namelen] = 0;
+ 369:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 370:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 371:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * If there is no more authentication still to be done,
+ 372:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * proceed to the network (or callback) phase.
+ 373:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 374:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if ((auth_pending[unit] &= ~pbit) == 0) {
+ 375:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     network_phase(unit);
+ 376:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 377:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 378:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 379:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 380:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * We have failed to authenticate ourselves to the peer using `protocol'.
+ 381:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 382:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 383:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_withpeer_fail(int unit, u16_t protocol)
+ 384:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 385:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int errCode = PPPERR_AUTHFAIL;
+ 386:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 387:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(protocol);
+ 388:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 389:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "auth_withpeer_fail: %d proto=%X\n", unit, protocol));
+ 390:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (passwd_from_file) {
+ 391:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     BZERO(ppp_settings.passwd, MAXSECRETLEN);
+ 392:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 393:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 394:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * XXX Warning: the unit number indicates the interface which is
+ 395:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * not necessarily the PPP connection.  It works here as long
+ 396:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * as we are only supporting PPP interfaces.
+ 397:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 398:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   pppIOCtl(unit, PPPCTLS_ERRCODE, &errCode);
+ 399:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 400:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 401:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * We've failed to authenticate ourselves to our peer.
+ 402:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * He'll probably take the link down, and there's not much
+ 403:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * we can do except wait for that.
+ 404:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 405:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_close(unit, "Authentication failed");
+ 406:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 407:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 408:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 409:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * We have successfully authenticated ourselves with the peer using `protocol'.
+ 410:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 411:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 412:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_withpeer_success(int unit, u16_t protocol)
+ 413:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 414:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int pbit;
+ 415:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 416:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "auth_withpeer_success: %d proto=%X\n", unit, protocol));
+ 417:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   switch (protocol) {
+ 418:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     case PPP_CHAP:
+ 419:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       pbit = CHAP_WITHPEER;
+ 420:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       break;
+ 421:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     case PPP_PAP:
+ 422:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       if (passwd_from_file) {
+ 423:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         BZERO(ppp_settings.passwd, MAXSECRETLEN);
+ 424:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       }
+ 425:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       pbit = PAP_WITHPEER;
+ 426:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       break;
+ 427:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     default:
+ 428:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       AUTHDEBUG((LOG_WARNING, "auth_peer_success: unknown protocol %x\n", protocol));
+ 429:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       pbit = 0;
+ 430:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 431:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 432:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 433:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * If there is no more authentication still being done,
+ 434:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * proceed to the network (or callback) phase.
+ 435:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 436:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if ((auth_pending[unit] &= ~pbit) == 0) {
+ 437:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     network_phase(unit);
+ 438:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 439:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 440:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT || CHAP_SUPPORT */
+ 441:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 442:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 443:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 444:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * np_up - a network protocol has come up.
+ 445:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 446:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 447:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** np_up(int unit, u16_t proto)
+ 448:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 449:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 450:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(proto);
+ 451:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 452:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "np_up: %d proto=%X\n", unit, proto));
+ 453:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (num_np_up == 0) {
+ 454:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     AUTHDEBUG((LOG_INFO, "np_up: maxconnect=%d idle_time_limit=%d\n",ppp_settings.maxconnect,ppp_se
+ 455:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /*
+ 456:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * At this point we consider that the link has come up successfully.
+ 457:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      */
+ 458:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (ppp_settings.idle_time_limit > 0) {
+ 459:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       TIMEOUT(check_idle, NULL, ppp_settings.idle_time_limit);
+ 460:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 461:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 462:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /*
+ 463:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * Set a timeout to close the connection once the maximum
+ 464:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * connect time has expired.
+ 465:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      */
+ 466:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (ppp_settings.maxconnect > 0) {
+ 467:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       TIMEOUT(connect_time_expired, 0, ppp_settings.maxconnect);
+ 468:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 469:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 470:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ++num_np_up;
+ 471:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 472:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 473:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 474:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * np_down - a network protocol has gone down.
+ 475:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 476:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 477:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** np_down(int unit, u16_t proto)
+ 478:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 479:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 480:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(proto);
+ 481:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "np_down: %d proto=%X\n", unit, proto));
+ 483:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (--num_np_up == 0 && ppp_settings.idle_time_limit > 0) {
+ 484:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     UNTIMEOUT(check_idle, NULL);
+ 485:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 486:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 487:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 488:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 489:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * np_finished - a network protocol has finished using the link.
+ 490:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 491:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 492:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** np_finished(int unit, u16_t proto)
+ 493:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 494:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 495:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(proto);
+ 496:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 497:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "np_finished: %d proto=%X\n", unit, proto));
+ 498:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (--num_np_open <= 0) {
+ 499:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /* no further use for the link: shut up shop. */
+ 500:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     lcp_close(0, "No network protocols running");
+ 501:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 502:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 503:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 504:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 505:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * auth_reset - called when LCP is starting negotiations to recheck
+ 506:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * authentication options, i.e. whether we have appropriate secrets
+ 507:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * to use for authenticating ourselves and/or the peer.
+ 508:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 509:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 510:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_reset(int unit)
+ 511:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 512:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *go = &lcp_gotoptions[unit];
+ 513:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *ao = &lcp_allowoptions[0];
+ 514:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ipcp_options *ipwo = &ipcp_wantoptions[0];
+ 515:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   u32_t remote;
+ 516:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 517:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "auth_reset: %d\n", unit));
+ 518:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ao->neg_upap = !ppp_settings.refuse_pap && (ppp_settings.passwd[0] != 0 || get_pap_passwd(unit, N
+ 519:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ao->neg_chap = !ppp_settings.refuse_chap && ppp_settings.passwd[0] != 0 /*have_chap_secret(ppp_se
+ 520:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 521:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (go->neg_upap && !have_pap_secret()) {
+ 522:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     go->neg_upap = 0;
+ 523:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 524:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (go->neg_chap) {
+ 525:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     remote = ipwo->accept_remote? 0: ipwo->hisaddr;
+ 526:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (!have_chap_secret(ppp_settings.remote_name, ppp_settings.our_name, remote)) {
+ 527:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       go->neg_chap = 0;
+ 528:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 529:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 530:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 531:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 532:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if PAP_SUPPORT
+ 533:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 534:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * check_passwd - Check the user name and passwd against the PAP secrets
+ 535:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * file.  If requested, also check against the system password database,
+ 536:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * and login the user if OK.
+ 537:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+ 538:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * returns:
+ 539:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *  UPAP_AUTHNAK: Authentication failed.
+ 540:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *  UPAP_AUTHACK: Authentication succeeded.
+ 541:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * In either case, msg points to an appropriate message.
+ 542:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 543:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** int
+ 544:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** check_passwd( int unit, char *auser, int userlen, char *apasswd, int passwdlen, char **msg, int *ms
+ 545:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+  19              		.loc 1 545 0
+  20              	.LVL0:
+ 546:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 1
+ 547:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 548:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(auser);
+ 549:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(userlen);
+ 550:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(apasswd);
+ 551:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(passwdlen);
+ 552:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(msglen);
+ 553:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   *msg = (char *) 0;
+  21              		.loc 1 553 0
+  22 0000 0022     		mov	r2, #0
+  23              	.LVL1:
+  24 0002 019B     		ldr	r3, [sp, #4]
+  25              	.LVL2:
+  26 0004 1A60     		str	r2, [r3]
+ 554:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return UPAP_AUTHACK;     /* XXX Assume all entries OK. */
+ 555:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #else
+ 556:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int ret = 0;
+ 557:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct wordlist *addrs = NULL;
+ 558:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   char passwd[256], user[256];
+ 559:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   char secret[MAXWORDLEN];
+ 560:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   static u_short attempts = 0;
+ 561:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 562:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 563:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * Make copies of apasswd and auser, then null-terminate them.
+ 564:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 565:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BCOPY(apasswd, passwd, passwdlen);
+ 566:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   passwd[passwdlen] = '\0';
+ 567:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BCOPY(auser, user, userlen);
+ 568:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   user[userlen] = '\0';
+ 569:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   *msg = (char *) 0;
+ 570:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 571:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Validate user name and password. */
+ 572:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ret = UPAP_AUTHACK;     /* XXX Assume all entries OK. */
+ 573:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 574:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ret == UPAP_AUTHNAK) {
+ 575:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (*msg == (char *) 0) {
+ 576:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       *msg = "Login incorrect";
+ 577:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 578:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     *msglen = strlen(*msg);
+ 579:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /*
+ 580:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * Frustrate passwd stealer programs.
+ 581:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * Allow 10 tries, but start backing off after 3 (stolen from login).
+ 582:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      * On 10'th, drop the connection.
+ 583:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****      */
+ 584:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (attempts++ >= 10) {
+ 585:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       AUTHDEBUG((LOG_WARNING, "%d LOGIN FAILURES BY %s\n", attempts, user));
+ 586:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       /*ppp_panic("Excess Bad Logins");*/
+ 587:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 588:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (attempts > 3) {
+ 589:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       sys_msleep((attempts - 3) * 5);
+ 590:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 591:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (addrs != NULL) {
+ 592:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       free_wordlist(addrs);
+ 593:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 594:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   } else {
+ 595:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     attempts = 0; /* Reset count */
+ 596:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (*msg == (char *) 0) {
+ 597:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       *msg = "Login ok";
+ 598:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 599:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     *msglen = strlen(*msg);
+ 600:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     set_allowed_addrs(unit, addrs);
+ 601:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 602:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 603:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BZERO(passwd, sizeof(passwd));
+ 604:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BZERO(secret, sizeof(secret));
+ 605:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 606:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return ret;
+ 607:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 608:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+  27              		.loc 1 608 0
+  28 0006 0220     		mov	r0, #2
+  29              	.LVL3:
+  30              		@ sp needed for prologue
+  31 0008 7047     		bx	lr
+  32              	.LFE302:
+  34              		.section	.rodata.str1.4,"aMS",%progbits,1
+  35              		.align	2
+  36              	.LC0:
+  37 0000 6C696E6B 		.ascii	"link_required: %d\012\000"
+  37      5F726571 
+  37      75697265 
+  37      643A2025 
+  37      640A00
+  38              		.text
+  39 000a C046     		.align	2
+  40              		.global	link_required
+  41              		.code	16
+  42              		.thumb_func
+  44              	link_required:
+  45              	.LFB290:
+  46              		.loc 1 182 0
+  47 000c 00B5     		push	{lr}
+  48              	.LCFI0:
+  49              	.LVL4:
+  50 000e 021C     		mov	r2, r0
+  51              		.loc 1 185 0
+  52 0010 0249     		ldr	r1, .L5
+  53 0012 0520     		mov	r0, #5
+  54              	.LVL5:
+  55 0014 FFF7FEFF 		bl	ppp_trace
+  56              	.LVL6:
+  57              		.loc 1 186 0
+  58              		@ sp needed for prologue
+  59 0018 01BC     		pop	{r0}
+  60 001a 0047     		bx	r0
+  61              	.L6:
+  62              		.align	2
+  63              	.L5:
+  64 001c 00000000 		.word	.LC0
+  65              	.LFE290:
+  67              		.section	.rodata.str1.4
+  68 0013 00       		.align	2
+  69              	.LC4:
+  70 0014 53656372 		.ascii	"Secret for %s on %s is too long\012\000"
+  70      65742066 
+  70      6F722025 
+  70      73206F6E 
+  70      20257320 
+  71              		.text
+  72              		.align	2
+  73              		.global	get_secret
+  74              		.code	16
+  75              		.thumb_func
+  77              	get_secret:
+  78              	.LFB305:
+ 609:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* PAP_SUPPORT */
+ 610:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 611:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 612:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 613:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * auth_ip_addr - check whether the peer is authorized to use
+ 614:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * a given IP address.  Returns 1 if authorized, 0 otherwise.
+ 615:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 616:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** int
+ 617:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_ip_addr(int unit, u32_t addr)
+ 618:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 619:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return ip_addr_check(addr, addresses[unit]);
+ 620:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 621:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 622:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 623:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * bad_ip_adrs - return 1 if the IP address is one we don't want
+ 624:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * to use, such as an address in the loopback net or a multicast address.
+ 625:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * addr is in network byte order.
+ 626:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 627:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** int
+ 628:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** bad_ip_adrs(u32_t addr)
+ 629:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 630:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   addr = ntohl(addr);
+ 631:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return (addr >> IN_CLASSA_NSHIFT) == IN_LOOPBACKNET
+ 632:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       || IN_MULTICAST(addr) || IN_BADCLASS(addr);
+ 633:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 634:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 635:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 636:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CHAP_SUPPORT
+ 637:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 638:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * get_secret - open the CHAP secret file and return the secret
+ 639:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * for authenticating the given client on the given server.
+ 640:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * (We could be either client or server).
+ 641:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 642:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** int get_secret( int unit, char *client, char *server, char *secret, int *secret_len, int save_addrs
+ 643:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+  79              		.loc 1 643 0
+  80 0020 F0B5     		push	{r4, r5, r6, r7, lr}
+  81              	.LCFI1:
+  82              	.LVL7:
+  83 0022 0C1C     		mov	r4, r1
+  84 0024 161C     		mov	r6, r2
+  85 0026 1F1C     		mov	r7, r3
+ 644:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 1
+ 645:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int len;
+ 646:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct wordlist *addrs;
+ 647:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 648:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 649:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(server);
+ 650:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(save_addrs);
+ 651:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 652:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   addrs = NULL;
+ 653:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 654:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if(!client || !client[0] || strcmp(client, ppp_settings.user)) {
+  86              		.loc 1 654 0
+  87 0028 0029     		cmp	r1, #0
+  88 002a 21D0     		beq	.L8
+  89              	.LVL8:
+  90 002c 0B78     		ldrb	r3, [r1]
+  91 002e 002B     		cmp	r3, #0
+  92 0030 1ED0     		beq	.L8
+  93 0032 1149     		ldr	r1, .L12
+  94              	.LVL9:
+  95 0034 201C     		mov	r0, r4
+  96              	.LVL10:
+  97 0036 FFF7FEFF 		bl	strcmp
+  98 003a 0028     		cmp	r0, #0
+  99 003c 18D1     		bne	.L8
+ 655:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return 0;
+ 656:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 657:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 658:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   len = strlen(ppp_settings.passwd);
+ 100              		.loc 1 658 0
+ 101 003e 0F48     		ldr	r0, .L12+4
+ 102 0040 FFF7FEFF 		bl	strlen
+ 103 0044 051C     		mov	r5, r0
+ 104              	.LVL11:
+ 659:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (len > MAXSECRETLEN) {
+ 105              		.loc 1 659 0
+ 106 0046 8023     		mov	r3, #128
+ 107 0048 5B00     		lsl	r3, r3, #1
+ 108 004a 9842     		cmp	r0, r3
+ 109 004c 07DD     		ble	.L9
+ 110              	.LVL12:
+ 660:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     AUTHDEBUG((LOG_ERR, "Secret for %s on %s is too long\n", client, server));
+ 111              		.loc 1 660 0
+ 112 004e 0C49     		ldr	r1, .L12+8
+ 113 0050 0120     		mov	r0, #1
+ 114              	.LVL13:
+ 115 0052 221C     		mov	r2, r4
+ 116 0054 331C     		mov	r3, r6
+ 117 0056 FFF7FEFF 		bl	ppp_trace
+ 118 005a 8025     		mov	r5, #128
+ 119 005c 6D00     		lsl	r5, r5, #1
+ 120              	.LVL14:
+ 121              	.L9:
+ 661:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     len = MAXSECRETLEN;
+ 662:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 663:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 664:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BCOPY(ppp_settings.passwd, secret, len);
+ 122              		.loc 1 664 0
+ 123 005e 0749     		ldr	r1, .L12+4
+ 124 0060 381C     		mov	r0, r7
+ 125 0062 2A1C     		mov	r2, r5
+ 126 0064 FFF7FEFF 		bl	memcpy
+ 665:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   *secret_len = len;
+ 127              		.loc 1 665 0
+ 128 0068 059B     		ldr	r3, [sp, #20]
+ 129 006a 1D60     		str	r5, [r3]
+ 130 006c 0120     		mov	r0, #1
+ 131 006e 00E0     		b	.L10
+ 132              	.LVL15:
+ 133              	.L8:
+ 666:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 667:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 1;
+ 134              		.loc 1 667 0
+ 135 0070 0020     		mov	r0, #0
+ 136              	.LVL16:
+ 137              	.L10:
+ 668:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #else
+ 669:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int ret = 0, len;
+ 670:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct wordlist *addrs;
+ 671:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   char secbuf[MAXWORDLEN];
+ 672:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 673:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   addrs = NULL;
+ 674:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   secbuf[0] = 0;
+ 675:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 676:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Find secret. */
+ 677:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ret < 0) {
+ 678:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return 0;
+ 679:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 680:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 681:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (save_addrs) {
+ 682:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     set_allowed_addrs(unit, addrs);
+ 683:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 684:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 685:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   len = strlen(secbuf);
+ 686:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (len > MAXSECRETLEN) {
+ 687:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     AUTHDEBUG((LOG_ERR, "Secret for %s on %s is too long\n", client, server));
+ 688:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     len = MAXSECRETLEN;
+ 689:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 690:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 691:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BCOPY(secbuf, secret, len);
+ 692:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   BZERO(secbuf, sizeof(secbuf));
+ 693:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   *secret_len = len;
+ 694:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 695:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 1;
+ 696:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 697:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 138              		.loc 1 697 0
+ 139              		@ sp needed for prologue
+ 140              	.LVL17:
+ 141              	.LVL18:
+ 142              	.LVL19:
+ 143              	.LVL20:
+ 144 0072 F0BC     		pop	{r4, r5, r6, r7}
+ 145 0074 02BC     		pop	{r1}
+ 146 0076 0847     		bx	r1
+ 147              	.L13:
+ 148              		.align	2
+ 149              	.L12:
+ 150 0078 08000000 		.word	ppp_settings+8
+ 151 007c 09010000 		.word	ppp_settings+265
+ 152 0080 14000000 		.word	.LC4
+ 153              	.LFE305:
+ 155              		.align	2
+ 156              		.global	bad_ip_adrs
+ 157              		.code	16
+ 158              		.thumb_func
+ 160              	bad_ip_adrs:
+ 161              	.LFB304:
+ 162              		.loc 1 629 0
+ 163 0084 00B5     		push	{lr}
+ 164              	.LCFI2:
+ 165              	.LVL21:
+ 166              		.loc 1 630 0
+ 167 0086 FFF7FEFF 		bl	ntohl
+ 168              	.LVL22:
+ 169              		.loc 1 631 0
+ 170 008a 030E     		lsr	r3, r0, #24
+ 171              	.LVL23:
+ 172 008c 7F2B     		cmp	r3, #127
+ 173 008e 0CD0     		beq	.L15
+ 174 0090 F023     		mov	r3, #240
+ 175 0092 1B06     		lsl	r3, r3, #24
+ 176 0094 1840     		and	r0, r0, r3
+ 177              	.LVL24:
+ 178 0096 E023     		mov	r3, #224
+ 179 0098 1B06     		lsl	r3, r3, #24
+ 180 009a 9842     		cmp	r0, r3
+ 181 009c 05D0     		beq	.L15
+ 182 009e 8022     		mov	r2, #128
+ 183 00a0 5205     		lsl	r2, r2, #21
+ 184 00a2 8318     		add	r3, r0, r2
+ 185 00a4 5842     		neg	r0, r3
+ 186 00a6 5841     		adc	r0, r0, r3
+ 187 00a8 00E0     		b	.L16
+ 188              	.LVL25:
+ 189              	.L15:
+ 190 00aa 0120     		mov	r0, #1
+ 191              	.LVL26:
+ 192              	.L16:
+ 193              		.loc 1 633 0
+ 194              		@ sp needed for prologue
+ 195 00ac 02BC     		pop	{r1}
+ 196 00ae 0847     		bx	r1
+ 197              	.LFE304:
+ 199              		.align	2
+ 200              		.global	auth_ip_addr
+ 201              		.code	16
+ 202              		.thumb_func
+ 204              	auth_ip_addr:
+ 205              	.LFB303:
+ 206              		.loc 1 618 0
+ 207 00b0 10B5     		push	{r4, lr}
+ 208              	.LCFI3:
+ 209              	.LVL27:
+ 210              		.loc 1 619 0
+ 211 00b2 0B4B     		ldr	r3, .L23
+ 212 00b4 8000     		lsl	r0, r0, #2
+ 213              	.LVL28:
+ 214 00b6 C458     		ldr	r4, [r0, r3]
+ 215              	.LBB4:
+ 698:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CHAP_SUPPORT */
+ 699:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 700:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 701:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0 /* UNUSED */
+ 702:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 703:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * auth_check_options - called to check authentication options.
+ 704:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 705:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** void
+ 706:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** auth_check_options(void)
+ 707:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 708:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *wo = &lcp_wantoptions[0];
+ 709:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int can_auth;
+ 710:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   ipcp_options *ipwo = &ipcp_wantoptions[0];
+ 711:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   u32_t remote;
+ 712:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 713:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* Default our_name to hostname, and user to our_name */
+ 714:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ppp_settings.our_name[0] == 0 || ppp_settings.usehostname) {
+ 715:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       strcpy(ppp_settings.our_name, ppp_settings.hostname);
+ 716:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 717:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 718:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ppp_settings.user[0] == 0) {
+ 719:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     strcpy(ppp_settings.user, ppp_settings.our_name);
+ 720:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 721:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 722:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* If authentication is required, ask peer for CHAP or PAP. */
+ 723:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ppp_settings.auth_required && !wo->neg_chap && !wo->neg_upap) {
+ 724:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     wo->neg_chap = 1;
+ 725:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     wo->neg_upap = 1;
+ 726:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 727:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 728:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 729:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * Check whether we have appropriate secrets to use
+ 730:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * to authenticate the peer.
+ 731:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 732:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   can_auth = wo->neg_upap && have_pap_secret();
+ 733:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (!can_auth && wo->neg_chap) {
+ 734:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     remote = ipwo->accept_remote? 0: ipwo->hisaddr;
+ 735:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     can_auth = have_chap_secret(ppp_settings.remote_name, ppp_settings.our_name, remote);
+ 736:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 737:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 738:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (ppp_settings.auth_required && !can_auth) {
+ 739:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     ppp_panic("No auth secret");
+ 740:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 741:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 742:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 743:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 744:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 745:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /**********************************/
+ 746:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*** LOCAL FUNCTION DEFINITIONS ***/
+ 747:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /**********************************/
+ 748:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 749:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * Proceed to the network phase.
+ 750:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 751:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void
+ 752:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** network_phase(int unit)
+ 753:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 754:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   int i;
+ 755:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct protent *protp;
+ 756:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_options *go = &lcp_gotoptions[unit];
+ 757:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 758:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 759:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * If the peer had to authenticate, run the auth-up script now.
+ 760:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 761:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if ((go->neg_chap || go->neg_upap) && !did_authup) {
+ 762:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /* XXX Do setup for peer authentication. */
+ 763:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     did_authup = 1;
+ 764:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 765:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 766:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if CBCP_SUPPORT
+ 767:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 768:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * If we negotiated callback, do it now.
+ 769:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 770:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (go->neg_cbcp) {
+ 771:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     lcp_phase[unit] = PHASE_CALLBACK;
+ 772:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     (*cbcp_protent.open)(unit);
+ 773:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return;
+ 774:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 775:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* CBCP_SUPPORT */
+ 776:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 777:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_phase[unit] = PHASE_NETWORK;
+ 778:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   for (i = 0; (protp = ppp_protocols[i]) != NULL; ++i) {
+ 779:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (protp->protocol < 0xC000 && protp->enabled_flag && protp->open != NULL) {
+ 780:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       (*protp->open)(unit);
+ 781:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       if (protp->protocol != PPP_CCP) {
+ 782:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         ++num_np_open;
+ 783:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       }
+ 784:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 785:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 786:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 787:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (num_np_open == 0) {
+ 788:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /* nothing to do */
+ 789:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     lcp_close(0, "No network protocols running");
+ 790:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 791:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 792:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 793:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 794:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * check_idle - check whether the link has been idle for long
+ 795:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * enough that we can shut it down.
+ 796:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 797:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void
+ 798:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** check_idle(void *arg)
+ 799:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 800:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   struct ppp_idle idle;
+ 801:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   u_short itime;
+ 802:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 803:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(arg);
+ 804:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (!get_idle_time(0, &idle)) {
+ 805:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return;
+ 806:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 807:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   itime = LWIP_MIN(idle.xmit_idle, idle.recv_idle);
+ 808:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (itime >= ppp_settings.idle_time_limit) {
+ 809:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     /* link is idle: shut it down. */
+ 810:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     AUTHDEBUG((LOG_INFO, "Terminating connection due to lack of activity.\n"));
+ 811:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     lcp_close(0, "Link inactive");
+ 812:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   } else {
+ 813:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     TIMEOUT(check_idle, NULL, ppp_settings.idle_time_limit - itime);
+ 814:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 815:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 816:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 817:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 818:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * connect_time_expired - log a message and close the connection.
+ 819:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 820:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void
+ 821:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** connect_time_expired(void *arg)
+ 822:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 823:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(arg);
+ 824:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 825:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   AUTHDEBUG((LOG_INFO, "Connect time expired\n"));
+ 826:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   lcp_close(0, "Connect time expired");   /* Close connection */
+ 827:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 828:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 829:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0
+ 830:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 831:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * login - Check the user name and password against the system
+ 832:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * password database, and login the user if OK.
+ 833:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *
+ 834:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * returns:
+ 835:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *  UPAP_AUTHNAK: Login failed.
+ 836:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  *  UPAP_AUTHACK: Login succeeded.
+ 837:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * In either case, msg points to an appropriate message.
+ 838:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 839:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 840:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** login(char *user, char *passwd, char **msg, int *msglen)
+ 841:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 842:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Fail until we decide that we want to support logins. */
+ 843:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return (UPAP_AUTHNAK);
+ 844:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 845:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 846:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 847:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 848:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * logout - Logout the user.
+ 849:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 850:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void
+ 851:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** logout(void)
+ 852:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 853:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   logged_in = 0;
+ 854:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 855:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 856:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 857:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * null_login - Check if a username of "" and a password of "" are
+ 858:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * acceptable, and iff so, set the list of acceptable IP addresses
+ 859:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * and return 1.
+ 860:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 861:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 862:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** null_login(int unit)
+ 863:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 864:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 865:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Fail until we decide that we want to support logins. */
+ 866:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 0;
+ 867:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 868:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 869:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 870:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * get_pap_passwd - get a password for authenticating ourselves with
+ 871:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * our peer using PAP.  Returns 1 on success, 0 if no suitable password
+ 872:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * could be found.
+ 873:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 874:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 875:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** get_pap_passwd(int unit, char *user, char *passwd)
+ 876:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 877:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(unit);
+ 878:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /* normally we would reject PAP if no password is provided,
+ 879:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    but this causes problems with some providers (like CHT in Taiwan)
+ 880:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    who incorrectly request PAP and expect a bogus/empty password, so
+ 881:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    always provide a default user/passwd of "none"/"none"
+ 882:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** */
+ 883:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if(user) {
+ 884:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     strcpy(user, "none");
+ 885:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 886:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if(passwd) {
+ 887:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     strcpy(passwd, "none");
+ 888:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 889:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 1;
+ 890:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 891:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 892:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 893:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * have_pap_secret - check whether we have a PAP file with any
+ 894:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * secrets that we could possibly use for authenticating the peer.
+ 895:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 896:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 897:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** have_pap_secret(void)
+ 898:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 899:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Fail until we set up our passwords. */
+ 900:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 0;
+ 901:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 902:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 903:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 904:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * have_chap_secret - check whether we have a CHAP file with a
+ 905:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * secret that we could possibly use for authenticating `client'
+ 906:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * on `server'.  Either can be the null string, meaning we don't
+ 907:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * know the identity yet.
+ 908:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 909:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 910:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** have_chap_secret(char *client, char *server, u32_t remote)
+ 911:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 912:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(client);
+ 913:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(server);
+ 914:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   LWIP_UNUSED_ARG(remote);
+ 915:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* XXX Fail until we set up our passwords. */
+ 916:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   return 0;
+ 917:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 918:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 919:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0 /* PAP_SUPPORT || CHAP_SUPPORT */
+ 920:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** /*
+ 921:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  * set_allowed_addrs() - set the list of allowed addresses.
+ 922:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****  */
+ 923:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static void
+ 924:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** set_allowed_addrs(int unit, struct wordlist *addrs)
+ 925:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 926:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (addresses[unit] != NULL) {
+ 927:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     free_wordlist(addresses[unit]);
+ 928:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 929:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   addresses[unit] = addrs;
+ 930:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 931:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #if 0
+ 932:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /*
+ 933:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * If there's only one authorized address we might as well
+ 934:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    * ask our peer for that one right away
+ 935:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****    */
+ 936:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (addrs != NULL && addrs->next == NULL) {
+ 937:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     char *p = addrs->word;
+ 938:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     struct ipcp_options *wo = &ipcp_wantoptions[unit];
+ 939:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     u32_t a;
+ 940:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     struct hostent *hp;
+ 941:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 942:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     if (wo->hisaddr == 0 && *p != '!' && *p != '-' && strchr(p, '/') == NULL) {
+ 943:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       hp = gethostbyname(p);
+ 944:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       if (hp != NULL && hp->h_addrtype == AF_INET) {
+ 945:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         a = *(u32_t *)hp->h_addr;
+ 946:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       } else {
+ 947:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         a = inet_addr(p);
+ 948:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       }
+ 949:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       if (a != (u32_t) -1) {
+ 950:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****         wo->hisaddr = a;
+ 951:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****       }
+ 952:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     }
+ 953:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 954:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif
+ 955:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** }
+ 956:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** #endif /* 0 */ /* PAP_SUPPORT || CHAP_SUPPORT */
+ 957:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 958:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** static int
+ 959:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** ip_addr_check(u32_t addr, struct wordlist *addrs)
+ 960:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** {
+ 961:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   /* don't allow loopback or multicast address */
+ 962:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (bad_ip_adrs(addr)) {
+ 216              		.loc 1 962 0
+ 217 00b8 081C     		mov	r0, r1
+ 218 00ba FFF7FEFF 		bl	bad_ip_adrs
+ 219              	.LVL29:
+ 220              	.LBB5:
+ 221 00be 0028     		cmp	r0, #0
+ 222 00c0 01D0     		beq	.L19
+ 223 00c2 0020     		mov	r0, #0
+ 224 00c4 09E0     		b	.L20
+ 225              	.L19:
+ 963:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return 0;
+ 964:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   }
+ 965:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c **** 
+ 966:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****   if (addrs == NULL) {
+ 226              		.loc 1 966 0
+ 227 00c6 002C     		cmp	r4, #0
+ 228 00c8 01D0     		beq	.L21
+ 229 00ca 0120     		mov	r0, #1
+ 230 00cc 05E0     		b	.L20
+ 231              	.L21:
+ 967:rtos/common/ethernet/lwIP_132/src/netif/ppp/auth.c ****     return !ppp_settings.auth_required; /* no addresses authorized */
+ 232              		.loc 1 967 0
+ 233 00ce 054B     		ldr	r3, .L23+4
+ 234 00d0 1B78     		ldrb	r3, [r3]
+ 235 00d2 9B07     		lsl	r3, r3, #30
+ 236 00d4 DB0F     		lsr	r3, r3, #31
+ 237 00d6 5842     		neg	r0, r3
+ 238 00d8 5841     		adc	r0, r0, r3
+ 239              	.L20:
+ 240              	.LBE5:
+ 241              	.LBE4:
+ 242              		.loc 1 620 0
+ 243              		@ sp needed for prologue
+ 244 00da 10BC     		pop	{r4}
+ 245 00dc 02BC     		pop	{r1}
+ 246 00de 0847     		bx	r1
+ 247              	.L24:
+ 248              		.align	2
+ 249              	.L23:
+ 250 00e0 0C010000 		.word	addresses
+ 251 00e4 00000000 		.word	ppp_settings
+ 252              	.LFE303:
+ 254              		.section	.rodata.str1.4
+ 255 0035 000000   		.align	2
+ 256              	.LC8:
+ 257 0038 6E6F6E65 		.ascii	"none\000"
+ 257      00
+ 258              		.text
+ 259              		.align	2
+ 260              		.code	16
+ 261              		.thumb_func
+ 263              	get_pap_passwd:
+ 264              	.LFB311:
+ 265              		.loc 1 876 0
+ 266 00e8 10B5     		push	{r4, lr}
+ 267              	.LCFI4:
+ 268              	.LVL30:
+ 269 00ea 081C     		mov	r0, r1
+ 270              	.LVL31:
+ 271 00ec 141C     		mov	r4, r2
+ 272              		.loc 1 883 0
+ 273 00ee 0029     		cmp	r1, #0
+ 274 00f0 03D0     		beq	.L26
+ 275              	.LVL32:
+ 276              		.loc 1 884 0
+ 277 00f2 0749     		ldr	r1, .L29
+ 278              	.LVL33:
+ 279 00f4 0522     		mov	r2, #5
+ 280 00f6 FFF7FEFF 		bl	memcpy
+ 281              	.LVL34:
+ 282              	.L26:
+ 283              		.loc 1 886 0
+ 284 00fa 002C     		cmp	r4, #0
+ 285 00fc 04D0     		beq	.L27
+ 286              		.loc 1 887 0
+ 287 00fe 0449     		ldr	r1, .L29
+ 288              	.LVL35:
+ 289 0100 201C     		mov	r0, r4
+ 290              	.LVL36:
+ 291 0102 0522     		mov	r2, #5
+ 292 0104 FFF7FEFF 		bl	memcpy
+ 293              	.LVL37:
+ 294              	.L27:
+ 295              		.loc 1 890 0
+ 296 0108 0120     		mov	r0, #1
+ 297              		@ sp needed for prologue
+ 298              	.LVL38:
+ 299 010a 10BC     		pop	{r4}
+ 300 010c 02BC     		pop	{r1}
+ 301 010e 0847     		bx	r1
+ 302              	.L30:
+ 303              		.align	2
+ 304              	.L29:
+ 305 0110 38000000 		.word	.LC8
+ 306              	.LFE311:
+ 308              		.section	.rodata.str1.4
+ 309 003d 000000   		.align	2
+ 310              	.LC11:
+ 311 0040 61757468 		.ascii	"auth_reset: %d\012\000"
+ 311      5F726573 
+ 311      65743A20 
+ 311      25640A00 
+ 312              		.text
+ 313              		.align	2
+ 314              		.global	auth_reset
+ 315              		.code	16
+ 316              		.thumb_func
+ 318              	auth_reset:
+ 319              	.LFB301:
+ 320              		.loc 1 511 0
+ 321 0114 30B5     		push	{r4, r5, lr}
+ 322              	.LCFI5:
+ 323              	.LVL39:
+ 324 0116 041C     		mov	r4, r0
+ 325              		.loc 1 512 0
+ 326 0118 4300     		lsl	r3, r0, #1
+ 327 011a 1B18     		add	r3, r3, r0
+ 328 011c DB00     		lsl	r3, r3, #3
+ 329 011e 244A     		ldr	r2, .L40
+ 330 0120 D518     		add	r5, r2, r3
+ 331              	.LVL40:
+ 332              		.loc 1 517 0
+ 333 0122 2449     		ldr	r1, .L40+4
+ 334 0124 0520     		mov	r0, #5
+ 335              	.LVL41:
+ 336 0126 221C     		mov	r2, r4
+ 337 0128 FFF7FEFF 		bl	ppp_trace
+ 338              		.loc 1 518 0
+ 339 012c 224B     		ldr	r3, .L40+8
+ 340 012e 1B78     		ldrb	r3, [r3]
+ 341 0130 1A07     		lsl	r2, r3, #28
+ 342 0132 0DD4     		bmi	.L32
+ 343 0134 204B     		ldr	r3, .L40+8
+ 344 0136 214A     		ldr	r2, .L40+12
+ 345 0138 9B5C     		ldrb	r3, [r3, r2]
+ 346 013a 002B     		cmp	r3, #0
+ 347 013c 06D1     		bne	.L33
+ 348 013e 201C     		mov	r0, r4
+ 349 0140 0021     		mov	r1, #0
+ 350 0142 0022     		mov	r2, #0
+ 351 0144 FFF7D0FF 		bl	get_pap_passwd
+ 352 0148 0028     		cmp	r0, #0
+ 353 014a 01D0     		beq	.L32
+ 354              	.L33:
+ 355 014c 0120     		mov	r0, #1
+ 356 014e 00E0     		b	.L34
+ 357              	.L32:
+ 358 0150 0020     		mov	r0, #0
+ 359              	.L34:
+ 360 0152 1B49     		ldr	r1, .L40+16
+ 361 0154 0B78     		ldrb	r3, [r1]
+ 362 0156 2022     		mov	r2, #32
+ 363 0158 9343     		bic	r3, r3, r2
+ 364 015a 4201     		lsl	r2, r0, #5
+ 365 015c 1343     		orr	r3, r3, r2
+ 366 015e 0B70     		strb	r3, [r1]
+ 367              		.loc 1 519 0
+ 368 0160 154B     		ldr	r3, .L40+8
+ 369 0162 1B78     		ldrb	r3, [r3]
+ 370 0164 DA06     		lsl	r2, r3, #27
+ 371 0166 01D5     		bpl	.L35
+ 372 0168 0020     		mov	r0, #0
+ 373 016a 08E0     		b	.L36
+ 374              	.L35:
+ 375 016c 124A     		ldr	r2, .L40+8
+ 376 016e 134B     		ldr	r3, .L40+12
+ 377 0170 D35C     		ldrb	r3, [r2, r3]
+ 378 0172 5A42     		neg	r2, r3
+ 379 0174 5341     		adc	r3, r3, r2
+ 380 0176 0122     		mov	r2, #1
+ 381 0178 5340     		eor	r3, r3, r2
+ 382 017a 1B06     		lsl	r3, r3, #24
+ 383 017c 180E     		lsr	r0, r3, #24
+ 384              	.L36:
+ 385 017e 1049     		ldr	r1, .L40+16
+ 386 0180 0B78     		ldrb	r3, [r1]
+ 387 0182 4022     		mov	r2, #64
+ 388 0184 9343     		bic	r3, r3, r2
+ 389 0186 8201     		lsl	r2, r0, #6
+ 390 0188 1343     		orr	r3, r3, r2
+ 391 018a 0B70     		strb	r3, [r1]
+ 392              		.loc 1 521 0
+ 393 018c 2B78     		ldrb	r3, [r5]
+ 394 018e 9A06     		lsl	r2, r3, #26
+ 395 0190 03D5     		bpl	.L37
+ 396              		.loc 1 522 0
+ 397 0192 2B78     		ldrb	r3, [r5]
+ 398 0194 2022     		mov	r2, #32
+ 399 0196 9343     		bic	r3, r3, r2
+ 400 0198 2B70     		strb	r3, [r5]
+ 401              	.L37:
+ 402              		.loc 1 524 0
+ 403 019a 2B78     		ldrb	r3, [r5]
+ 404 019c 5A06     		lsl	r2, r3, #25
+ 405 019e 03D5     		bpl	.L39
+ 406              		.loc 1 527 0
+ 407 01a0 2B78     		ldrb	r3, [r5]
+ 408 01a2 4022     		mov	r2, #64
+ 409 01a4 9343     		bic	r3, r3, r2
+ 410 01a6 2B70     		strb	r3, [r5]
+ 411              	.L39:
+ 412              		.loc 1 530 0
+ 413              		@ sp needed for prologue
+ 414              	.LVL42:
+ 415              	.LVL43:
+ 416 01a8 30BC     		pop	{r4, r5}
+ 417 01aa 01BC     		pop	{r0}
+ 418 01ac 0047     		bx	r0
+ 419              	.L41:
+ 420 01ae C046     		.align	2
+ 421              	.L40:
+ 422 01b0 00000000 		.word	lcp_gotoptions
+ 423 01b4 40000000 		.word	.LC11
+ 424 01b8 00000000 		.word	ppp_settings
+ 425 01bc 09010000 		.word	265
+ 426 01c0 00000000 		.word	lcp_allowoptions
+ 427              	.LFE301:
+ 429              		.section	.rodata.str1.4
+ 430              		.align	2
+ 431              	.LC15:
+ 432 0050 6E705F66 		.ascii	"np_finished: %d proto=%X\012\000"
+ 432      696E6973 
+ 432      6865643A 
+ 432      20256420 
+ 432      70726F74 
+ 433 006a 0000     		.align	2
+ 434              	.LC18:
+ 435 006c 4E6F206E 		.ascii	"No network protocols running\000"
+ 435      6574776F 
+ 435      726B2070 
+ 435      726F746F 
+ 435      636F6C73 
+ 436              		.text
+ 437              		.align	2
+ 438              		.global	np_finished
+ 439              		.code	16
+ 440              		.thumb_func
+ 442              	np_finished:
+ 443              	.LFB300:
+ 444              		.loc 1 493 0
+ 445 01c4 00B5     		push	{lr}
+ 446              	.LCFI6:
+ 447              	.LVL44:
+ 448 01c6 021C     		mov	r2, r0
+ 449 01c8 0B04     		lsl	r3, r1, #16
+ 450 01ca 1B0C     		lsr	r3, r3, #16
+ 451              	.LVL45:
+ 452              		.loc 1 497 0
+ 453 01cc 0749     		ldr	r1, .L45
+ 454 01ce 0520     		mov	r0, #5
+ 455              	.LVL46:
+ 456 01d0 FFF7FEFF 		bl	ppp_trace
+ 457              	.LVL47:
+ 458              		.loc 1 498 0
+ 459 01d4 064A     		ldr	r2, .L45+4
+ 460 01d6 1368     		ldr	r3, [r2]
+ 461 01d8 013B     		sub	r3, r3, #1
+ 462 01da 1360     		str	r3, [r2]
+ 463 01dc 002B     		cmp	r3, #0
+ 464 01de 03DC     		bgt	.L44
+ 465              		.loc 1 500 0
+ 466 01e0 0449     		ldr	r1, .L45+8
+ 467 01e2 0020     		mov	r0, #0
+ 468 01e4 FFF7FEFF 		bl	lcp_close
+ 469              	.L44:
+ 470              		.loc 1 502 0
+ 471              		@ sp needed for prologue
+ 472 01e8 01BC     		pop	{r0}
+ 473 01ea 0047     		bx	r0
+ 474              	.L46:
+ 475              		.align	2
+ 476              	.L45:
+ 477 01ec 50000000 		.word	.LC15
+ 478 01f0 10010000 		.word	num_np_open
+ 479 01f4 6C000000 		.word	.LC18
+ 480              	.LFE300:
+ 482              		.section	.rodata.str1.4
+ 483 0089 000000   		.align	2
+ 484              	.LC20:
+ 485 008c 436F6E6E 		.ascii	"Connect time expired\012\000"
+ 485      65637420 
+ 485      74696D65 
+ 485      20657870 
+ 485      69726564 
+ 486 00a2 0000     		.align	2
+ 487              	.LC22:
+ 488 00a4 436F6E6E 		.ascii	"Connect time expired\000"
+ 488      65637420 
+ 488      74696D65 
+ 488      20657870 
+ 488      69726564 
+ 489              		.text
+ 490              		.align	2
+ 491              		.code	16
+ 492              		.thumb_func
+ 494              	connect_time_expired:
+ 495              	.LFB308:
+ 496              		.loc 1 822 0
+ 497 01f8 00B5     		push	{lr}
+ 498              	.LCFI7:
+ 499              	.LVL48:
+ 500              		.loc 1 825 0
+ 501 01fa 0549     		ldr	r1, .L49
+ 502 01fc 0520     		mov	r0, #5
+ 503              	.LVL49:
+ 504 01fe FFF7FEFF 		bl	ppp_trace
+ 505              		.loc 1 826 0
+ 506 0202 0449     		ldr	r1, .L49+4
+ 507 0204 0020     		mov	r0, #0
+ 508 0206 FFF7FEFF 		bl	lcp_close
+ 509              		.loc 1 827 0
+ 510              		@ sp needed for prologue
+ 511 020a 01BC     		pop	{r0}
+ 512 020c 0047     		bx	r0
+ 513              	.L50:
+ 514 020e C046     		.align	2
+ 515              	.L49:
+ 516 0210 8C000000 		.word	.LC20
+ 517 0214 A4000000 		.word	.LC22
+ 518              	.LFE308:
+ 520              		.align	2
+ 521              		.code	16
+ 522              		.thumb_func
+ 524              	network_phase:
+ 525              	.LFB306:
+ 526              		.loc 1 753 0
+ 527 0218 F0B5     		push	{r4, r5, r6, r7, lr}
+ 528              	.LCFI8:
+ 529 021a 5F46     		mov	r7, fp
+ 530 021c 5646     		mov	r6, sl
+ 531 021e 4D46     		mov	r5, r9
+ 532 0220 4446     		mov	r4, r8
+ 533 0222 F0B4     		push	{r4, r5, r6, r7}
+ 534              	.LCFI9:
+ 535              	.LVL50:
+ 536 0224 81B0     		sub	sp, sp, #4
+ 537              	.LCFI10:
+ 538 0226 071C     		mov	r7, r0
+ 539              		.loc 1 756 0
+ 540 0228 4300     		lsl	r3, r0, #1
+ 541 022a 1B18     		add	r3, r3, r0
+ 542 022c DB00     		lsl	r3, r3, #3
+ 543 022e 244A     		ldr	r2, .L60
+ 544 0230 D218     		add	r2, r2, r3
+ 545              	.LVL51:
+ 546              		.loc 1 761 0
+ 547 0232 1378     		ldrb	r3, [r2]
+ 548 0234 5906     		lsl	r1, r3, #25
+ 549 0236 02D4     		bmi	.L52
+ 550 0238 1378     		ldrb	r3, [r2]
+ 551 023a 9A06     		lsl	r2, r3, #26
+ 552 023c 06D5     		bpl	.L53
+ 553              	.LVL52:
+ 554              	.L52:
+ 555 023e 214B     		ldr	r3, .L60+4
+ 556 0240 1B68     		ldr	r3, [r3]
+ 557 0242 002B     		cmp	r3, #0
+ 558 0244 02D1     		bne	.L53
+ 559              		.loc 1 763 0
+ 560 0246 1F4A     		ldr	r2, .L60+4
+ 561              	.LVL53:
+ 562 0248 0123     		mov	r3, #1
+ 563 024a 1360     		str	r3, [r2]
+ 564              	.LVL54:
+ 565              	.L53:
+ 566              		.loc 1 777 0
+ 567 024c 1E49     		ldr	r1, .L60+8
+ 568 024e BA00     		lsl	r2, r7, #2
+ 569              	.LVL55:
+ 570 0250 0523     		mov	r3, #5
+ 571 0252 5350     		str	r3, [r2, r1]
+ 572              		.loc 1 778 0
+ 573 0254 1D4B     		ldr	r3, .L60+12
+ 574 0256 1C68     		ldr	r4, [r3]
+ 575              	.LVL56:
+ 576 0258 002C     		cmp	r4, #0
+ 577 025a 20D0     		beq	.L54
+ 578              	.LVL57:
+ 579 025c 1C4D     		ldr	r5, .L60+16
+ 580              		.loc 1 779 0
+ 581 025e 1D4B     		ldr	r3, .L60+20
+ 582 0260 1B04     		lsl	r3, r3, #16
+ 583 0262 0093     		str	r3, [sp]
+ 584 0264 1E0C     		lsr	r6, r3, #16
+ 585              		.loc 1 781 0
+ 586 0266 1C49     		ldr	r1, .L60+24
+ 587 0268 0A04     		lsl	r2, r1, #16
+ 588 026a 120C     		lsr	r2, r2, #16
+ 589 026c 9246     		mov	sl, r2
+ 590              		.loc 1 782 0
+ 591 026e 1B4B     		ldr	r3, .L60+28
+ 592 0270 9846     		mov	r8, r3
+ 593              	.L56:
+ 594              		.loc 1 779 0
+ 595 0272 2388     		ldrh	r3, [r4]
+ 596 0274 B342     		cmp	r3, r6
+ 597 0276 0FD8     		bhi	.L55
+ 598 0278 236A     		ldr	r3, [r4, #32]
+ 599 027a 002B     		cmp	r3, #0
+ 600 027c 0CD0     		beq	.L55
+ 601 027e A369     		ldr	r3, [r4, #24]
+ 602 0280 002B     		cmp	r3, #0
+ 603 0282 09D0     		beq	.L55
+ 604              		.loc 1 780 0
+ 605 0284 381C     		mov	r0, r7
+ 606 0286 00F0EBFA 		bl	.L62
+ 607              		.loc 1 781 0
+ 608 028a 2388     		ldrh	r3, [r4]
+ 609 028c 5345     		cmp	r3, sl
+ 610 028e 03D0     		beq	.L55
+ 611              		.loc 1 782 0
+ 612 0290 4146     		mov	r1, r8
+ 613 0292 0B68     		ldr	r3, [r1]
+ 614 0294 0133     		add	r3, r3, #1
+ 615 0296 0B60     		str	r3, [r1]
+ 616              	.LVL58:
+ 617              	.L55:
+ 618              		.loc 1 778 0
+ 619 0298 10CD     		ldmia	r5!, {r4}
+ 620 029a 002C     		cmp	r4, #0
+ 621 029c E9D1     		bne	.L56
+ 622              	.L54:
+ 623              		.loc 1 787 0
+ 624 029e 0F4B     		ldr	r3, .L60+28
+ 625 02a0 1B68     		ldr	r3, [r3]
+ 626 02a2 002B     		cmp	r3, #0
+ 627 02a4 03D1     		bne	.L58
+ 628              		.loc 1 789 0
+ 629 02a6 0E49     		ldr	r1, .L60+32
+ 630 02a8 0020     		mov	r0, #0
+ 631 02aa FFF7FEFF 		bl	lcp_close
+ 632              	.LVL59:
+ 633              	.L58:
+ 634              		.loc 1 791 0
+ 635 02ae 01B0     		add	sp, sp, #4
+ 636              		@ sp needed for prologue
+ 637              	.LVL60:
+ 638              	.LVL61:
+ 639 02b0 3CBC     		pop	{r2, r3, r4, r5}
+ 640 02b2 9046     		mov	r8, r2
+ 641 02b4 9946     		mov	r9, r3
+ 642 02b6 A246     		mov	sl, r4
+ 643 02b8 AB46     		mov	fp, r5
+ 644 02ba F0BC     		pop	{r4, r5, r6, r7}
+ 645 02bc 01BC     		pop	{r0}
+ 646 02be 0047     		bx	r0
+ 647              	.L61:
+ 648              		.align	2
+ 649              	.L60:
+ 650 02c0 00000000 		.word	lcp_gotoptions
+ 651 02c4 08010000 		.word	did_authup
+ 652 02c8 00000000 		.word	lcp_phase
+ 653 02cc 00000000 		.word	ppp_protocols
+ 654 02d0 04000000 		.word	ppp_protocols+4
+ 655 02d4 FFBFFFFF 		.word	-16385
+ 656 02d8 FD80FFFF 		.word	-32515
+ 657 02dc 10010000 		.word	num_np_open
+ 658 02e0 6C000000 		.word	.LC18
+ 659              	.LFE306:
+ 661              		.section	.rodata.str1.4
+ 662 00b9 000000   		.align	2
+ 663              	.LC33:
+ 664 00bc 61757468 		.ascii	"auth_peer_success: %d proto=%X\012\000"
+ 664      5F706565 
+ 664      725F7375 
+ 664      63636573 
+ 664      733A2025 
+ 665              		.align	2
+ 666              	.LC35:
+ 667 00dc 61757468 		.ascii	"auth_peer_success: unknown protocol %x\012\000"
+ 667      5F706565 
+ 667      725F7375 
+ 667      63636573 
+ 667      733A2075 
+ 668              		.text
+ 669              		.align	2
+ 670              		.global	auth_peer_success
+ 671              		.code	16
+ 672              		.thumb_func
+ 674              	auth_peer_success:
+ 675              	.LFB295:
+ 676              		.loc 1 345 0
+ 677 02e4 F0B5     		push	{r4, r5, r6, r7, lr}
+ 678              	.LCFI11:
+ 679 02e6 4746     		mov	r7, r8
+ 680 02e8 80B4     		push	{r7}
+ 681              	.LCFI12:
+ 682              	.LVL62:
+ 683 02ea 061C     		mov	r6, r0
+ 684 02ec 9046     		mov	r8, r2
+ 685 02ee 1D1C     		mov	r5, r3
+ 686 02f0 0904     		lsl	r1, r1, #16
+ 687              	.LVL63:
+ 688 02f2 0C0C     		lsr	r4, r1, #16
+ 689              	.LVL64:
+ 690              		.loc 1 348 0
+ 691 02f4 1749     		ldr	r1, .L73
+ 692 02f6 0520     		mov	r0, #5
+ 693              	.LVL65:
+ 694 02f8 321C     		mov	r2, r6
+ 695              	.LVL66:
+ 696 02fa 231C     		mov	r3, r4
+ 697              	.LVL67:
+ 698 02fc FFF7FEFF 		bl	ppp_trace
+ 699              		.loc 1 349 0
+ 700 0300 154B     		ldr	r3, .L73+4
+ 701 0302 9C42     		cmp	r4, r3
+ 702 0304 03D0     		beq	.L65
+ 703 0306 154B     		ldr	r3, .L73+8
+ 704 0308 9C42     		cmp	r4, r3
+ 705 030a 02D1     		bne	.L71
+ 706 030c 07E0     		b	.L72
+ 707              	.L65:
+ 708 030e 0227     		mov	r7, #2
+ 709              	.LVL68:
+ 710 0310 06E0     		b	.L67
+ 711              	.LVL69:
+ 712              	.L71:
+ 713              		.loc 1 357 0
+ 714 0312 1349     		ldr	r1, .L73+12
+ 715 0314 0320     		mov	r0, #3
+ 716 0316 221C     		mov	r2, r4
+ 717              	.LVL70:
+ 718 0318 FFF7FEFF 		bl	ppp_trace
+ 719 031c 15E0     		b	.L70
+ 720              	.LVL71:
+ 721              	.L72:
+ 722              		.loc 1 358 0
+ 723 031e 0827     		mov	r7, #8
+ 724              	.LVL72:
+ 725              	.L67:
+ 726              		.loc 1 364 0
+ 727 0320 FF2D     		cmp	r5, #255
+ 728 0322 00D9     		bls	.L69
+ 729 0324 FF25     		mov	r5, #255
+ 730              	.L69:
+ 731              		.loc 1 367 0
+ 732 0326 0F4C     		ldr	r4, .L73+16
+ 733              	.LVL73:
+ 734 0328 201C     		mov	r0, r4
+ 735 032a 4146     		mov	r1, r8
+ 736 032c 2A1C     		mov	r2, r5
+ 737 032e FFF7FEFF 		bl	memcpy
+ 738              		.loc 1 368 0
+ 739 0332 0023     		mov	r3, #0
+ 740 0334 6355     		strb	r3, [r4, r5]
+ 741              		.loc 1 374 0
+ 742 0336 0C49     		ldr	r1, .L73+20
+ 743 0338 B200     		lsl	r2, r6, #2
+ 744 033a 5358     		ldr	r3, [r2, r1]
+ 745 033c BB43     		bic	r3, r3, r7
+ 746 033e 5350     		str	r3, [r2, r1]
+ 747 0340 002B     		cmp	r3, #0
+ 748 0342 02D1     		bne	.L70
+ 749              		.loc 1 375 0
+ 750 0344 301C     		mov	r0, r6
+ 751 0346 FFF767FF 		bl	network_phase
+ 752              	.L70:
+ 753              		.loc 1 377 0
+ 754              		@ sp needed for prologue
+ 755              	.LVL74:
+ 756              	.LVL75:
+ 757              	.LVL76:
+ 758              	.LVL77:
+ 759 034a 04BC     		pop	{r2}
+ 760 034c 9046     		mov	r8, r2
+ 761 034e F0BC     		pop	{r4, r5, r6, r7}
+ 762 0350 01BC     		pop	{r0}
+ 763 0352 0047     		bx	r0
+ 764              	.L74:
+ 765              		.align	2
+ 766              	.L73:
+ 767 0354 BC000000 		.word	.LC33
+ 768 0358 23C00000 		.word	49187
+ 769 035c 23C20000 		.word	49699
+ 770 0360 DC000000 		.word	.LC35
+ 771 0364 00000000 		.word	peer_authname
+ 772 0368 00010000 		.word	auth_pending
+ 773              	.LFE295:
+ 775              		.section	.rodata.str1.4
+ 776              		.align	2
+ 777              	.LC39:
+ 778 0104 61757468 		.ascii	"auth_peer_fail: %d proto=%X\012\000"
+ 778      5F706565 
+ 778      725F6661 
+ 778      696C3A20 
+ 778      25642070 
+ 779 0121 000000   		.align	2
+ 780              	.LC41:
+ 781 0124 41757468 		.ascii	"Authentication failed\000"
+ 781      656E7469 
+ 781      63617469 
+ 781      6F6E2066 
+ 781      61696C65 
+ 782              		.text
+ 783              		.align	2
+ 784              		.global	auth_peer_fail
+ 785              		.code	16
+ 786              		.thumb_func
+ 788              	auth_peer_fail:
+ 789              	.LFB294:
+ 790              		.loc 1 328 0
+ 791 036c 10B5     		push	{r4, lr}
+ 792              	.LCFI13:
+ 793              	.LVL78:
+ 794 036e 041C     		mov	r4, r0
+ 795 0370 0B04     		lsl	r3, r1, #16
+ 796 0372 1B0C     		lsr	r3, r3, #16
+ 797              	.LVL79:
+ 798              		.loc 1 331 0
+ 799 0374 0549     		ldr	r1, .L77
+ 800 0376 0520     		mov	r0, #5
+ 801              	.LVL80:
+ 802 0378 221C     		mov	r2, r4
+ 803 037a FFF7FEFF 		bl	ppp_trace
+ 804              	.LVL81:
+ 805              		.loc 1 335 0
+ 806 037e 0449     		ldr	r1, .L77+4
+ 807 0380 201C     		mov	r0, r4
+ 808 0382 FFF7FEFF 		bl	lcp_close
+ 809              		.loc 1 336 0
+ 810              		@ sp needed for prologue
+ 811              	.LVL82:
+ 812 0386 10BC     		pop	{r4}
+ 813 0388 01BC     		pop	{r0}
+ 814 038a 0047     		bx	r0
+ 815              	.L78:
+ 816              		.align	2
+ 817              	.L77:
+ 818 038c 04010000 		.word	.LC39
+ 819 0390 24010000 		.word	.LC41
+ 820              	.LFE294:
+ 822              		.section	.rodata.str1.4
+ 823 013a 0000     		.align	2
+ 824              	.LC43:
+ 825 013c 6E705F64 		.ascii	"np_down: %d proto=%X\012\000"
+ 825      6F776E3A 
+ 825      20256420 
+ 825      70726F74 
+ 825      6F3D2558 
+ 826              		.text
+ 827              		.align	2
+ 828              		.global	np_down
+ 829              		.code	16
+ 830              		.thumb_func
+ 832              	np_down:
+ 833              	.LFB299:
+ 834              		.loc 1 478 0
+ 835 0394 00B5     		push	{lr}
+ 836              	.LCFI14:
+ 837              	.LVL83:
+ 838 0396 021C     		mov	r2, r0
+ 839 0398 0B04     		lsl	r3, r1, #16
+ 840 039a 1B0C     		lsr	r3, r3, #16
+ 841              	.LVL84:
+ 842              		.loc 1 482 0
+ 843 039c 0949     		ldr	r1, .L82
+ 844 039e 0520     		mov	r0, #5
+ 845              	.LVL85:
+ 846 03a0 FFF7FEFF 		bl	ppp_trace
+ 847              	.LVL86:
+ 848              		.loc 1 483 0
+ 849 03a4 084A     		ldr	r2, .L82+4
+ 850 03a6 1368     		ldr	r3, [r2]
+ 851 03a8 013B     		sub	r3, r3, #1
+ 852 03aa 1360     		str	r3, [r2]
+ 853 03ac 002B     		cmp	r3, #0
+ 854 03ae 07D1     		bne	.L81
+ 855 03b0 064B     		ldr	r3, .L82+8
+ 856 03b2 5B88     		ldrh	r3, [r3, #2]
+ 857 03b4 002B     		cmp	r3, #0
+ 858 03b6 03D0     		beq	.L81
+ 859              		.loc 1 484 0
+ 860 03b8 0548     		ldr	r0, .L82+12
+ 861 03ba 0021     		mov	r1, #0
+ 862 03bc FFF7FEFF 		bl	sys_untimeout
+ 863              	.L81:
+ 864              		.loc 1 486 0
+ 865              		@ sp needed for prologue
+ 866 03c0 01BC     		pop	{r0}
+ 867 03c2 0047     		bx	r0
+ 868              	.L83:
+ 869              		.align	2
+ 870              	.L82:
+ 871 03c4 3C010000 		.word	.LC43
+ 872 03c8 14010000 		.word	num_np_up
+ 873 03cc 00000000 		.word	ppp_settings
+ 874 03d0 00000000 		.word	check_idle
+ 875              	.LFE299:
+ 877              		.section	.rodata.str1.4
+ 878 0152 0000     		.align	2
+ 879              	.LC49:
+ 880 0154 5465726D 		.ascii	"Terminating connection due to lack of activity.\012"
+ 880      696E6174 
+ 880      696E6720 
+ 880      636F6E6E 
+ 880      65637469 
+ 881 0184 00       		.ascii	"\000"
+ 882 0185 000000   		.align	2
+ 883              	.LC51:
+ 884 0188 4C696E6B 		.ascii	"Link inactive\000"
+ 884      20696E61 
+ 884      63746976 
+ 884      6500
+ 885              		.text
+ 886              		.align	2
+ 887              		.code	16
+ 888              		.thumb_func
+ 890              	check_idle:
+ 891              	.LFB307:
+ 892              		.loc 1 799 0
+ 893 03d4 30B5     		push	{r4, r5, lr}
+ 894              	.LCFI15:
+ 895              	.LVL87:
+ 896 03d6 81B0     		sub	sp, sp, #4
+ 897              	.LCFI16:
+ 898              		.loc 1 804 0
+ 899 03d8 0020     		mov	r0, #0
+ 900              	.LVL88:
+ 901 03da 6946     		mov	r1, sp
+ 902 03dc FFF7FEFF 		bl	get_idle_time
+ 903 03e0 0028     		cmp	r0, #0
+ 904 03e2 29D0     		beq	.L88
+ 905              		.loc 1 807 0
+ 906 03e4 6B46     		mov	r3, sp
+ 907 03e6 0233     		add	r3, r3, #2
+ 908 03e8 1888     		ldrh	r0, [r3]
+ 909 03ea 6B46     		mov	r3, sp
+ 910 03ec 1988     		ldrh	r1, [r3]
+ 911 03ee 0A04     		lsl	r2, r1, #16
+ 912 03f0 0304     		lsl	r3, r0, #16
+ 913 03f2 9342     		cmp	r3, r2
+ 914 03f4 00D2     		bcs	.L86
+ 915 03f6 011C     		add	r1, r0, #0
+ 916              	.L86:
+ 917 03f8 0B04     		lsl	r3, r1, #16
+ 918 03fa 1D0C     		lsr	r5, r3, #16
+ 919              	.LVL89:
+ 920              		.loc 1 808 0
+ 921 03fc 104B     		ldr	r3, .L89
+ 922 03fe 5B88     		ldrh	r3, [r3, #2]
+ 923 0400 AB42     		cmp	r3, r5
+ 924 0402 08D8     		bhi	.L87
+ 925              		.loc 1 810 0
+ 926 0404 0F49     		ldr	r1, .L89+4
+ 927 0406 0520     		mov	r0, #5
+ 928 0408 FFF7FEFF 		bl	ppp_trace
+ 929              		.loc 1 811 0
+ 930 040c 0E49     		ldr	r1, .L89+8
+ 931 040e 0020     		mov	r0, #0
+ 932 0410 FFF7FEFF 		bl	lcp_close
+ 933 0414 10E0     		b	.L88
+ 934              	.L87:
+ 935              		.loc 1 813 0
+ 936 0416 0D4C     		ldr	r4, .L89+12
+ 937 0418 201C     		mov	r0, r4
+ 938 041a 0021     		mov	r1, #0
+ 939 041c FFF7FEFF 		bl	sys_untimeout
+ 940 0420 074B     		ldr	r3, .L89
+ 941 0422 5B88     		ldrh	r3, [r3, #2]
+ 942 0424 5B1B     		sub	r3, r3, r5
+ 943 0426 5801     		lsl	r0, r3, #5
+ 944 0428 C01A     		sub	r0, r0, r3
+ 945 042a 8000     		lsl	r0, r0, #2
+ 946 042c C018     		add	r0, r0, r3
+ 947 042e C000     		lsl	r0, r0, #3
+ 948 0430 211C     		mov	r1, r4
+ 949 0432 0022     		mov	r2, #0
+ 950 0434 FFF7FEFF 		bl	sys_timeout
+ 951              	.L88:
+ 952              		.loc 1 815 0
+ 953 0438 01B0     		add	sp, sp, #4
+ 954              		@ sp needed for prologue
+ 955              	.LVL90:
+ 956 043a 30BC     		pop	{r4, r5}
+ 957 043c 01BC     		pop	{r0}
+ 958 043e 0047     		bx	r0
+ 959              	.L90:
+ 960              		.align	2
+ 961              	.L89:
+ 962 0440 00000000 		.word	ppp_settings
+ 963 0444 54010000 		.word	.LC49
+ 964 0448 88010000 		.word	.LC51
+ 965 044c 00000000 		.word	check_idle
+ 966              	.LFE307:
+ 968              		.section	.rodata.str1.4
+ 969 0196 0000     		.align	2
+ 970              	.LC54:
+ 971 0198 6E705F75 		.ascii	"np_up: %d proto=%X\012\000"
+ 971      703A2025 
+ 971      64207072 
+ 971      6F746F3D 
+ 971      25580A00 
+ 972              		.align	2
+ 973              	.LC57:
+ 974 01ac 6E705F75 		.ascii	"np_up: maxconnect=%d idle_time_limit=%d\012\000"
+ 974      703A206D 
+ 974      6178636F 
+ 974      6E6E6563 
+ 974      743D2564 
+ 975              		.text
+ 976              		.align	2
+ 977              		.global	np_up
+ 978              		.code	16
+ 979              		.thumb_func
+ 981              	np_up:
+ 982              	.LFB298:
+ 983              		.loc 1 448 0
+ 984 0450 10B5     		push	{r4, lr}
+ 985              	.LCFI17:
+ 986              	.LVL91:
+ 987 0452 021C     		mov	r2, r0
+ 988 0454 0B04     		lsl	r3, r1, #16
+ 989 0456 1B0C     		lsr	r3, r3, #16
+ 990              	.LVL92:
+ 991              		.loc 1 452 0
+ 992 0458 1E49     		ldr	r1, .L95
+ 993 045a 0520     		mov	r0, #5
+ 994              	.LVL93:
+ 995 045c FFF7FEFF 		bl	ppp_trace
+ 996              	.LVL94:
+ 997              		.loc 1 453 0
+ 998 0460 1D4B     		ldr	r3, .L95+4
+ 999 0462 1B68     		ldr	r3, [r3]
+ 1000 0464 002B     		cmp	r3, #0
+ 1001 0466 2DD1     		bne	.L92
+ 1002              		.loc 1 454 0
+ 1003 0468 1C49     		ldr	r1, .L95+8
+ 1004 046a 1D4C     		ldr	r4, .L95+12
+ 1005 046c 6268     		ldr	r2, [r4, #4]
+ 1006 046e 6388     		ldrh	r3, [r4, #2]
+ 1007 0470 0520     		mov	r0, #5
+ 1008 0472 FFF7FEFF 		bl	ppp_trace
+ 1009              		.loc 1 458 0
+ 1010 0476 6388     		ldrh	r3, [r4, #2]
+ 1011 0478 002B     		cmp	r3, #0
+ 1012 047a 0FD0     		beq	.L93
+ 1013              		.loc 1 459 0
+ 1014 047c 194C     		ldr	r4, .L95+16
+ 1015 047e 201C     		mov	r0, r4
+ 1016 0480 0021     		mov	r1, #0
+ 1017 0482 FFF7FEFF 		bl	sys_untimeout
+ 1018 0486 164B     		ldr	r3, .L95+12
+ 1019 0488 5B88     		ldrh	r3, [r3, #2]
+ 1020 048a 5801     		lsl	r0, r3, #5
+ 1021 048c C01A     		sub	r0, r0, r3
+ 1022 048e 8000     		lsl	r0, r0, #2
+ 1023 0490 C018     		add	r0, r0, r3
+ 1024 0492 C000     		lsl	r0, r0, #3
+ 1025 0494 211C     		mov	r1, r4
+ 1026 0496 0022     		mov	r2, #0
+ 1027 0498 FFF7FEFF 		bl	sys_timeout
+ 1028              	.L93:
+ 1029              		.loc 1 466 0
+ 1030 049c 104B     		ldr	r3, .L95+12
+ 1031 049e 5B68     		ldr	r3, [r3, #4]
+ 1032 04a0 002B     		cmp	r3, #0
+ 1033 04a2 0FDD     		ble	.L92
+ 1034              		.loc 1 467 0
+ 1035 04a4 104C     		ldr	r4, .L95+20
+ 1036 04a6 201C     		mov	r0, r4
+ 1037 04a8 0021     		mov	r1, #0
+ 1038 04aa FFF7FEFF 		bl	sys_untimeout
+ 1039 04ae 0C4B     		ldr	r3, .L95+12
+ 1040 04b0 5B68     		ldr	r3, [r3, #4]
+ 1041 04b2 5801     		lsl	r0, r3, #5
+ 1042 04b4 C01A     		sub	r0, r0, r3
+ 1043 04b6 8000     		lsl	r0, r0, #2
+ 1044 04b8 C018     		add	r0, r0, r3
+ 1045 04ba C000     		lsl	r0, r0, #3
+ 1046 04bc 211C     		mov	r1, r4
+ 1047 04be 0022     		mov	r2, #0
+ 1048 04c0 FFF7FEFF 		bl	sys_timeout
+ 1049              	.L92:
+ 1050              		.loc 1 470 0
+ 1051 04c4 044A     		ldr	r2, .L95+4
+ 1052 04c6 1368     		ldr	r3, [r2]
+ 1053 04c8 0133     		add	r3, r3, #1
+ 1054 04ca 1360     		str	r3, [r2]
+ 1055              		.loc 1 471 0
+ 1056              		@ sp needed for prologue
+ 1057 04cc 10BC     		pop	{r4}
+ 1058 04ce 01BC     		pop	{r0}
+ 1059 04d0 0047     		bx	r0
+ 1060              	.L96:
+ 1061 04d2 C046     		.align	2
+ 1062              	.L95:
+ 1063 04d4 98010000 		.word	.LC54
+ 1064 04d8 14010000 		.word	num_np_up
+ 1065 04dc AC010000 		.word	.LC57
+ 1066 04e0 00000000 		.word	ppp_settings
+ 1067 04e4 00000000 		.word	check_idle
+ 1068 04e8 00000000 		.word	connect_time_expired
+ 1069              	.LFE298:
+ 1071              		.section	.rodata.str1.4
+ 1072 01d5 000000   		.align	2
+ 1073              	.LC62:
+ 1074 01d8 61757468 		.ascii	"auth_withpeer_success: %d proto=%X\012\000"
+ 1074      5F776974 
+ 1074      68706565 
+ 1074      725F7375 
+ 1074      63636573 
+ 1075              		.text
+ 1076              		.align	2
+ 1077              		.global	auth_withpeer_success
+ 1078              		.code	16
+ 1079              		.thumb_func
+ 1081              	auth_withpeer_success:
+ 1082              	.LFB297:
+ 1083              		.loc 1 413 0
+ 1084 04ec 70B5     		push	{r4, r5, r6, lr}
+ 1085              	.LCFI18:
+ 1086              	.LVL95:
+ 1087 04ee 051C     		mov	r5, r0
+ 1088 04f0 0904     		lsl	r1, r1, #16
+ 1089              	.LVL96:
+ 1090 04f2 0C0C     		lsr	r4, r1, #16
+ 1091              	.LVL97:
+ 1092              		.loc 1 416 0
+ 1093 04f4 1749     		ldr	r1, .L106
+ 1094 04f6 0520     		mov	r0, #5
+ 1095              	.LVL98:
+ 1096 04f8 2A1C     		mov	r2, r5
+ 1097 04fa 231C     		mov	r3, r4
+ 1098 04fc FFF7FEFF 		bl	ppp_trace
+ 1099              		.loc 1 417 0
+ 1100 0500 154B     		ldr	r3, .L106+4
+ 1101 0502 9C42     		cmp	r4, r3
+ 1102 0504 04D0     		beq	.L99
+ 1103 0506 154B     		ldr	r3, .L106+8
+ 1104 0508 9C42     		cmp	r4, r3
+ 1105 050a 0FD1     		bne	.L105
+ 1106 050c 0420     		mov	r0, #4
+ 1107              	.LVL99:
+ 1108 050e 13E0     		b	.L101
+ 1109              	.LVL100:
+ 1110              	.L99:
+ 1111              		.loc 1 422 0
+ 1112 0510 134B     		ldr	r3, .L106+12
+ 1113 0512 1B68     		ldr	r3, [r3]
+ 1114 0514 002B     		cmp	r3, #0
+ 1115 0516 01D1     		bne	.L102
+ 1116 0518 0120     		mov	r0, #1
+ 1117              	.LVL101:
+ 1118 051a 0DE0     		b	.L101
+ 1119              	.LVL102:
+ 1120              	.L102:
+ 1121              		.loc 1 423 0
+ 1122 051c 1148     		ldr	r0, .L106+16
+ 1123 051e 8022     		mov	r2, #128
+ 1124 0520 5200     		lsl	r2, r2, #1
+ 1125 0522 0021     		mov	r1, #0
+ 1126 0524 FFF7FEFF 		bl	memset
+ 1127 0528 0120     		mov	r0, #1
+ 1128              	.LVL103:
+ 1129 052a 05E0     		b	.L101
+ 1130              	.LVL104:
+ 1131              	.L105:
+ 1132              		.loc 1 428 0
+ 1133 052c 0E49     		ldr	r1, .L106+20
+ 1134 052e 0320     		mov	r0, #3
+ 1135 0530 221C     		mov	r2, r4
+ 1136              	.LVL105:
+ 1137 0532 FFF7FEFF 		bl	ppp_trace
+ 1138 0536 0020     		mov	r0, #0
+ 1139              	.LVL106:
+ 1140              	.L101:
+ 1141              		.loc 1 436 0
+ 1142 0538 0C49     		ldr	r1, .L106+24
+ 1143 053a AA00     		lsl	r2, r5, #2
+ 1144 053c 5358     		ldr	r3, [r2, r1]
+ 1145 053e 8343     		bic	r3, r3, r0
+ 1146 0540 5350     		str	r3, [r2, r1]
+ 1147 0542 002B     		cmp	r3, #0
+ 1148 0544 02D1     		bne	.L104
+ 1149              		.loc 1 437 0
+ 1150 0546 281C     		mov	r0, r5
+ 1151              	.LVL107:
+ 1152 0548 FFF766FE 		bl	network_phase
+ 1153              	.LVL108:
+ 1154              	.L104:
+ 1155              		.loc 1 439 0
+ 1156              		@ sp needed for prologue
+ 1157              	.LVL109:
+ 1158              	.LVL110:
+ 1159 054c 70BC     		pop	{r4, r5, r6}
+ 1160 054e 01BC     		pop	{r0}
+ 1161 0550 0047     		bx	r0
+ 1162              	.L107:
+ 1163 0552 C046     		.align	2
+ 1164              	.L106:
+ 1165 0554 D8010000 		.word	.LC62
+ 1166 0558 23C00000 		.word	49187
+ 1167 055c 23C20000 		.word	49699
+ 1168 0560 18010000 		.word	passwd_from_file
+ 1169 0564 09010000 		.word	ppp_settings+265
+ 1170 0568 DC000000 		.word	.LC35
+ 1171 056c 00010000 		.word	auth_pending
+ 1172              	.LFE297:
+ 1174              		.section	.rodata.str1.4
+ 1175              		.align	2
+ 1176              	.LC68:
+ 1177 01fc 61757468 		.ascii	"auth_withpeer_fail: %d proto=%X\012\000"
+ 1177      5F776974 
+ 1177      68706565 
+ 1177      725F6661 
+ 1177      696C3A20 
+ 1178              		.text
+ 1179              		.align	2
+ 1180              		.global	auth_withpeer_fail
+ 1181              		.code	16
+ 1182              		.thumb_func
+ 1184              	auth_withpeer_fail:
+ 1185              	.LFB296:
+ 1186              		.loc 1 384 0
+ 1187 0570 10B5     		push	{r4, lr}
+ 1188              	.LCFI19:
+ 1189              	.LVL111:
+ 1190 0572 81B0     		sub	sp, sp, #4
+ 1191              	.LCFI20:
+ 1192 0574 041C     		mov	r4, r0
+ 1193 0576 0B04     		lsl	r3, r1, #16
+ 1194 0578 1B0C     		lsr	r3, r3, #16
+ 1195              	.LVL112:
+ 1196              		.loc 1 385 0
+ 1197 057a 0722     		mov	r2, #7
+ 1198 057c 5242     		neg	r2, r2
+ 1199 057e 0092     		str	r2, [sp]
+ 1200              	.LVL113:
+ 1201              		.loc 1 389 0
+ 1202 0580 0D49     		ldr	r1, .L111
+ 1203 0582 0520     		mov	r0, #5
+ 1204              	.LVL114:
+ 1205 0584 221C     		mov	r2, r4
+ 1206 0586 FFF7FEFF 		bl	ppp_trace
+ 1207              	.LVL115:
+ 1208              		.loc 1 390 0
+ 1209 058a 0C4B     		ldr	r3, .L111+4
+ 1210 058c 1B68     		ldr	r3, [r3]
+ 1211 058e 002B     		cmp	r3, #0
+ 1212 0590 05D0     		beq	.L109
+ 1213              		.loc 1 391 0
+ 1214 0592 0B48     		ldr	r0, .L111+8
+ 1215 0594 8022     		mov	r2, #128
+ 1216 0596 5200     		lsl	r2, r2, #1
+ 1217 0598 0021     		mov	r1, #0
+ 1218 059a FFF7FEFF 		bl	memset
+ 1219              	.L109:
+ 1220              		.loc 1 398 0
+ 1221 059e 201C     		mov	r0, r4
+ 1222 05a0 6521     		mov	r1, #101
+ 1223 05a2 6A46     		mov	r2, sp
+ 1224 05a4 FFF7FEFF 		bl	pppIOCtl
+ 1225              		.loc 1 405 0
+ 1226 05a8 0649     		ldr	r1, .L111+12
+ 1227 05aa 201C     		mov	r0, r4
+ 1228 05ac FFF7FEFF 		bl	lcp_close
+ 1229              		.loc 1 406 0
+ 1230 05b0 01B0     		add	sp, sp, #4
+ 1231              		@ sp needed for prologue
+ 1232              	.LVL116:
+ 1233 05b2 10BC     		pop	{r4}
+ 1234 05b4 01BC     		pop	{r0}
+ 1235 05b6 0047     		bx	r0
+ 1236              	.L112:
+ 1237              		.align	2
+ 1238              	.L111:
+ 1239 05b8 FC010000 		.word	.LC68
+ 1240 05bc 18010000 		.word	passwd_from_file
+ 1241 05c0 09010000 		.word	ppp_settings+265
+ 1242 05c4 24010000 		.word	.LC41
+ 1243              	.LFE296:
+ 1245              		.section	.rodata.str1.4
+ 1246 021d 000000   		.align	2
+ 1247              	.LC74:
+ 1248 0220 6C696E6B 		.ascii	"link_established: %d\012\000"
+ 1248      5F657374 
+ 1248      61626C69 
+ 1248      73686564 
+ 1248      3A202564 
+ 1249 0236 0000     		.align	2
+ 1250              	.LC79:
+ 1251 0238 70656572 		.ascii	"peer refused to authenticate\012\000"
+ 1251      20726566 
+ 1251      75736564 
+ 1251      20746F20 
+ 1251      61757468 
+ 1252 0256 0000     		.align	2
+ 1253              	.LC81:
+ 1254 0258 70656572 		.ascii	"peer refused to authenticate\000"
+ 1254      20726566 
+ 1254      75736564 
+ 1254      20746F20 
+ 1254      61757468 
+ 1255 0275 000000   		.align	2
+ 1256              	.LC89:
+ 1257 0278 4E6F2073 		.ascii	"No secret found for PAP login\012\000"
+ 1257      65637265 
+ 1257      7420666F 
+ 1257      756E6420 
+ 1257      666F7220 
+ 1258              		.text
+ 1259              		.align	2
+ 1260              		.global	link_established
+ 1261              		.code	16
+ 1262              		.thumb_func
+ 1264              	link_established:
+ 1265              	.LFB293:
+ 1266              		.loc 1 246 0
+ 1267 05c8 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1268              	.LCFI21:
+ 1269 05ca 4746     		mov	r7, r8
+ 1270 05cc 80B4     		push	{r7}
+ 1271              	.LCFI22:
+ 1272              	.LVL117:
+ 1273 05ce 061C     		mov	r6, r0
+ 1274              		.loc 1 250 0
+ 1275 05d0 4300     		lsl	r3, r0, #1
+ 1276 05d2 1B18     		add	r3, r3, r0
+ 1277 05d4 DB00     		lsl	r3, r3, #3
+ 1278 05d6 9846     		mov	r8, r3
+ 1279              		.loc 1 251 0
+ 1280 05d8 464B     		ldr	r3, .L130
+ 1281 05da 4146     		mov	r1, r8
+ 1282 05dc 5F18     		add	r7, r3, r1
+ 1283              	.LVL118:
+ 1284              		.loc 1 256 0
+ 1285 05de 4649     		ldr	r1, .L130+4
+ 1286 05e0 0520     		mov	r0, #5
+ 1287              	.LVL119:
+ 1288 05e2 321C     		mov	r2, r6
+ 1289 05e4 FFF7FEFF 		bl	ppp_trace
+ 1290              		.loc 1 260 0
+ 1291 05e8 444B     		ldr	r3, .L130+8
+ 1292 05ea 1A68     		ldr	r2, [r3]
+ 1293              	.LVL120:
+ 1294 05ec 002A     		cmp	r2, #0
+ 1295 05ee 12D0     		beq	.L114
+ 1296 05f0 434C     		ldr	r4, .L130+12
+ 1297              		.loc 1 261 0
+ 1298 05f2 444B     		ldr	r3, .L130+16
+ 1299 05f4 1B04     		lsl	r3, r3, #16
+ 1300 05f6 1D0C     		lsr	r5, r3, #16
+ 1301              	.L116:
+ 1302 05f8 1388     		ldrh	r3, [r2]
+ 1303 05fa AB42     		cmp	r3, r5
+ 1304 05fc 08D0     		beq	.L115
+ 1305 05fe 136A     		ldr	r3, [r2, #32]
+ 1306 0600 002B     		cmp	r3, #0
+ 1307 0602 05D0     		beq	.L115
+ 1308 0604 1369     		ldr	r3, [r2, #16]
+ 1309 0606 002B     		cmp	r3, #0
+ 1310 0608 02D0     		beq	.L115
+ 1311              		.loc 1 262 0
+ 1312 060a 301C     		mov	r0, r6
+ 1313 060c 00F028F9 		bl	.L62
+ 1314              	.LVL121:
+ 1315              	.L115:
+ 1316              		.loc 1 260 0
+ 1317 0610 04CC     		ldmia	r4!, {r2}
+ 1318 0612 002A     		cmp	r2, #0
+ 1319 0614 F0D1     		bne	.L116
+ 1320              	.L114:
+ 1321              		.loc 1 265 0
+ 1322 0616 3C4B     		ldr	r3, .L130+20
+ 1323 0618 1B78     		ldrb	r3, [r3]
+ 1324 061a 9A07     		lsl	r2, r3, #30
+ 1325 061c 0ED5     		bpl	.L117
+ 1326              	.LVL122:
+ 1327 061e 3B78     		ldrb	r3, [r7]
+ 1328 0620 5906     		lsl	r1, r3, #25
+ 1329 0622 58D4     		bmi	.L118
+ 1330 0624 3B78     		ldrb	r3, [r7]
+ 1331 0626 9A06     		lsl	r2, r3, #26
+ 1332 0628 5AD4     		bmi	.L119
+ 1333              		.loc 1 272 0
+ 1334 062a 3849     		ldr	r1, .L130+24
+ 1335 062c 0320     		mov	r0, #3
+ 1336 062e FFF7FEFF 		bl	ppp_trace
+ 1337              		.loc 1 273 0
+ 1338 0632 3749     		ldr	r1, .L130+28
+ 1339 0634 301C     		mov	r0, r6
+ 1340 0636 FFF7FEFF 		bl	lcp_close
+ 1341 063a 56E0     		b	.L128
+ 1342              	.L117:
+ 1343              		.loc 1 278 0
+ 1344 063c 3549     		ldr	r1, .L130+32
+ 1345 063e B200     		lsl	r2, r6, #2
+ 1346 0640 0323     		mov	r3, #3
+ 1347 0642 5350     		str	r3, [r2, r1]
+ 1348              		.loc 1 281 0
+ 1349 0644 3B78     		ldrb	r3, [r7]
+ 1350 0646 5906     		lsl	r1, r3, #25
+ 1351 0648 06D5     		bpl	.L121
+ 1352              	.L127:
+ 1353              		.loc 1 282 0
+ 1354 064a 3349     		ldr	r1, .L130+36
+ 1355 064c 3A79     		ldrb	r2, [r7, #4]
+ 1356 064e 301C     		mov	r0, r6
+ 1357 0650 FFF7FEFF 		bl	ChapAuthPeer
+ 1358 0654 0824     		mov	r4, #8
+ 1359              	.LVL123:
+ 1360 0656 08E0     		b	.L122
+ 1361              	.LVL124:
+ 1362              	.L121:
+ 1363              		.loc 1 290 0
+ 1364 0658 3B78     		ldrb	r3, [r7]
+ 1365 065a 9A06     		lsl	r2, r3, #26
+ 1366 065c 01D4     		bmi	.L123
+ 1367 065e 0024     		mov	r4, #0
+ 1368              	.LVL125:
+ 1369 0660 03E0     		b	.L122
+ 1370              	.LVL126:
+ 1371              	.L123:
+ 1372              		.loc 1 291 0
+ 1373 0662 301C     		mov	r0, r6
+ 1374 0664 FFF7FEFF 		bl	upap_authpeer
+ 1375 0668 0224     		mov	r4, #2
+ 1376              	.LVL127:
+ 1377              	.L122:
+ 1378              		.loc 1 253 0
+ 1379 066a 2C4B     		ldr	r3, .L130+40
+ 1380 066c 4146     		mov	r1, r8
+ 1381 066e 5A18     		add	r2, r3, r1
+ 1382              	.LVL128:
+ 1383              		.loc 1 296 0
+ 1384 0670 1378     		ldrb	r3, [r2]
+ 1385 0672 5906     		lsl	r1, r3, #25
+ 1386 0674 07D5     		bpl	.L124
+ 1387              		.loc 1 297 0
+ 1388 0676 2A49     		ldr	r1, .L130+44
+ 1389 0678 1279     		ldrb	r2, [r2, #4]
+ 1390              	.LVL129:
+ 1391 067a 301C     		mov	r0, r6
+ 1392 067c FFF7FEFF 		bl	ChapAuthWithPeer
+ 1393              		.loc 1 298 0
+ 1394 0680 0423     		mov	r3, #4
+ 1395 0682 1C43     		orr	r4, r4, r3
+ 1396 0684 1EE0     		b	.L125
+ 1397              	.LVL130:
+ 1398              	.L124:
+ 1399              		.loc 1 305 0
+ 1400 0686 1378     		ldrb	r3, [r2]
+ 1401 0688 9A06     		lsl	r2, r3, #26
+ 1402 068a 1BD5     		bpl	.L125
+ 1403              	.LVL131:
+ 1404              		.loc 1 306 0
+ 1405 068c 1E4B     		ldr	r3, .L130+20
+ 1406 068e 254A     		ldr	r2, .L130+48
+ 1407 0690 9B5C     		ldrb	r3, [r3, r2]
+ 1408 0692 002B     		cmp	r3, #0
+ 1409 0694 0ED1     		bne	.L126
+ 1410              		.loc 1 307 0
+ 1411 0696 244A     		ldr	r2, .L130+52
+ 1412 0698 0123     		mov	r3, #1
+ 1413 069a 1360     		str	r3, [r2]
+ 1414              		.loc 1 308 0
+ 1415 069c 2049     		ldr	r1, .L130+44
+ 1416 069e 234B     		ldr	r3, .L130+56
+ 1417 06a0 CA18     		add	r2, r1, r3
+ 1418 06a2 301C     		mov	r0, r6
+ 1419 06a4 FFF720FD 		bl	get_pap_passwd
+ 1420 06a8 0028     		cmp	r0, #0
+ 1421 06aa 03D1     		bne	.L126
+ 1422              		.loc 1 309 0
+ 1423 06ac 2049     		ldr	r1, .L130+60
+ 1424 06ae 0120     		mov	r0, #1
+ 1425 06b0 FFF7FEFF 		bl	ppp_trace
+ 1426              	.L126:
+ 1427              		.loc 1 312 0
+ 1428 06b4 1A49     		ldr	r1, .L130+44
+ 1429 06b6 1D4B     		ldr	r3, .L130+56
+ 1430 06b8 CA18     		add	r2, r1, r3
+ 1431 06ba 301C     		mov	r0, r6
+ 1432 06bc FFF7FEFF 		bl	upap_authwithpeer
+ 1433              		.loc 1 313 0
+ 1434 06c0 0123     		mov	r3, #1
+ 1435 06c2 1C43     		orr	r4, r4, r3
+ 1436              	.L125:
+ 1437              		.loc 1 316 0
+ 1438 06c4 1B4A     		ldr	r2, .L130+64
+ 1439 06c6 B300     		lsl	r3, r6, #2
+ 1440 06c8 9C50     		str	r4, [r3, r2]
+ 1441              		.loc 1 318 0
+ 1442 06ca 002C     		cmp	r4, #0
+ 1443 06cc 0DD1     		bne	.L128
+ 1444              		.loc 1 319 0
+ 1445 06ce 301C     		mov	r0, r6
+ 1446 06d0 FFF7A2FD 		bl	network_phase
+ 1447 06d4 09E0     		b	.L128
+ 1448              	.LVL132:
+ 1449              	.L118:
+ 1450              		.loc 1 278 0
+ 1451 06d6 0F49     		ldr	r1, .L130+32
+ 1452 06d8 B200     		lsl	r2, r6, #2
+ 1453 06da 0323     		mov	r3, #3
+ 1454 06dc 5350     		str	r3, [r2, r1]
+ 1455 06de B4E7     		b	.L127
+ 1456              	.L119:
+ 1457 06e0 0C49     		ldr	r1, .L130+32
+ 1458 06e2 B200     		lsl	r2, r6, #2
+ 1459 06e4 0323     		mov	r3, #3
+ 1460 06e6 5350     		str	r3, [r2, r1]
+ 1461 06e8 BBE7     		b	.L123
+ 1462              	.LVL133:
+ 1463              	.L128:
+ 1464              		.loc 1 321 0
+ 1465              		@ sp needed for prologue
+ 1466              	.LVL134:
+ 1467              	.LVL135:
+ 1468              	.LVL136:
+ 1469 06ea 04BC     		pop	{r2}
+ 1470 06ec 9046     		mov	r8, r2
+ 1471 06ee F0BC     		pop	{r4, r5, r6, r7}
+ 1472 06f0 01BC     		pop	{r0}
+ 1473 06f2 0047     		bx	r0
+ 1474              	.L131:
+ 1475              		.align	2
+ 1476              	.L130:
+ 1477 06f4 00000000 		.word	lcp_gotoptions
+ 1478 06f8 20020000 		.word	.LC74
+ 1479 06fc 00000000 		.word	ppp_protocols
+ 1480 0700 04000000 		.word	ppp_protocols+4
+ 1481 0704 21C0FFFF 		.word	-16351
+ 1482 0708 00000000 		.word	ppp_settings
+ 1483 070c 38020000 		.word	.LC79
+ 1484 0710 58020000 		.word	.LC81
+ 1485 0714 00000000 		.word	lcp_phase
+ 1486 0718 0A020000 		.word	ppp_settings+522
+ 1487 071c 00000000 		.word	lcp_hisoptions
+ 1488 0720 08000000 		.word	ppp_settings+8
+ 1489 0724 09010000 		.word	265
+ 1490 0728 18010000 		.word	passwd_from_file
+ 1491 072c 01010000 		.word	257
+ 1492 0730 78020000 		.word	.LC89
+ 1493 0734 00010000 		.word	auth_pending
+ 1494              	.LFE293:
+ 1496              		.section	.rodata.str1.4
+ 1497 0297 00       		.align	2
+ 1498              	.LC92:
+ 1499 0298 6C696E6B 		.ascii	"link_down: %d\012\000"
+ 1499      5F646F77 
+ 1499      6E3A2025 
+ 1499      640A00
+ 1500 02a7 00       		.align	2
+ 1501              	.LC97:
+ 1502 02a8 4C435020 		.ascii	"LCP down\000"
+ 1502      646F776E 
+ 1502      00
+ 1503              		.text
+ 1504              		.align	2
+ 1505              		.global	link_down
+ 1506              		.code	16
+ 1507              		.thumb_func
+ 1509              	link_down:
+ 1510              	.LFB292:
+ 1511              		.loc 1 212 0
+ 1512 0738 F0B5     		push	{r4, r5, r6, r7, lr}
+ 1513              	.LCFI23:
+ 1514 073a 5F46     		mov	r7, fp
+ 1515 073c 5646     		mov	r6, sl
+ 1516 073e 4D46     		mov	r5, r9
+ 1517 0740 4446     		mov	r4, r8
+ 1518 0742 F0B4     		push	{r4, r5, r6, r7}
+ 1519              	.LCFI24:
+ 1520              	.LVL137:
+ 1521 0744 81B0     		sub	sp, sp, #4
+ 1522              	.LCFI25:
+ 1523 0746 8046     		mov	r8, r0
+ 1524              		.loc 1 216 0
+ 1525 0748 2749     		ldr	r1, .L141
+ 1526 074a 0520     		mov	r0, #5
+ 1527              	.LVL138:
+ 1528 074c 4246     		mov	r2, r8
+ 1529 074e FFF7FEFF 		bl	ppp_trace
+ 1530              		.loc 1 217 0
+ 1531 0752 264B     		ldr	r3, .L141+4
+ 1532 0754 1B68     		ldr	r3, [r3]
+ 1533 0756 002B     		cmp	r3, #0
+ 1534 0758 02D0     		beq	.L133
+ 1535              		.loc 1 219 0
+ 1536 075a 244A     		ldr	r2, .L141+4
+ 1537 075c 0023     		mov	r3, #0
+ 1538 075e 1360     		str	r3, [r2]
+ 1539              	.L133:
+ 1540              		.loc 1 221 0
+ 1541 0760 234B     		ldr	r3, .L141+8
+ 1542 0762 1C68     		ldr	r4, [r3]
+ 1543              	.LVL139:
+ 1544 0764 002C     		cmp	r4, #0
+ 1545 0766 22D0     		beq	.L134
+ 1546 0768 224D     		ldr	r5, .L141+12
+ 1547              		.loc 1 225 0
+ 1548 076a 2349     		ldr	r1, .L141+16
+ 1549 076c 0A04     		lsl	r2, r1, #16
+ 1550 076e 160C     		lsr	r6, r2, #16
+ 1551              		.loc 1 228 0
+ 1552 0770 2239     		sub	r1, r1, #34
+ 1553 0772 6B46     		mov	r3, sp
+ 1554 0774 1980     		strh	r1, [r3]
+ 1555 0776 1A88     		ldrh	r2, [r3]
+ 1556 0778 1204     		lsl	r2, r2, #16
+ 1557 077a 170C     		lsr	r7, r2, #16
+ 1558              	.L137:
+ 1559              		.loc 1 222 0
+ 1560 077c 236A     		ldr	r3, [r4, #32]
+ 1561 077e 002B     		cmp	r3, #0
+ 1562 0780 12D0     		beq	.L135
+ 1563              		.loc 1 225 0
+ 1564 0782 2388     		ldrh	r3, [r4]
+ 1565 0784 B342     		cmp	r3, r6
+ 1566 0786 0FD0     		beq	.L135
+ 1567 0788 6369     		ldr	r3, [r4, #20]
+ 1568 078a 002B     		cmp	r3, #0
+ 1569 078c 02D0     		beq	.L136
+ 1570              		.loc 1 226 0
+ 1571 078e 4046     		mov	r0, r8
+ 1572 0790 00F066F8 		bl	.L62
+ 1573              	.L136:
+ 1574              		.loc 1 228 0
+ 1575 0794 2388     		ldrh	r3, [r4]
+ 1576 0796 BB42     		cmp	r3, r7
+ 1577 0798 06D8     		bhi	.L135
+ 1578 079a E369     		ldr	r3, [r4, #28]
+ 1579 079c 002B     		cmp	r3, #0
+ 1580 079e 03D0     		beq	.L135
+ 1581              		.loc 1 229 0
+ 1582 07a0 1649     		ldr	r1, .L141+20
+ 1583 07a2 4046     		mov	r0, r8
+ 1584 07a4 00F05CF8 		bl	.L62
+ 1585              	.L135:
+ 1586              		.loc 1 221 0
+ 1587 07a8 10CD     		ldmia	r5!, {r4}
+ 1588 07aa 002C     		cmp	r4, #0
+ 1589 07ac E6D1     		bne	.L137
+ 1590              	.L134:
+ 1591              		.loc 1 232 0
+ 1592 07ae 144B     		ldr	r3, .L141+24
+ 1593 07b0 0022     		mov	r2, #0
+ 1594 07b2 1A60     		str	r2, [r3]
+ 1595              		.loc 1 233 0
+ 1596 07b4 134B     		ldr	r3, .L141+28
+ 1597 07b6 1A60     		str	r2, [r3]
+ 1598              		.loc 1 234 0
+ 1599 07b8 134A     		ldr	r2, .L141+32
+ 1600 07ba 4146     		mov	r1, r8
+ 1601 07bc 8B00     		lsl	r3, r1, #2
+ 1602 07be 9B58     		ldr	r3, [r3, r2]
+ 1603 07c0 002B     		cmp	r3, #0
+ 1604 07c2 04D0     		beq	.L138
+ 1605              		.loc 1 235 0
+ 1606 07c4 111C     		mov	r1, r2
+ 1607 07c6 4346     		mov	r3, r8
+ 1608 07c8 9A00     		lsl	r2, r3, #2
+ 1609 07ca 0623     		mov	r3, #6
+ 1610 07cc 5350     		str	r3, [r2, r1]
+ 1611              	.L138:
+ 1612              		.loc 1 237 0
+ 1613 07ce 4046     		mov	r0, r8
+ 1614 07d0 FFF7FEFF 		bl	pppLinkDown
+ 1615              		.loc 1 238 0
+ 1616 07d4 01B0     		add	sp, sp, #4
+ 1617              		@ sp needed for prologue
+ 1618              	.LVL140:
+ 1619              	.LVL141:
+ 1620 07d6 3CBC     		pop	{r2, r3, r4, r5}
+ 1621 07d8 9046     		mov	r8, r2
+ 1622 07da 9946     		mov	r9, r3
+ 1623 07dc A246     		mov	sl, r4
+ 1624 07de AB46     		mov	fp, r5
+ 1625 07e0 F0BC     		pop	{r4, r5, r6, r7}
+ 1626 07e2 01BC     		pop	{r0}
+ 1627 07e4 0047     		bx	r0
+ 1628              	.L142:
+ 1629 07e6 C046     		.align	2
+ 1630              	.L141:
+ 1631 07e8 98020000 		.word	.LC92
+ 1632 07ec 08010000 		.word	did_authup
+ 1633 07f0 00000000 		.word	ppp_protocols
+ 1634 07f4 04000000 		.word	ppp_protocols+4
+ 1635 07f8 21C0FFFF 		.word	-16351
+ 1636 07fc A8020000 		.word	.LC97
+ 1637 0800 10010000 		.word	num_np_open
+ 1638 0804 14010000 		.word	num_np_up
+ 1639 0808 00000000 		.word	lcp_phase
+ 1640              	.LFE292:
+ 1642              		.section	.rodata.str1.4
+ 1643 02b1 000000   		.align	2
+ 1644              	.LC102:
+ 1645 02b4 6C696E6B 		.ascii	"link_terminated: %d\012\000"
+ 1645      5F746572 
+ 1645      6D696E61 
+ 1645      7465643A 
+ 1645      2025640A 
+ 1646 02c9 000000   		.align	2
+ 1647              	.LC106:
+ 1648 02cc 436F6E6E 		.ascii	"Connection terminated.\012\000"
+ 1648      65637469 
+ 1648      6F6E2074 
+ 1648      65726D69 
+ 1648      6E617465 
+ 1649              		.text
+ 1650              		.align	2
+ 1651              		.global	link_terminated
+ 1652              		.code	16
+ 1653              		.thumb_func
+ 1655              	link_terminated:
+ 1656              	.LFB291:
+ 1657              		.loc 1 194 0
+ 1658 080c 10B5     		push	{r4, lr}
+ 1659              	.LCFI26:
+ 1660              	.LVL142:
+ 1661 080e 041C     		mov	r4, r0
+ 1662              		.loc 1 195 0
+ 1663 0810 0F49     		ldr	r1, .L147
+ 1664 0812 0520     		mov	r0, #5
+ 1665              	.LVL143:
+ 1666 0814 221C     		mov	r2, r4
+ 1667 0816 FFF7FEFF 		bl	ppp_trace
+ 1668              		.loc 1 196 0
+ 1669 081a 0E4A     		ldr	r2, .L147+4
+ 1670 081c A300     		lsl	r3, r4, #2
+ 1671 081e 9B58     		ldr	r3, [r3, r2]
+ 1672 0820 002B     		cmp	r3, #0
+ 1673 0822 11D0     		beq	.L146
+ 1674              		.loc 1 199 0
+ 1675 0824 0C4B     		ldr	r3, .L147+8
+ 1676 0826 1B68     		ldr	r3, [r3]
+ 1677 0828 002B     		cmp	r3, #0
+ 1678 082a 02D0     		beq	.L145
+ 1679              	.LBB14:
+ 1680              	.LBB15:
+ 1681              		.loc 1 853 0
+ 1682 082c 0A4A     		ldr	r2, .L147+8
+ 1683 082e 0023     		mov	r3, #0
+ 1684 0830 1360     		str	r3, [r2]
+ 1685              	.L145:
+ 1686              	.LBE15:
+ 1687              	.LBE14:
+ 1688              		.loc 1 202 0
+ 1689 0832 0849     		ldr	r1, .L147+4
+ 1690 0834 A200     		lsl	r2, r4, #2
+ 1691 0836 0023     		mov	r3, #0
+ 1692 0838 5350     		str	r3, [r2, r1]
+ 1693              		.loc 1 203 0
+ 1694 083a 0849     		ldr	r1, .L147+12
+ 1695 083c 0220     		mov	r0, #2
+ 1696 083e FFF7FEFF 		bl	ppp_trace
+ 1697              		.loc 1 204 0
+ 1698 0842 201C     		mov	r0, r4
+ 1699 0844 FFF7FEFF 		bl	pppLinkTerminated
+ 1700              	.L146:
+ 1701              		.loc 1 205 0
+ 1702              		@ sp needed for prologue
+ 1703              	.LVL144:
+ 1704 0848 10BC     		pop	{r4}
+ 1705 084a 01BC     		pop	{r0}
+ 1706 084c 0047     		bx	r0
+ 1707              	.L148:
+ 1708 084e C046     		.align	2
+ 1709              	.L147:
+ 1710 0850 B4020000 		.word	.LC102
+ 1711 0854 00000000 		.word	lcp_phase
+ 1712 0858 04010000 		.word	logged_in
+ 1713 085c CC020000 		.word	.LC106
+ 1714              	.LFE291:
+ 1716              		.bss
+ 1717              	peer_authname:
+ 1718 0000 00000000 		.space	256
+ 1718      00000000 
+ 1718      00000000 
+ 1718      00000000 
+ 1718      00000000 
+ 1719              		.align	2
+ 1720              	auth_pending:
+ 1721 0100 00000000 		.space	4
+ 1722              		.align	2
+ 1723              	logged_in:
+ 1724 0104 00000000 		.space	4
+ 1725              		.align	2
+ 1726              	did_authup:
+ 1727 0108 00000000 		.space	4
+ 1728              		.align	2
+ 1729              	addresses:
+ 1730 010c 00000000 		.space	4
+ 1731              		.align	2
+ 1732              	num_np_open:
+ 1733 0110 00000000 		.space	4
+ 1734              		.align	2
+ 1735              	num_np_up:
+ 1736 0114 00000000 		.space	4
+ 1737              		.align	2
+ 1738              	passwd_from_file:
+ 1739 0118 00000000 		.space	4
+ 2148              	.Letext0:
+ 5858              		.code 16
+ 5859              		.align	1
+ 5860              	.L62:
+ 5861 0860 1847C046 		bx	r3
+DEFINED SYMBOLS
+                            *ABS*:00000000 auth.c
+     /tmp/ccVlC7fo.s:1      .text:00000000 $t
+     /tmp/ccVlC7fo.s:16     .text:00000000 check_passwd
+     /tmp/ccVlC7fo.s:44     .text:0000000c link_required
+     /tmp/ccVlC7fo.s:64     .text:0000001c $d
+     /tmp/ccVlC7fo.s:77     .text:00000020 get_secret
+     /tmp/ccVlC7fo.s:74     .text:00000020 $t
+     /tmp/ccVlC7fo.s:150    .text:00000078 $d
+     /tmp/ccVlC7fo.s:160    .text:00000084 bad_ip_adrs
+     /tmp/ccVlC7fo.s:157    .text:00000084 $t
+     /tmp/ccVlC7fo.s:204    .text:000000b0 auth_ip_addr
+     /tmp/ccVlC7fo.s:250    .text:000000e0 $d
+     /tmp/ccVlC7fo.s:1729   .bss:0000010c addresses
+     /tmp/ccVlC7fo.s:260    .text:000000e8 $t
+     /tmp/ccVlC7fo.s:263    .text:000000e8 get_pap_passwd
+     /tmp/ccVlC7fo.s:305    .text:00000110 $d
+     /tmp/ccVlC7fo.s:318    .text:00000114 auth_reset
+     /tmp/ccVlC7fo.s:315    .text:00000114 $t
+     /tmp/ccVlC7fo.s:422    .text:000001b0 $d
+     /tmp/ccVlC7fo.s:442    .text:000001c4 np_finished
+     /tmp/ccVlC7fo.s:439    .text:000001c4 $t
+     /tmp/ccVlC7fo.s:477    .text:000001ec $d
+     /tmp/ccVlC7fo.s:1732   .bss:00000110 num_np_open
+     /tmp/ccVlC7fo.s:491    .text:000001f8 $t
+     /tmp/ccVlC7fo.s:494    .text:000001f8 connect_time_expired
+     /tmp/ccVlC7fo.s:516    .text:00000210 $d
+     /tmp/ccVlC7fo.s:521    .text:00000218 $t
+     /tmp/ccVlC7fo.s:524    .text:00000218 network_phase
+     /tmp/ccVlC7fo.s:650    .text:000002c0 $d
+     /tmp/ccVlC7fo.s:1726   .bss:00000108 did_authup
+     /tmp/ccVlC7fo.s:674    .text:000002e4 auth_peer_success
+     /tmp/ccVlC7fo.s:671    .text:000002e4 $t
+     /tmp/ccVlC7fo.s:767    .text:00000354 $d
+     /tmp/ccVlC7fo.s:1717   .bss:00000000 peer_authname
+     /tmp/ccVlC7fo.s:1720   .bss:00000100 auth_pending
+     /tmp/ccVlC7fo.s:788    .text:0000036c auth_peer_fail
+     /tmp/ccVlC7fo.s:785    .text:0000036c $t
+     /tmp/ccVlC7fo.s:818    .text:0000038c $d
+     /tmp/ccVlC7fo.s:832    .text:00000394 np_down
+     /tmp/ccVlC7fo.s:829    .text:00000394 $t
+     /tmp/ccVlC7fo.s:871    .text:000003c4 $d
+     /tmp/ccVlC7fo.s:1735   .bss:00000114 num_np_up
+     /tmp/ccVlC7fo.s:890    .text:000003d4 check_idle
+     /tmp/ccVlC7fo.s:887    .text:000003d4 $t
+     /tmp/ccVlC7fo.s:962    .text:00000440 $d
+     /tmp/ccVlC7fo.s:981    .text:00000450 np_up
+     /tmp/ccVlC7fo.s:978    .text:00000450 $t
+     /tmp/ccVlC7fo.s:1063   .text:000004d4 $d
+     /tmp/ccVlC7fo.s:1081   .text:000004ec auth_withpeer_success
+     /tmp/ccVlC7fo.s:1078   .text:000004ec $t
+     /tmp/ccVlC7fo.s:1165   .text:00000554 $d
+     /tmp/ccVlC7fo.s:1738   .bss:00000118 passwd_from_file
+     /tmp/ccVlC7fo.s:1184   .text:00000570 auth_withpeer_fail
+     /tmp/ccVlC7fo.s:1181   .text:00000570 $t
+     /tmp/ccVlC7fo.s:1239   .text:000005b8 $d
+     /tmp/ccVlC7fo.s:1264   .text:000005c8 link_established
+     /tmp/ccVlC7fo.s:1261   .text:000005c8 $t
+     /tmp/ccVlC7fo.s:1477   .text:000006f4 $d
+     /tmp/ccVlC7fo.s:1509   .text:00000738 link_down
+     /tmp/ccVlC7fo.s:1506   .text:00000738 $t
+     /tmp/ccVlC7fo.s:1631   .text:000007e8 $d
+     /tmp/ccVlC7fo.s:1655   .text:0000080c link_terminated
+     /tmp/ccVlC7fo.s:1652   .text:0000080c $t
+     /tmp/ccVlC7fo.s:1710   .text:00000850 $d
+     /tmp/ccVlC7fo.s:1723   .bss:00000104 logged_in
+     /tmp/ccVlC7fo.s:5858   .text:00000860 $t
+
+UNDEFINED SYMBOLS
+ppp_trace
+strcmp
+strlen
+memcpy
+ppp_settings
+ntohl
+lcp_gotoptions
+lcp_allowoptions
+lcp_close
+lcp_phase
+ppp_protocols
+sys_untimeout
+get_idle_time
+sys_timeout
+memset
+pppIOCtl
+ChapAuthPeer
+upap_authpeer
+ChapAuthWithPeer
+upap_authwithpeer
+lcp_hisoptions
+pppLinkDown
+pppLinkTerminated

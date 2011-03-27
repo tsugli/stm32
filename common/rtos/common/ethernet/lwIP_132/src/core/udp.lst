@@ -1,0 +1,1966 @@
+   1              		.code	16
+   2              		.file	"udp.c"
+  10              	.Ltext0:
+  11              		.align	2
+  12              		.global	udp_bind
+  13              		.code	16
+  14              		.thumb_func
+  16              	udp_bind:
+  17              	.LFB6:
+  18              		.file 1 "rtos/common/ethernet/lwIP_132/src/core/udp.c"
+   1:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+   2:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @file
+   3:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * User Datagram Protocol module
+   4:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+   5:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+   6:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+   7:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /*
+   8:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+   9:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * All rights reserved.
+  10:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  11:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Redistribution and use in source and binary forms, with or without modification,
+  12:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * are permitted provided that the following conditions are met:
+  13:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  14:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * 1. Redistributions of source code must retain the above copyright notice,
+  15:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *    this list of conditions and the following disclaimer.
+  16:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * 2. Redistributions in binary form must reproduce the above copyright notice,
+  17:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *    this list of conditions and the following disclaimer in the documentation
+  18:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *    and/or other materials provided with the distribution.
+  19:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * 3. The name of the author may not be used to endorse or promote products
+  20:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *    derived from this software without specific prior written permission.
+  21:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  22:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  23:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+  24:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+  25:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+  26:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+  27:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+  30:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+  31:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * OF SUCH DAMAGE.
+  32:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  33:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * This file is part of the lwIP TCP/IP stack.
+  34:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  35:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Author: Adam Dunkels <adam@sics.se>
+  36:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  37:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+  38:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  39:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  40:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /* udp.c
+  41:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  42:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * The code for the User Datagram Protocol UDP & UDPLite (RFC 3828).
+  43:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  44:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+  45:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  46:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /* @todo Check the use of '(struct udp_pcb).chksum_len_rx'!
+  47:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+  48:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  49:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/opt.h"
+  50:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  51:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_UDP /* don't build if not configured for use in lwipopts.h */
+  52:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  53:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/udp.h"
+  54:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/def.h"
+  55:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/memp.h"
+  56:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/inet.h"
+  57:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/inet_chksum.h"
+  58:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/ip_addr.h"
+  59:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/netif.h"
+  60:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/icmp.h"
+  61:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/stats.h"
+  62:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/snmp.h"
+  63:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "arch/perf.h"
+  64:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include "lwip/dhcp.h"
+  65:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  66:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #include <string.h>
+  67:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  68:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /* The list of UDP PCBs */
+  69:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /* exported in udp.h (was static) */
+  70:rtos/common/ethernet/lwIP_132/src/core/udp.c **** struct udp_pcb *udp_pcbs;
+  71:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  72:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+  73:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Process an incoming UDP datagram.
+  74:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  75:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Given an incoming UDP datagram (as a chain of pbufs) this function
+  76:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * finds a corresponding UDP PCB and hands over the pbuf to the pcbs
+  77:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * recv function. If no pcb is found or the datagram is incorrect, the
+  78:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * pbuf is freed.
+  79:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  80:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param p pbuf to be demultiplexed to a UDP PCB.
+  81:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param inp network interface on which the datagram was received.
+  82:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+  83:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+  84:rtos/common/ethernet/lwIP_132/src/core/udp.c **** void
+  85:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_input(struct pbuf *p, struct netif *inp)
+  86:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+  87:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_hdr *udphdr;
+  88:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *pcb, *prev;
+  89:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *uncon_pcb;
+  90:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct ip_hdr *iphdr;
+  91:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   u16_t src, dest;
+  92:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   u8_t local_match;
+  93:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   u8_t broadcast;
+  94:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  95:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   PERF_START;
+  96:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  97:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   UDP_STATS_INC(udp.recv);
+  98:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+  99:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   iphdr = p->payload;
+ 100:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 101:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* Check minimum length (IP header + UDP header)
+ 102:rtos/common/ethernet/lwIP_132/src/core/udp.c ****    * and move payload pointer to UDP header */
+ 103:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (p->tot_len < (IPH_HL(iphdr) * 4 + UDP_HLEN) || pbuf_header(p, -(s16_t)(IPH_HL(iphdr) * 4))) {
+ 104:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* drop short packets */
+ 105:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG,
+ 106:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                 ("udp_input: short UDP datagram (%"U16_F" bytes) discarded\n", p->tot_len));
+ 107:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     UDP_STATS_INC(udp.lenerr);
+ 108:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     UDP_STATS_INC(udp.drop);
+ 109:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     snmp_inc_udpinerrors();
+ 110:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pbuf_free(p);
+ 111:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     goto end;
+ 112:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 113:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 114:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udphdr = (struct udp_hdr *)p->payload;
+ 115:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 116:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* is broadcast packet ? */
+ 117:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   broadcast = ip_addr_isbroadcast(&(iphdr->dest), inp);
+ 118:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 119:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG, ("udp_input: received datagram of length %"U16_F"\n", p->tot_len));
+ 120:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 121:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* convert src and dest ports to host byte order */
+ 122:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   src = ntohs(udphdr->src);
+ 123:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   dest = ntohs(udphdr->dest);
+ 124:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 125:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udp_debug_print(udphdr);
+ 126:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 127:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* print the UDP source and destination */
+ 128:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG,
+ 129:rtos/common/ethernet/lwIP_132/src/core/udp.c ****               ("udp (%"U16_F".%"U16_F".%"U16_F".%"U16_F", %"U16_F") <-- "
+ 130:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                "(%"U16_F".%"U16_F".%"U16_F".%"U16_F", %"U16_F")\n",
+ 131:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                ip4_addr1(&iphdr->dest), ip4_addr2(&iphdr->dest),
+ 132:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                ip4_addr3(&iphdr->dest), ip4_addr4(&iphdr->dest), ntohs(udphdr->dest),
+ 133:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                ip4_addr1(&iphdr->src), ip4_addr2(&iphdr->src),
+ 134:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                ip4_addr3(&iphdr->src), ip4_addr4(&iphdr->src), ntohs(udphdr->src)));
+ 135:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 136:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_DHCP
+ 137:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb = NULL;
+ 138:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* when LWIP_DHCP is active, packets to DHCP_CLIENT_PORT may only be processed by
+ 139:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      the dhcp module, no other UDP pcb may use the local UDP port DHCP_CLIENT_PORT */
+ 140:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (dest == DHCP_CLIENT_PORT) {
+ 141:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* all packets for DHCP_CLIENT_PORT not coming from DHCP_SERVER_PORT are dropped! */
+ 142:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (src == DHCP_SERVER_PORT) {
+ 143:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if ((inp->dhcp != NULL) && (inp->dhcp->pcb != NULL)) {
+ 144:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* accept the packe if 
+ 145:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            (- broadcast or directed to us) -> DHCP is link-layer-addressed, local ip is always ANY!
+ 146:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            - inp->dhcp->pcb->remote == ANY or iphdr->src */
+ 147:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         if ((ip_addr_isany(&inp->dhcp->pcb->remote_ip) ||
+ 148:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_cmp(&(inp->dhcp->pcb->remote_ip), &(iphdr->src)))) {
+ 149:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           pcb = inp->dhcp->pcb;
+ 150:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         }
+ 151:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 152:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 153:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else
+ 154:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_DHCP */
+ 155:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   {
+ 156:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     prev = NULL;
+ 157:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     local_match = 0;
+ 158:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     uncon_pcb = NULL;
+ 159:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* Iterate through the UDP pcb list for a matching pcb.
+ 160:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * 'Perfect match' pcbs (connected to the remote port & ip address) are
+ 161:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * preferred. If no perfect match is found, the first unconnected pcb that
+ 162:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * matches the local port and ip address gets the datagram. */
+ 163:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     for (pcb = udp_pcbs; pcb != NULL; pcb = pcb->next) {
+ 164:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       local_match = 0;
+ 165:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* print the PCB local and remote address */
+ 166:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG,
+ 167:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                   ("pcb (%"U16_F".%"U16_F".%"U16_F".%"U16_F", %"U16_F") --- "
+ 168:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    "(%"U16_F".%"U16_F".%"U16_F".%"U16_F", %"U16_F")\n",
+ 169:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    ip4_addr1(&pcb->local_ip), ip4_addr2(&pcb->local_ip),
+ 170:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    ip4_addr3(&pcb->local_ip), ip4_addr4(&pcb->local_ip), pcb->local_port,
+ 171:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    ip4_addr1(&pcb->remote_ip), ip4_addr2(&pcb->remote_ip),
+ 172:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    ip4_addr3(&pcb->remote_ip), ip4_addr4(&pcb->remote_ip), pcb->remote_port));
+ 173:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 174:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* compare PCB local addr+port to UDP destination addr+port */
+ 175:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if ((pcb->local_port == dest) &&
+ 176:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           ((!broadcast && ip_addr_isany(&pcb->local_ip)) ||
+ 177:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_cmp(&(pcb->local_ip), &(iphdr->dest)) ||
+ 178:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_IGMP
+ 179:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_ismulticast(&(iphdr->dest)) ||
+ 180:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_IGMP */
+ 181:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if IP_SOF_BROADCAST_RECV
+ 182:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            (broadcast && (pcb->so_options & SOF_BROADCAST)))) {
+ 183:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #else  /* IP_SOF_BROADCAST_RECV */
+ 184:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            (broadcast))) {
+ 185:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* IP_SOF_BROADCAST_RECV */
+ 186:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         local_match = 1;
+ 187:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         if ((uncon_pcb == NULL) && 
+ 188:rtos/common/ethernet/lwIP_132/src/core/udp.c ****             ((pcb->flags & UDP_FLAGS_CONNECTED) == 0)) {
+ 189:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           /* the first unconnected matching PCB */
+ 190:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           uncon_pcb = pcb;
+ 191:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         }
+ 192:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 193:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* compare PCB remote addr+port to UDP source addr+port */
+ 194:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if ((local_match != 0) &&
+ 195:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           (pcb->remote_port == src) &&
+ 196:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           (ip_addr_isany(&pcb->remote_ip) ||
+ 197:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_cmp(&(pcb->remote_ip), &(iphdr->src)))) {
+ 198:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* the first fully matching PCB */
+ 199:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         if (prev != NULL) {
+ 200:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           /* move the pcb to the front of udp_pcbs so that is
+ 201:rtos/common/ethernet/lwIP_132/src/core/udp.c ****              found faster next time */
+ 202:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           prev->next = pcb->next;
+ 203:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           pcb->next = udp_pcbs;
+ 204:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           udp_pcbs = pcb;
+ 205:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         } else {
+ 206:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           UDP_STATS_INC(udp.cachehit);
+ 207:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         }
+ 208:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         break;
+ 209:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 210:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       prev = pcb;
+ 211:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 212:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* no fully matching pcb found? then look for an unconnected pcb */
+ 213:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (pcb == NULL) {
+ 214:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       pcb = uncon_pcb;
+ 215:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 216:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 217:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 218:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* Check checksum if this is a match or if it was directed at us. */
+ 219:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pcb != NULL || ip_addr_cmp(&inp->ip_addr, &iphdr->dest)) {
+ 220:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_input: calculating checksum\n"));
+ 221:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_UDPLITE
+ 222:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (IPH_PROTO(iphdr) == IP_PROTO_UDPLITE) {
+ 223:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* Do the UDP Lite checksum */
+ 224:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if CHECKSUM_CHECK_UDP
+ 225:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       u16_t chklen = ntohs(udphdr->len);
+ 226:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (chklen < sizeof(struct udp_hdr)) {
+ 227:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         if (chklen == 0) {
+ 228:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           /* For UDP-Lite, checksum length of 0 means checksum
+ 229:rtos/common/ethernet/lwIP_132/src/core/udp.c ****              over the complete packet (See RFC 3828 chap. 3.1) */
+ 230:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           chklen = p->tot_len;
+ 231:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         } else {
+ 232:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           /* At least the UDP-Lite header must be covered by the
+ 233:rtos/common/ethernet/lwIP_132/src/core/udp.c ****              checksum! (Again, see RFC 3828 chap. 3.1) */
+ 234:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           UDP_STATS_INC(udp.chkerr);
+ 235:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           UDP_STATS_INC(udp.drop);
+ 236:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           snmp_inc_udpinerrors();
+ 237:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           pbuf_free(p);
+ 238:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           goto end;
+ 239:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         }
+ 240:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 241:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (inet_chksum_pseudo_partial(p, (struct ip_addr *)&(iphdr->src),
+ 242:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                              (struct ip_addr *)&(iphdr->dest),
+ 243:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                              IP_PROTO_UDPLITE, p->tot_len, chklen) != 0) {
+ 244:rtos/common/ethernet/lwIP_132/src/core/udp.c ****        LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 245:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                    ("udp_input: UDP Lite datagram discarded due to failing checksum\n"));
+ 246:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         UDP_STATS_INC(udp.chkerr);
+ 247:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         UDP_STATS_INC(udp.drop);
+ 248:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         snmp_inc_udpinerrors();
+ 249:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pbuf_free(p);
+ 250:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         goto end;
+ 251:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 252:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* CHECKSUM_CHECK_UDP */
+ 253:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     } else
+ 254:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_UDPLITE */
+ 255:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     {
+ 256:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if CHECKSUM_CHECK_UDP
+ 257:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (udphdr->chksum != 0) {
+ 258:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         if (inet_chksum_pseudo(p, (struct ip_addr *)&(iphdr->src),
+ 259:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                                (struct ip_addr *)&(iphdr->dest),
+ 260:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                                IP_PROTO_UDP, p->tot_len) != 0) {
+ 261:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 262:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                       ("udp_input: UDP datagram discarded due to failing checksum\n"));
+ 263:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           UDP_STATS_INC(udp.chkerr);
+ 264:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           UDP_STATS_INC(udp.drop);
+ 265:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           snmp_inc_udpinerrors();
+ 266:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           pbuf_free(p);
+ 267:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           goto end;
+ 268:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         }
+ 269:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 270:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* CHECKSUM_CHECK_UDP */
+ 271:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 272:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if(pbuf_header(p, -UDP_HLEN)) {
+ 273:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* Can we cope with this failing? Just assert for now */
+ 274:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_ASSERT("pbuf_header failed\n", 0);
+ 275:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       UDP_STATS_INC(udp.drop);
+ 276:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       snmp_inc_udpinerrors();
+ 277:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       pbuf_free(p);
+ 278:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       goto end;
+ 279:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 280:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (pcb != NULL) {
+ 281:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       snmp_inc_udpindatagrams();
+ 282:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* callback */
+ 283:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (pcb->recv != NULL) {
+ 284:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* now the recv function is responsible for freeing p */
+ 285:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pcb->recv(pcb->recv_arg, pcb, p, &iphdr->src, src);
+ 286:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       } else {
+ 287:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* no recv function registered? then we have to free the pbuf! */
+ 288:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pbuf_free(p);
+ 289:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         goto end;
+ 290:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 291:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     } else {
+ 292:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_input: not for us.\n"));
+ 293:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 294:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_ICMP
+ 295:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* No match was found, send ICMP destination port unreachable unless
+ 296:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          destination address was broadcast/multicast. */
+ 297:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (!broadcast &&
+ 298:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           !ip_addr_ismulticast(&iphdr->dest)) {
+ 299:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* move payload pointer back to ip header */
+ 300:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pbuf_header(p, (IPH_HL(iphdr) * 4) + UDP_HLEN);
+ 301:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         LWIP_ASSERT("p->payload == iphdr", (p->payload == iphdr));
+ 302:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         icmp_dest_unreach(p, ICMP_DUR_PORT);
+ 303:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 304:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_ICMP */
+ 305:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       UDP_STATS_INC(udp.proterr);
+ 306:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       UDP_STATS_INC(udp.drop);
+ 307:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       snmp_inc_udpnoports();
+ 308:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       pbuf_free(p);
+ 309:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 310:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else {
+ 311:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pbuf_free(p);
+ 312:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 313:rtos/common/ethernet/lwIP_132/src/core/udp.c **** end:
+ 314:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   PERF_STOP("udp_input");
+ 315:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 316:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 317:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 318:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Send data using UDP.
+ 319:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 320:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB used to send the data.
+ 321:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param p chain of pbuf's to be sent.
+ 322:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 323:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * The datagram will be sent to the current remote_ip & remote_port
+ 324:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * stored in pcb. If the pcb is not bound to a port, it will
+ 325:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * automatically be bound to a random port.
+ 326:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 327:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return lwIP error code.
+ 328:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - ERR_OK. Successful. No error occured.
+ 329:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - ERR_MEM. Out of memory.
+ 330:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - ERR_RTE. Could not find route to destination address.
+ 331:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - More errors could be returned by lower protocol layers.
+ 332:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 333:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_disconnect() udp_sendto()
+ 334:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 335:rtos/common/ethernet/lwIP_132/src/core/udp.c **** err_t
+ 336:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_send(struct udp_pcb *pcb, struct pbuf *p)
+ 337:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 338:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* send to the packet using remote ip and port stored in the pcb */
+ 339:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return udp_sendto(pcb, p, &pcb->remote_ip, pcb->remote_port);
+ 340:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 341:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 342:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 343:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Send data to a specified address using UDP.
+ 344:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 345:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB used to send the data.
+ 346:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param p chain of pbuf's to be sent.
+ 347:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param dst_ip Destination IP address.
+ 348:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param dst_port Destination UDP port.
+ 349:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 350:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * dst_ip & dst_port are expected to be in the same byte order as in the pcb.
+ 351:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 352:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * If the PCB already has a remote address association, it will
+ 353:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * be restored after the data is sent.
+ 354:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * 
+ 355:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return lwIP error code (@see udp_send for possible error codes)
+ 356:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 357:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_disconnect() udp_send()
+ 358:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 359:rtos/common/ethernet/lwIP_132/src/core/udp.c **** err_t
+ 360:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_sendto(struct udp_pcb *pcb, struct pbuf *p,
+ 361:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct ip_addr *dst_ip, u16_t dst_port)
+ 362:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 363:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct netif *netif;
+ 364:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 365:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_send\n"));
+ 366:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 367:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* find the outgoing network interface for this packet */
+ 368:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_IGMP
+ 369:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   netif = ip_route((ip_addr_ismulticast(dst_ip))?(&(pcb->multicast_ip)):(dst_ip));
+ 370:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #else
+ 371:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   netif = ip_route(dst_ip);
+ 372:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_IGMP */
+ 373:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 374:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* no outgoing network interface could be found? */
+ 375:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (netif == NULL) {
+ 376:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("udp_send: No route to 0x%"X32_F"\n", dst_ip->
+ 377:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     UDP_STATS_INC(udp.rterr);
+ 378:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     return ERR_RTE;
+ 379:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 380:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return udp_sendto_if(pcb, p, dst_ip, dst_port, netif);
+ 381:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 382:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 383:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 384:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Send data to a specified address using UDP.
+ 385:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * The netif used for sending can be specified.
+ 386:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 387:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * This function exists mainly for DHCP, to be able to send UDP packets
+ 388:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * on a netif that is still down.
+ 389:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 390:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB used to send the data.
+ 391:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param p chain of pbuf's to be sent.
+ 392:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param dst_ip Destination IP address.
+ 393:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param dst_port Destination UDP port.
+ 394:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param netif the netif used for sending.
+ 395:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 396:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * dst_ip & dst_port are expected to be in the same byte order as in the pcb.
+ 397:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 398:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return lwIP error code (@see udp_send for possible error codes)
+ 399:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 400:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_disconnect() udp_send()
+ 401:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 402:rtos/common/ethernet/lwIP_132/src/core/udp.c **** err_t
+ 403:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_sendto_if(struct udp_pcb *pcb, struct pbuf *p,
+ 404:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct ip_addr *dst_ip, u16_t dst_port, struct netif *netif)
+ 405:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 406:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_hdr *udphdr;
+ 407:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct ip_addr *src_ip;
+ 408:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   err_t err;
+ 409:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct pbuf *q; /* q will be sent down the stack */
+ 410:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 411:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if IP_SOF_BROADCAST
+ 412:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* broadcast filter? */
+ 413:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if ( ((pcb->so_options & SOF_BROADCAST) == 0) && ip_addr_isbroadcast(dst_ip, netif) ) {
+ 414:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
+ 415:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       ("udp_sendto_if: SOF_BROADCAST not enabled on pcb %p\n", (void *)pcb));
+ 416:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     return ERR_VAL;
+ 417:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 418:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* IP_SOF_BROADCAST */
+ 419:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 420:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* if the PCB is not yet bound to a port, bind it here */
+ 421:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pcb->local_port == 0) {
+ 422:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_send: not yet bound to a port, binding now\n"));
+ 423:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
+ 424:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (err != ERR_OK) {
+ 425:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("udp_send: forced port bind
+ 426:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return err;
+ 427:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 428:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 429:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 430:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* not enough space to add an UDP header to first pbuf in given p chain? */
+ 431:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pbuf_header(p, UDP_HLEN)) {
+ 432:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* allocate header in a separate new pbuf */
+ 433:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     q = pbuf_alloc(PBUF_IP, UDP_HLEN, PBUF_RAM);
+ 434:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* new header pbuf could not be allocated? */
+ 435:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (q == NULL) {
+ 436:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("udp_send: could not alloca
+ 437:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return ERR_MEM;
+ 438:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 439:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* chain header q in front of given pbuf p */
+ 440:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pbuf_chain(q, p);
+ 441:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* first pbuf q points to header pbuf */
+ 442:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG,
+ 443:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                 ("udp_send: added header pbuf %p before given pbuf %p\n", (void *)q, (void *)p));
+ 444:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else {
+ 445:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* adding space for header within p succeeded */
+ 446:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* first pbuf q equals given pbuf */
+ 447:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     q = p;
+ 448:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: added header in given pbuf %p\n", (void *)p));
+ 449:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 450:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_ASSERT("check that first pbuf can hold struct udp_hdr",
+ 451:rtos/common/ethernet/lwIP_132/src/core/udp.c ****               (q->len >= sizeof(struct udp_hdr)));
+ 452:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* q now represents the packet to be sent */
+ 453:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udphdr = q->payload;
+ 454:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udphdr->src = htons(pcb->local_port);
+ 455:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udphdr->dest = htons(dst_port);
+ 456:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* in UDP, 0 checksum means 'no checksum' */
+ 457:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udphdr->chksum = 0x0000; 
+ 458:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 459:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* PCB local address is IP_ANY_ADDR? */
+ 460:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (ip_addr_isany(&pcb->local_ip)) {
+ 461:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* use outgoing network interface IP address as source address */
+ 462:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     src_ip = &(netif->ip_addr);
+ 463:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else {
+ 464:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* check if UDP PCB local IP address is correct
+ 465:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * this could be an old address if netif->ip_addr has changed */
+ 466:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (!ip_addr_cmp(&(pcb->local_ip), &(netif->ip_addr))) {
+ 467:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* local_ip doesn't match, drop the packet */
+ 468:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (q != p) {
+ 469:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* free the header pbuf */
+ 470:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pbuf_free(q);
+ 471:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         q = NULL;
+ 472:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* p is still referenced by the caller, and will live on */
+ 473:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 474:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return ERR_VAL;
+ 475:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 476:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* use UDP PCB local IP address as source address */
+ 477:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     src_ip = &(pcb->local_ip);
+ 478:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 479:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 480:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG, ("udp_send: sending datagram of length %"U16_F"\n", q->tot_len));
+ 481:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 482:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_UDPLITE
+ 483:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* UDP Lite protocol? */
+ 484:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pcb->flags & UDP_FLAGS_UDPLITE) {
+ 485:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     u16_t chklen, chklen_hdr;
+ 486:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP LITE packet length %"U16_F"\n", q->tot_len));
+ 487:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* set UDP message length in UDP header */
+ 488:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     chklen_hdr = chklen = pcb->chksum_len_tx;
+ 489:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if ((chklen < sizeof(struct udp_hdr)) || (chklen > q->tot_len)) {
+ 490:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (chklen != 0) {
+ 491:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP LITE pcb->chksum_len is illegal: %"U16_F"\n", chklen
+ 492:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 493:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* For UDP-Lite, checksum length of 0 means checksum
+ 494:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          over the complete packet. (See RFC 3828 chap. 3.1)
+ 495:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          At least the UDP-Lite header must be covered by the
+ 496:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          checksum, therefore, if chksum_len has an illegal
+ 497:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          value, we generate the checksum over the complete
+ 498:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          packet to be safe. */
+ 499:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       chklen_hdr = 0;
+ 500:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       chklen = q->tot_len;
+ 501:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 502:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     udphdr->len = htons(chklen_hdr);
+ 503:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* calculate checksum */
+ 504:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if CHECKSUM_GEN_UDP
+ 505:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     udphdr->chksum = inet_chksum_pseudo_partial(q, src_ip, dst_ip,
+ 506:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                                         IP_PROTO_UDPLITE, q->tot_len, chklen);
+ 507:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* chksum zero must become 0xffff, as zero means 'no checksum' */
+ 508:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (udphdr->chksum == 0x0000)
+ 509:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       udphdr->chksum = 0xffff;
+ 510:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* CHECKSUM_CHECK_UDP */
+ 511:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* output to IP */
+ 512:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: ip_output_if (,,,,IP_PROTO_UDPLITE,)\n"));
+ 513:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_NETIF_HWADDRHINT
+ 514:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     netif->addr_hint = &(pcb->addr_hint);
+ 515:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 516:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     err = ip_output_if(q, src_ip, dst_ip, pcb->ttl, pcb->tos, IP_PROTO_UDPLITE, netif);
+ 517:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_NETIF_HWADDRHINT
+ 518:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     netif->addr_hint = NULL;
+ 519:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 520:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else
+ 521:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_UDPLITE */
+ 522:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   {      /* UDP */
+ 523:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP packet length %"U16_F"\n", q->tot_len));
+ 524:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     udphdr->len = htons(q->tot_len);
+ 525:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* calculate checksum */
+ 526:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if CHECKSUM_GEN_UDP
+ 527:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if ((pcb->flags & UDP_FLAGS_NOCHKSUM) == 0) {
+ 528:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       udphdr->chksum = inet_chksum_pseudo(q, src_ip, dst_ip, IP_PROTO_UDP, q->tot_len);
+ 529:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* chksum zero must become 0xffff, as zero means 'no checksum' */
+ 530:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (udphdr->chksum == 0x0000) udphdr->chksum = 0xffff;
+ 531:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 532:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* CHECKSUM_CHECK_UDP */
+ 533:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP checksum 0x%04"X16_F"\n", udphdr->chksum));
+ 534:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     LWIP_DEBUGF(UDP_DEBUG, ("udp_send: ip_output_if (,,,,IP_PROTO_UDP,)\n"));
+ 535:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* output to IP */
+ 536:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_NETIF_HWADDRHINT
+ 537:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     netif->addr_hint = &(pcb->addr_hint);
+ 538:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 539:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     err = ip_output_if(q, src_ip, dst_ip, pcb->ttl, pcb->tos, IP_PROTO_UDP, netif);
+ 540:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #if LWIP_NETIF_HWADDRHINT
+ 541:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     netif->addr_hint = NULL;
+ 542:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif /* LWIP_NETIF_HWADDRHINT*/
+ 543:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 544:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* TODO: must this be increased even if error occured? */
+ 545:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   snmp_inc_udpoutdatagrams();
+ 546:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 547:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* did we chain a separate header pbuf earlier? */
+ 548:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (q != p) {
+ 549:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* free the header pbuf */
+ 550:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pbuf_free(q);
+ 551:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     q = NULL;
+ 552:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* p is still referenced by the caller, and will live on */
+ 553:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 554:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 555:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   UDP_STATS_INC(udp.xmit);
+ 556:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return err;
+ 557:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 558:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 559:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 560:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Bind an UDP PCB.
+ 561:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 562:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB to be bound with a local address ipaddr and port.
+ 563:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param ipaddr local IP address to bind with. Use IP_ADDR_ANY to
+ 564:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * bind to all local interfaces.
+ 565:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param port local UDP port to bind with. Use 0 to automatically bind
+ 566:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * to a random port between UDP_LOCAL_PORT_RANGE_START and
+ 567:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * UDP_LOCAL_PORT_RANGE_END.
+ 568:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 569:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * ipaddr & port are expected to be in the same byte order as in the pcb.
+ 570:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 571:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return lwIP error code.
+ 572:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - ERR_OK. Successful. No error occured.
+ 573:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * - ERR_USE. The specified ipaddr and port are already bound to by
+ 574:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * another UDP PCB.
+ 575:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 576:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_disconnect()
+ 577:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 578:rtos/common/ethernet/lwIP_132/src/core/udp.c **** err_t
+ 579:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_bind(struct udp_pcb *pcb, struct ip_addr *ipaddr, u16_t port)
+ 580:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+  19              		.loc 1 580 0
+  20 0000 70B5     		push	{r4, r5, r6, lr}
+  21              	.LCFI0:
+  22              	.LVL0:
+  23 0002 0D1C     		mov	r5, r1
+  24 0004 1204     		lsl	r2, r2, #16
+  25              	.LVL1:
+  26 0006 120C     		lsr	r2, r2, #16
+  27              	.LVL2:
+ 581:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *ipcb;
+ 582:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   u8_t rebind;
+ 583:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 584:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_bind(ipaddr = "));
+ 585:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   ip_addr_debug_print(UDP_DEBUG, ipaddr);
+ 586:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, (", port = %"U16_F")\n", port));
+ 587:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 588:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   rebind = 0;
+ 589:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* Check for double bind and rebind of the same pcb */
+ 590:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   for (ipcb = udp_pcbs; ipcb != NULL; ipcb = ipcb->next) {
+  28              		.loc 1 590 0
+  29 0008 204B     		ldr	r3, .L19
+  30 000a 1B68     		ldr	r3, [r3]
+  31              	.LVL3:
+  32 000c 002B     		cmp	r3, #0
+  33 000e 01D1     		bne	.L2
+  34              	.LVL4:
+  35 0010 0024     		mov	r4, #0
+  36              	.LVL5:
+  37 0012 07E0     		b	.L3
+  38              	.LVL6:
+  39              	.L2:
+  40 0014 0024     		mov	r4, #0
+  41              	.LVL7:
+ 591:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* is this UDP PCB already on active list? */
+ 592:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (pcb == ipcb) {
+  42              		.loc 1 592 0
+  43 0016 0121     		mov	r1, #1
+  44              	.LVL8:
+  45              	.L5:
+  46 0018 9842     		cmp	r0, r3
+  47 001a 00D1     		bne	.L4
+  48 001c 0C1C     		mov	r4, r1
+  49              	.L4:
+  50              		.loc 1 590 0
+  51 001e DB68     		ldr	r3, [r3, #12]
+  52 0020 002B     		cmp	r3, #0
+  53 0022 F9D1     		bne	.L5
+  54              	.LVL9:
+  55              	.L3:
+ 593:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* pcb may occur at most once in active list */
+ 594:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_ASSERT("rebind == 0", rebind == 0);
+ 595:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* pcb already in list, just rebind */
+ 596:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       rebind = 1;
+ 597:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 598:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 599:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* this code does not allow upper layer to share a UDP port for
+ 600:rtos/common/ethernet/lwIP_132/src/core/udp.c ****        listening to broadcast or multicast traffic (See SO_REUSE_ADDR and
+ 601:rtos/common/ethernet/lwIP_132/src/core/udp.c ****        SO_REUSE_PORT under *BSD). TODO: See where it fits instead, OR
+ 602:rtos/common/ethernet/lwIP_132/src/core/udp.c ****        combine with implementation of UDP PCB flags. Leon Woestenberg. */
+ 603:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #ifdef LWIP_UDP_TODO
+ 604:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* port matches that of PCB in list? */
+ 605:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     else
+ 606:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if ((ipcb->local_port == port) &&
+ 607:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           /* IP address matches, or one is IP_ADDR_ANY? */
+ 608:rtos/common/ethernet/lwIP_132/src/core/udp.c ****           (ip_addr_isany(&(ipcb->local_ip)) ||
+ 609:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_isany(ipaddr) ||
+ 610:rtos/common/ethernet/lwIP_132/src/core/udp.c ****            ip_addr_cmp(&(ipcb->local_ip), ipaddr))) {
+ 611:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* other PCB already binds to this local IP and port */
+ 612:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         LWIP_DEBUGF(UDP_DEBUG,
+ 613:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                     ("udp_bind: local port %"U16_F" already bound by another pcb\n", port));
+ 614:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         return ERR_USE;
+ 615:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 616:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif
+ 617:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 618:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 619:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   ip_addr_set(&pcb->local_ip, ipaddr);
+  56              		.loc 1 619 0
+  57 0024 002D     		cmp	r5, #0
+  58 0026 01D1     		bne	.L6
+  59 0028 0021     		mov	r1, #0
+  60 002a 00E0     		b	.L7
+  61              	.LVL10:
+  62              	.L6:
+  63 002c 2968     		ldr	r1, [r5]
+  64              	.L7:
+  65 002e 0160     		str	r1, [r0]
+ 620:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 621:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* no port specified? */
+ 622:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (port == 0) {
+  66              		.loc 1 622 0
+  67 0030 002A     		cmp	r2, #0
+  68 0032 1BD1     		bne	.L8
+ 623:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #ifndef UDP_LOCAL_PORT_RANGE_START
+ 624:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #define UDP_LOCAL_PORT_RANGE_START 4096
+ 625:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #define UDP_LOCAL_PORT_RANGE_END   0x7fff
+ 626:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif
+ 627:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     port = UDP_LOCAL_PORT_RANGE_START;
+ 628:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     ipcb = udp_pcbs;
+  69              		.loc 1 628 0
+  70 0034 154B     		ldr	r3, .L19
+  71              	.LVL11:
+  72 0036 1B68     		ldr	r3, [r3]
+  73              	.LVL12:
+  74 0038 191C     		mov	r1, r3
+  75 003a 8022     		mov	r2, #128
+  76              	.LVL13:
+  77 003c 5201     		lsl	r2, r2, #5
+  78              	.LVL14:
+ 629:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     while ((ipcb != NULL) && (port != UDP_LOCAL_PORT_RANGE_END)) {
+  79              		.loc 1 629 0
+  80 003e 144D     		ldr	r5, .L19+4
+  81              	.LVL15:
+ 630:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (ipcb->local_port == port) {
+ 631:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* port is already used by another udp_pcb */
+ 632:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         port++;
+  82              		.loc 1 632 0
+  83 0040 9C46     		mov	ip, r3
+  84 0042 08E0     		b	.L18
+  85              	.LVL16:
+  86              	.L11:
+  87              		.loc 1 630 0
+  88 0044 4B8A     		ldrh	r3, [r1, #18]
+  89 0046 9342     		cmp	r3, r2
+  90 0048 04D1     		bne	.L10
+  91              		.loc 1 632 0
+  92 004a 0133     		add	r3, r3, #1
+  93 004c 1B04     		lsl	r3, r3, #16
+  94 004e 1A0C     		lsr	r2, r3, #16
+  95              	.LVL17:
+  96 0050 6146     		mov	r1, ip
+  97 0052 00E0     		b	.L18
+  98              	.L10:
+ 633:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* restart scanning all udp pcbs */
+ 634:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         ipcb = udp_pcbs;
+ 635:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       } else
+ 636:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* go on with next udp pcb */
+ 637:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         ipcb = ipcb->next;
+  99              		.loc 1 637 0
+ 100 0054 C968     		ldr	r1, [r1, #12]
+ 101              	.LVL18:
+ 102              	.L18:
+ 103              		.loc 1 629 0
+ 104 0056 0B1C     		mov	r3, r1
+ 105 0058 5E1E     		sub	r6, r3, #1
+ 106 005a B341     		sbc	r3, r3, r6
+ 107 005c 002B     		cmp	r3, #0
+ 108 005e 01D0     		beq	.L16
+ 109 0060 AA42     		cmp	r2, r5
+ 110 0062 EFD1     		bne	.L11
+ 111              	.L16:
+ 638:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 639:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (ipcb != NULL) {
+ 112              		.loc 1 639 0
+ 113 0064 002B     		cmp	r3, #0
+ 114 0066 01D0     		beq	.L8
+ 115 0068 F520     		mov	r0, #245
+ 116              	.LVL19:
+ 117 006a 09E0     		b	.L13
+ 118              	.LVL20:
+ 119              	.L8:
+ 640:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* no more ports available in local range */
+ 641:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG, ("udp_bind: out of free UDP ports\n"));
+ 642:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return ERR_USE;
+ 643:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 644:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 645:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->local_port = port;
+ 120              		.loc 1 645 0
+ 121 006c 4282     		strh	r2, [r0, #18]
+ 646:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   snmp_insert_udpidx_tree(pcb);
+ 647:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* pcb not active yet? */
+ 648:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (rebind == 0) {
+ 122              		.loc 1 648 0
+ 123 006e 002C     		cmp	r4, #0
+ 124 0070 01D0     		beq	.L14
+ 125 0072 0020     		mov	r0, #0
+ 126              	.LVL21:
+ 127 0074 04E0     		b	.L13
+ 128              	.LVL22:
+ 129              	.L14:
+ 649:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* place the PCB on the active list if not already there */
+ 650:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pcb->next = udp_pcbs;
+ 130              		.loc 1 650 0
+ 131 0076 054A     		ldr	r2, .L19
+ 132              	.LVL23:
+ 133 0078 1368     		ldr	r3, [r2]
+ 134              	.LVL24:
+ 135 007a C360     		str	r3, [r0, #12]
+ 651:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     udp_pcbs = pcb;
+ 136              		.loc 1 651 0
+ 137 007c 1060     		str	r0, [r2]
+ 138 007e 0020     		mov	r0, #0
+ 139              	.LVL25:
+ 140              	.L13:
+ 141 0080 0006     		lsl	r0, r0, #24
+ 142 0082 0016     		asr	r0, r0, #24
+ 652:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 653:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE,
+ 654:rtos/common/ethernet/lwIP_132/src/core/udp.c ****               ("udp_bind: bound to %"U16_F".%"U16_F".%"U16_F".%"U16_F", port %"U16_F"\n",
+ 655:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->local_ip.addr) >> 24) & 0xff),
+ 656:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->local_ip.addr) >> 16) & 0xff),
+ 657:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->local_ip.addr) >> 8) & 0xff),
+ 658:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)(ntohl(pcb->local_ip.addr) & 0xff), pcb->local_port));
+ 659:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return ERR_OK;
+ 660:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 143              		.loc 1 660 0
+ 144              		@ sp needed for prologue
+ 145              	.LVL26:
+ 146              	.LVL27:
+ 147 0084 70BC     		pop	{r4, r5, r6}
+ 148 0086 02BC     		pop	{r1}
+ 149 0088 0847     		bx	r1
+ 150              	.L20:
+ 151 008a C046     		.align	2
+ 152              	.L19:
+ 153 008c 00000000 		.word	udp_pcbs
+ 154 0090 FF7F0000 		.word	32767
+ 155              	.LFE6:
+ 157              		.align	2
+ 158              		.global	udp_connect
+ 159              		.code	16
+ 160              		.thumb_func
+ 162              	udp_connect:
+ 163              	.LFB7:
+ 661:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 662:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Connect an UDP PCB.
+ 663:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 664:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * This will associate the UDP PCB with the remote address.
+ 665:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 666:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB to be connected with remote address ipaddr and port.
+ 667:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param ipaddr remote IP address to connect with.
+ 668:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param port remote UDP port to connect with.
+ 669:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 670:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return lwIP error code
+ 671:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 672:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * ipaddr & port are expected to be in the same byte order as in the pcb.
+ 673:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 674:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * The udp pcb is bound to a random local port if not already bound.
+ 675:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 676:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_disconnect()
+ 677:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 678:rtos/common/ethernet/lwIP_132/src/core/udp.c **** err_t
+ 679:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_connect(struct udp_pcb *pcb, struct ip_addr *ipaddr, u16_t port)
+ 680:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 164              		.loc 1 680 0
+ 165 0094 70B5     		push	{r4, r5, r6, lr}
+ 166              	.LCFI1:
+ 167              	.LVL28:
+ 168 0096 041C     		mov	r4, r0
+ 169 0098 0D1C     		mov	r5, r1
+ 170 009a 1204     		lsl	r2, r2, #16
+ 171              	.LVL29:
+ 172 009c 160C     		lsr	r6, r2, #16
+ 173              	.LVL30:
+ 681:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *ipcb;
+ 682:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 683:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pcb->local_port == 0) {
+ 174              		.loc 1 683 0
+ 175 009e 438A     		ldrh	r3, [r0, #18]
+ 176 00a0 002B     		cmp	r3, #0
+ 177 00a2 07D1     		bne	.L22
+ 178              	.LVL31:
+ 179              	.LBB2:
+ 684:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     err_t err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
+ 180              		.loc 1 684 0
+ 181 00a4 211C     		mov	r1, r4
+ 182 00a6 0022     		mov	r2, #0
+ 183 00a8 FFF7FEFF 		bl	udp_bind
+ 184              	.LVL32:
+ 185 00ac 0006     		lsl	r0, r0, #24
+ 186 00ae 000E     		lsr	r0, r0, #24
+ 187              	.LVL33:
+ 685:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (err != ERR_OK)
+ 188              		.loc 1 685 0
+ 189 00b0 0028     		cmp	r0, #0
+ 190 00b2 1DD1     		bne	.L23
+ 191              	.LVL34:
+ 192              	.L22:
+ 193              	.LBE2:
+ 686:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return err;
+ 687:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 688:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 689:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   ip_addr_set(&pcb->remote_ip, ipaddr);
+ 194              		.loc 1 689 0
+ 195 00b4 002D     		cmp	r5, #0
+ 196 00b6 01D1     		bne	.L24
+ 197 00b8 0021     		mov	r1, #0
+ 198 00ba 00E0     		b	.L25
+ 199              	.LVL35:
+ 200              	.L24:
+ 201 00bc 2968     		ldr	r1, [r5]
+ 202              	.L25:
+ 203 00be 6160     		str	r1, [r4, #4]
+ 690:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->remote_port = port;
+ 204              		.loc 1 690 0
+ 205 00c0 A682     		strh	r6, [r4, #20]
+ 691:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->flags |= UDP_FLAGS_CONNECTED;
+ 206              		.loc 1 691 0
+ 207 00c2 237C     		ldrb	r3, [r4, #16]
+ 208 00c4 0422     		mov	r2, #4
+ 209 00c6 1343     		orr	r3, r3, r2
+ 210 00c8 2374     		strb	r3, [r4, #16]
+ 692:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /** TODO: this functionality belongs in upper layers */
+ 693:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #ifdef LWIP_UDP_TODO
+ 694:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* Nail down local IP for netconn_addr()/getsockname() */
+ 695:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (ip_addr_isany(&pcb->local_ip) && !ip_addr_isany(&pcb->remote_ip)) {
+ 696:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     struct netif *netif;
+ 697:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 698:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if ((netif = ip_route(&(pcb->remote_ip))) == NULL) {
+ 699:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       LWIP_DEBUGF(UDP_DEBUG, ("udp_connect: No route to 0x%lx\n", pcb->remote_ip.addr));
+ 700:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       UDP_STATS_INC(udp.rterr);
+ 701:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return ERR_RTE;
+ 702:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 703:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /** TODO: this will bind the udp pcb locally, to the interface which
+ 704:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         is used to route output packets to the remote address. However, we
+ 705:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         might want to accept incoming packets on any interface! */
+ 706:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pcb->local_ip = netif->ip_addr;
+ 707:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else if (ip_addr_isany(&pcb->remote_ip)) {
+ 708:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pcb->local_ip.addr = 0;
+ 709:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 710:rtos/common/ethernet/lwIP_132/src/core/udp.c **** #endif
+ 711:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE,
+ 712:rtos/common/ethernet/lwIP_132/src/core/udp.c ****               ("udp_connect: connected to %"U16_F".%"U16_F".%"U16_F".%"U16_F",port %"U16_F"\n",
+ 713:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->remote_ip.addr) >> 24) & 0xff),
+ 714:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->remote_ip.addr) >> 16) & 0xff),
+ 715:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)((ntohl(pcb->remote_ip.addr) >> 8) & 0xff),
+ 716:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                (u16_t)(ntohl(pcb->remote_ip.addr) & 0xff), pcb->remote_port));
+ 717:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 718:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* Insert UDP PCB into the list of active UDP PCBs. */
+ 719:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   for (ipcb = udp_pcbs; ipcb != NULL; ipcb = ipcb->next) {
+ 211              		.loc 1 719 0
+ 212 00ca 0C4B     		ldr	r3, .L31
+ 213 00cc 1B68     		ldr	r3, [r3]
+ 214              	.LVL36:
+ 215 00ce 002B     		cmp	r3, #0
+ 216 00d0 08D0     		beq	.L26
+ 720:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     if (pcb == ipcb) {
+ 217              		.loc 1 720 0
+ 218 00d2 9C42     		cmp	r4, r3
+ 219 00d4 0BD0     		beq	.L27
+ 220 00d6 1A1C     		mov	r2, r3
+ 221 00d8 01E0     		b	.L28
+ 222              	.LVL37:
+ 223              	.L29:
+ 224 00da 9442     		cmp	r4, r2
+ 225 00dc 07D0     		beq	.L27
+ 226              	.LVL38:
+ 227              	.L28:
+ 228              		.loc 1 719 0
+ 229 00de D268     		ldr	r2, [r2, #12]
+ 230 00e0 002A     		cmp	r2, #0
+ 231 00e2 FAD1     		bne	.L29
+ 232              	.LVL39:
+ 233              	.L26:
+ 721:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* already on the list, just return */
+ 722:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       return ERR_OK;
+ 723:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 724:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 725:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* PCB not yet on the list, add PCB now */
+ 726:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->next = udp_pcbs;
+ 234              		.loc 1 726 0
+ 235 00e4 E360     		str	r3, [r4, #12]
+ 727:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   udp_pcbs = pcb;
+ 236              		.loc 1 727 0
+ 237 00e6 054B     		ldr	r3, .L31
+ 238 00e8 1C60     		str	r4, [r3]
+ 239 00ea 0020     		mov	r0, #0
+ 240              	.LVL40:
+ 241 00ec 00E0     		b	.L23
+ 242              	.LVL41:
+ 243              	.L27:
+ 728:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return ERR_OK;
+ 244              		.loc 1 728 0
+ 245 00ee 0020     		mov	r0, #0
+ 246              	.LVL42:
+ 247              	.L23:
+ 248 00f0 0006     		lsl	r0, r0, #24
+ 249              	.LVL43:
+ 250 00f2 0016     		asr	r0, r0, #24
+ 729:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 251              		.loc 1 729 0
+ 252              		@ sp needed for prologue
+ 253              	.LVL44:
+ 254              	.LVL45:
+ 255              	.LVL46:
+ 256 00f4 70BC     		pop	{r4, r5, r6}
+ 257 00f6 02BC     		pop	{r1}
+ 258 00f8 0847     		bx	r1
+ 259              	.L32:
+ 260 00fa C046     		.align	2
+ 261              	.L31:
+ 262 00fc 00000000 		.word	udp_pcbs
+ 263              	.LFE7:
+ 265              		.align	2
+ 266              		.global	udp_disconnect
+ 267              		.code	16
+ 268              		.thumb_func
+ 270              	udp_disconnect:
+ 271              	.LFB8:
+ 730:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 731:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 732:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Disconnect a UDP PCB
+ 733:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 734:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb the udp pcb to disconnect.
+ 735:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 736:rtos/common/ethernet/lwIP_132/src/core/udp.c **** void
+ 737:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_disconnect(struct udp_pcb *pcb)
+ 738:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 272              		.loc 1 738 0
+ 273              	.LVL47:
+ 739:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* reset remote address association */
+ 740:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   ip_addr_set(&pcb->remote_ip, IP_ADDR_ANY);
+ 274              		.loc 1 740 0
+ 275 0100 044B     		ldr	r3, .L35
+ 276 0102 1B68     		ldr	r3, [r3]
+ 277 0104 4360     		str	r3, [r0, #4]
+ 741:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->remote_port = 0;
+ 278              		.loc 1 741 0
+ 279 0106 0023     		mov	r3, #0
+ 280 0108 8382     		strh	r3, [r0, #20]
+ 742:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* mark PCB as unconnected */
+ 743:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->flags &= ~UDP_FLAGS_CONNECTED;
+ 281              		.loc 1 743 0
+ 282 010a 037C     		ldrb	r3, [r0, #16]
+ 283 010c 0422     		mov	r2, #4
+ 284 010e 9343     		bic	r3, r3, r2
+ 285 0110 0374     		strb	r3, [r0, #16]
+ 744:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 286              		.loc 1 744 0
+ 287              		@ sp needed for prologue
+ 288 0112 7047     		bx	lr
+ 289              	.L36:
+ 290              		.align	2
+ 291              	.L35:
+ 292 0114 00000000 		.word	ip_addr_any
+ 293              	.LFE8:
+ 295              		.align	2
+ 296              		.global	udp_recv
+ 297              		.code	16
+ 298              		.thumb_func
+ 300              	udp_recv:
+ 301              	.LFB9:
+ 745:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 746:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 747:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Set a receive callback for a UDP PCB
+ 748:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 749:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * This callback will be called when receiving a datagram for the pcb.
+ 750:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 751:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb the pcb for wich to set the recv callback
+ 752:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param recv function pointer of the callback function
+ 753:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param recv_arg additional argument to pass to the callback function
+ 754:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 755:rtos/common/ethernet/lwIP_132/src/core/udp.c **** void
+ 756:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_recv(struct udp_pcb *pcb,
+ 757:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          void (* recv)(void *arg, struct udp_pcb *upcb, struct pbuf *p,
+ 758:rtos/common/ethernet/lwIP_132/src/core/udp.c ****                        struct ip_addr *addr, u16_t port),
+ 759:rtos/common/ethernet/lwIP_132/src/core/udp.c ****          void *recv_arg)
+ 760:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 302              		.loc 1 760 0
+ 303              	.LVL48:
+ 761:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* remember recv() callback and user data */
+ 762:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->recv = recv;
+ 304              		.loc 1 762 0
+ 305 0118 8161     		str	r1, [r0, #24]
+ 763:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb->recv_arg = recv_arg;
+ 306              		.loc 1 763 0
+ 307 011a C261     		str	r2, [r0, #28]
+ 764:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 308              		.loc 1 764 0
+ 309              		@ sp needed for prologue
+ 310 011c 7047     		bx	lr
+ 311              	.LFE9:
+ 313 011e C046     		.align	2
+ 314              		.global	udp_new
+ 315              		.code	16
+ 316              		.thumb_func
+ 318              	udp_new:
+ 319              	.LFB11:
+ 765:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 766:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 767:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Remove an UDP PCB.
+ 768:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 769:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @param pcb UDP PCB to be removed. The PCB is removed from the list of
+ 770:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * UDP PCB's and the data structure is freed from memory.
+ 771:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 772:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_new()
+ 773:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 774:rtos/common/ethernet/lwIP_132/src/core/udp.c **** void
+ 775:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_remove(struct udp_pcb *pcb)
+ 776:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 777:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *pcb2;
+ 778:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 779:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   snmp_delete_udpidx_tree(pcb);
+ 780:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* pcb to be removed is first in list? */
+ 781:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (udp_pcbs == pcb) {
+ 782:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* make list start at 2nd pcb */
+ 783:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     udp_pcbs = udp_pcbs->next;
+ 784:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* pcb not 1st in list */
+ 785:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   } else
+ 786:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     for (pcb2 = udp_pcbs; pcb2 != NULL; pcb2 = pcb2->next) {
+ 787:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       /* find pcb in udp_pcbs list */
+ 788:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       if (pcb2->next != NULL && pcb2->next == pcb) {
+ 789:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         /* remove pcb from list */
+ 790:rtos/common/ethernet/lwIP_132/src/core/udp.c ****         pcb2->next = pcb->next;
+ 791:rtos/common/ethernet/lwIP_132/src/core/udp.c ****       }
+ 792:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     }
+ 793:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   memp_free(MEMP_UDP_PCB, pcb);
+ 794:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 795:rtos/common/ethernet/lwIP_132/src/core/udp.c **** 
+ 796:rtos/common/ethernet/lwIP_132/src/core/udp.c **** /**
+ 797:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * Create a UDP PCB.
+ 798:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 799:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @return The UDP PCB which was created. NULL if the PCB data structure
+ 800:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * could not be allocated.
+ 801:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  *
+ 802:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  * @see udp_remove()
+ 803:rtos/common/ethernet/lwIP_132/src/core/udp.c ****  */
+ 804:rtos/common/ethernet/lwIP_132/src/core/udp.c **** struct udp_pcb *
+ 805:rtos/common/ethernet/lwIP_132/src/core/udp.c **** udp_new(void)
+ 806:rtos/common/ethernet/lwIP_132/src/core/udp.c **** {
+ 320              		.loc 1 806 0
+ 321 0120 00B5     		push	{lr}
+ 322              	.LCFI2:
+ 807:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   struct udp_pcb *pcb;
+ 808:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   pcb = memp_malloc(MEMP_UDP_PCB);
+ 323              		.loc 1 808 0
+ 324 0122 0120     		mov	r0, #1
+ 325 0124 FFF7FEFF 		bl	memp_malloc
+ 809:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   /* could allocate UDP PCB? */
+ 810:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   if (pcb != NULL) {
+ 326              		.loc 1 810 0
+ 327 0128 0028     		cmp	r0, #0
+ 328 012a 0CD0     		beq	.L40
+ 329              	.LVL49:
+ 811:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* UDP Lite: by initializing to all zeroes, chksum_len is set to 0
+ 812:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * which means checksum is generated over the whole datagram per default
+ 813:rtos/common/ethernet/lwIP_132/src/core/udp.c ****      * (recommended as default by RFC 3828). */
+ 814:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     /* initialize PCB to all zeroes */
+ 815:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     memset(pcb, 0, sizeof(struct udp_pcb));
+ 330              		.loc 1 815 0
+ 331 012c 0023     		mov	r3, #0
+ 332 012e 021C     		mov	r2, r0
+ 333 0130 08C2     		stmia	r2!, {r3}
+ 334 0132 08C2     		stmia	r2!, {r3}
+ 335 0134 08C2     		stmia	r2!, {r3}
+ 336 0136 08C2     		stmia	r2!, {r3}
+ 337 0138 08C2     		stmia	r2!, {r3}
+ 338 013a 08C2     		stmia	r2!, {r3}
+ 339 013c 08C2     		stmia	r2!, {r3}
+ 340 013e 1360     		str	r3, [r2]
+ 816:rtos/common/ethernet/lwIP_132/src/core/udp.c ****     pcb->ttl = UDP_TTL;
+ 341              		.loc 1 816 0
+ 342 0140 0123     		mov	r3, #1
+ 343 0142 5B42     		neg	r3, r3
+ 344 0144 C372     		strb	r3, [r0, #11]
+ 345              	.L40:
+ 346              	.LVL50:
+ 817:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   }
+ 818:rtos/common/ethernet/lwIP_132/src/core/udp.c ****   return pcb;
+ 819:rtos/common/ethernet/lwIP_132/src/core/udp.c **** }
+ 347              		.loc 1 819 0
+ 348              		@ sp needed for prologue
+ 349 0146 02BC     		pop	{r1}
+ 350 0148 0847     		bx	r1
+ 351              	.LFE11:
+ 353 014a C046     		.align	2
+ 354              		.global	udp_remove
+ 355              		.code	16
+ 356              		.thumb_func
+ 358              	udp_remove:
+ 359              	.LFB10:
+ 360              		.loc 1 776 0
+ 361 014c 00B5     		push	{lr}
+ 362              	.LCFI3:
+ 363              	.LVL51:
+ 364 014e 011C     		mov	r1, r0
+ 365              		.loc 1 781 0
+ 366 0150 0C4B     		ldr	r3, .L49
+ 367 0152 1B68     		ldr	r3, [r3]
+ 368              	.LVL52:
+ 369 0154 8B42     		cmp	r3, r1
+ 370 0156 02D0     		beq	.L43
+ 371              	.LVL53:
+ 372              		.loc 1 786 0
+ 373 0158 002B     		cmp	r3, #0
+ 374 015a 05D1     		bne	.L48
+ 375 015c 0DE0     		b	.L45
+ 376              	.L43:
+ 377              		.loc 1 783 0
+ 378 015e 094A     		ldr	r2, .L49
+ 379 0160 DB68     		ldr	r3, [r3, #12]
+ 380              	.LVL54:
+ 381 0162 1360     		str	r3, [r2]
+ 382 0164 09E0     		b	.L45
+ 383              	.LVL55:
+ 384              	.L46:
+ 385 0166 131C     		mov	r3, r2
+ 386              	.LVL56:
+ 387              	.L48:
+ 388              		.loc 1 788 0
+ 389 0168 DA68     		ldr	r2, [r3, #12]
+ 390              	.LVL57:
+ 391 016a 002A     		cmp	r2, #0
+ 392 016c 05D0     		beq	.L45
+ 393 016e 9142     		cmp	r1, r2
+ 394 0170 F9D1     		bne	.L46
+ 395              		.loc 1 790 0
+ 396 0172 CA68     		ldr	r2, [r1, #12]
+ 397 0174 DA60     		str	r2, [r3, #12]
+ 398              		.loc 1 786 0
+ 399 0176 002A     		cmp	r2, #0
+ 400 0178 F5D1     		bne	.L46
+ 401              	.L45:
+ 402              		.loc 1 793 0
+ 403 017a 0120     		mov	r0, #1
+ 404 017c FFF7FEFF 		bl	memp_free
+ 405              	.LVL58:
+ 406              		.loc 1 794 0
+ 407              		@ sp needed for prologue
+ 408 0180 01BC     		pop	{r0}
+ 409 0182 0047     		bx	r0
+ 410              	.L50:
+ 411              		.align	2
+ 412              	.L49:
+ 413 0184 00000000 		.word	udp_pcbs
+ 414              	.LFE10:
+ 416              		.align	2
+ 417              		.global	udp_sendto_if
+ 418              		.code	16
+ 419              		.thumb_func
+ 421              	udp_sendto_if:
+ 422              	.LFB5:
+ 423              		.loc 1 405 0
+ 424 0188 F0B5     		push	{r4, r5, r6, r7, lr}
+ 425              	.LCFI4:
+ 426 018a 5746     		mov	r7, sl
+ 427 018c 4646     		mov	r6, r8
+ 428 018e C0B4     		push	{r6, r7}
+ 429              	.LCFI5:
+ 430              	.LVL59:
+ 431 0190 83B0     		sub	sp, sp, #12
+ 432              	.LCFI6:
+ 433 0192 041C     		mov	r4, r0
+ 434 0194 8846     		mov	r8, r1
+ 435 0196 9246     		mov	sl, r2
+ 436 0198 1B04     		lsl	r3, r3, #16
+ 437              	.LVL60:
+ 438 019a 1F0C     		lsr	r7, r3, #16
+ 439              	.LVL61:
+ 440              		.loc 1 421 0
+ 441 019c 438A     		ldrh	r3, [r0, #18]
+ 442 019e 002B     		cmp	r3, #0
+ 443 01a0 07D1     		bne	.L52
+ 444              	.LVL62:
+ 445              		.loc 1 423 0
+ 446 01a2 211C     		mov	r1, r4
+ 447 01a4 0022     		mov	r2, #0
+ 448 01a6 FFF7FEFF 		bl	udp_bind
+ 449              	.LVL63:
+ 450 01aa 0006     		lsl	r0, r0, #24
+ 451 01ac 050E     		lsr	r5, r0, #24
+ 452              	.LVL64:
+ 453              		.loc 1 424 0
+ 454 01ae 002D     		cmp	r5, #0
+ 455 01b0 62D1     		bne	.L53
+ 456              	.LVL65:
+ 457              	.L52:
+ 458              		.loc 1 431 0
+ 459 01b2 4046     		mov	r0, r8
+ 460 01b4 0821     		mov	r1, #8
+ 461 01b6 FFF7FEFF 		bl	pbuf_header
+ 462 01ba 0028     		cmp	r0, #0
+ 463 01bc 01D1     		bne	.L54
+ 464 01be 4646     		mov	r6, r8
+ 465              	.LVL66:
+ 466 01c0 0CE0     		b	.L55
+ 467              	.LVL67:
+ 468              	.L54:
+ 469              		.loc 1 433 0
+ 470 01c2 0120     		mov	r0, #1
+ 471 01c4 0821     		mov	r1, #8
+ 472 01c6 0022     		mov	r2, #0
+ 473 01c8 FFF7FEFF 		bl	pbuf_alloc
+ 474 01cc 061C     		mov	r6, r0
+ 475              	.LVL68:
+ 476              		.loc 1 435 0
+ 477 01ce 0028     		cmp	r0, #0
+ 478 01d0 01D1     		bne	.L56
+ 479              	.LVL69:
+ 480 01d2 FF25     		mov	r5, #255
+ 481              	.LVL70:
+ 482 01d4 50E0     		b	.L53
+ 483              	.L56:
+ 484              		.loc 1 440 0
+ 485 01d6 4146     		mov	r1, r8
+ 486 01d8 FFF7FEFF 		bl	pbuf_chain
+ 487              	.LVL71:
+ 488              	.L55:
+ 489              		.loc 1 453 0
+ 490 01dc 7568     		ldr	r5, [r6, #4]
+ 491              	.LVL72:
+ 492              		.loc 1 454 0
+ 493 01de 608A     		ldrh	r0, [r4, #18]
+ 494 01e0 FFF7FEFF 		bl	htons
+ 495 01e4 2880     		strh	r0, [r5]
+ 496              		.loc 1 455 0
+ 497 01e6 381C     		mov	r0, r7
+ 498 01e8 FFF7FEFF 		bl	htons
+ 499 01ec 6880     		strh	r0, [r5, #2]
+ 500              		.loc 1 457 0
+ 501 01ee 0023     		mov	r3, #0
+ 502 01f0 EB80     		strh	r3, [r5, #6]
+ 503              		.loc 1 460 0
+ 504 01f2 271C     		mov	r7, r4
+ 505              	.LVL73:
+ 506 01f4 002C     		cmp	r4, #0
+ 507 01f6 02D0     		beq	.L57
+ 508 01f8 2268     		ldr	r2, [r4]
+ 509 01fa 002A     		cmp	r2, #0
+ 510 01fc 02D1     		bne	.L58
+ 511              	.L57:
+ 512              		.loc 1 462 0
+ 513 01fe 0A9F     		ldr	r7, [sp, #40]
+ 514 0200 0437     		add	r7, r7, #4
+ 515 0202 0CE0     		b	.L59
+ 516              	.LVL74:
+ 517              	.L58:
+ 518              		.loc 1 466 0
+ 519 0204 0A99     		ldr	r1, [sp, #40]
+ 520 0206 4B68     		ldr	r3, [r1, #4]
+ 521 0208 9A42     		cmp	r2, r3
+ 522 020a 08D0     		beq	.L59
+ 523              	.LVL75:
+ 524              		.loc 1 468 0
+ 525 020c 4645     		cmp	r6, r8
+ 526 020e 01D1     		bne	.L60
+ 527 0210 F725     		mov	r5, #247
+ 528              	.LVL76:
+ 529 0212 31E0     		b	.L53
+ 530              	.LVL77:
+ 531              	.L60:
+ 532              		.loc 1 470 0
+ 533 0214 301C     		mov	r0, r6
+ 534 0216 FFF7FEFF 		bl	pbuf_free
+ 535 021a F725     		mov	r5, #247
+ 536              	.LVL78:
+ 537 021c 2CE0     		b	.L53
+ 538              	.LVL79:
+ 539              	.L59:
+ 540              		.loc 1 524 0
+ 541 021e 3089     		ldrh	r0, [r6, #8]
+ 542 0220 FFF7FEFF 		bl	htons
+ 543 0224 A880     		strh	r0, [r5, #4]
+ 544              		.loc 1 527 0
+ 545 0226 237C     		ldrb	r3, [r4, #16]
+ 546 0228 DA07     		lsl	r2, r3, #31
+ 547 022a 0DD4     		bmi	.L61
+ 548              		.loc 1 528 0
+ 549 022c 3389     		ldrh	r3, [r6, #8]
+ 550 022e 0093     		str	r3, [sp]
+ 551 0230 301C     		mov	r0, r6
+ 552 0232 391C     		mov	r1, r7
+ 553 0234 5246     		mov	r2, sl
+ 554 0236 1123     		mov	r3, #17
+ 555 0238 FFF7FEFF 		bl	inet_chksum_pseudo
+ 556 023c E880     		strh	r0, [r5, #6]
+ 557              		.loc 1 530 0
+ 558 023e 0028     		cmp	r0, #0
+ 559 0240 02D1     		bne	.L61
+ 560 0242 0123     		mov	r3, #1
+ 561 0244 5B42     		neg	r3, r3
+ 562 0246 EB80     		strh	r3, [r5, #6]
+ 563              	.L61:
+ 564              		.loc 1 539 0
+ 565 0248 E37A     		ldrb	r3, [r4, #11]
+ 566 024a A27A     		ldrb	r2, [r4, #10]
+ 567 024c 0092     		str	r2, [sp]
+ 568 024e 1122     		mov	r2, #17
+ 569 0250 0192     		str	r2, [sp, #4]
+ 570 0252 0A99     		ldr	r1, [sp, #40]
+ 571 0254 0291     		str	r1, [sp, #8]
+ 572 0256 301C     		mov	r0, r6
+ 573 0258 391C     		mov	r1, r7
+ 574 025a 5246     		mov	r2, sl
+ 575 025c FFF7FEFF 		bl	ip_output_if
+ 576 0260 0006     		lsl	r0, r0, #24
+ 577 0262 050E     		lsr	r5, r0, #24
+ 578              	.LVL80:
+ 579              		.loc 1 548 0
+ 580 0264 4645     		cmp	r6, r8
+ 581 0266 02D0     		beq	.L62
+ 582              		.loc 1 550 0
+ 583 0268 301C     		mov	r0, r6
+ 584 026a FFF7FEFF 		bl	pbuf_free
+ 585              	.L62:
+ 586              		.loc 1 555 0
+ 587 026e 0749     		ldr	r1, .L64
+ 588 0270 7822     		mov	r2, #120
+ 589 0272 8B5A     		ldrh	r3, [r1, r2]
+ 590 0274 0133     		add	r3, r3, #1
+ 591 0276 8B52     		strh	r3, [r1, r2]
+ 592              	.LVL81:
+ 593              	.L53:
+ 594 0278 2806     		lsl	r0, r5, #24
+ 595 027a 0016     		asr	r0, r0, #24
+ 596              		.loc 1 557 0
+ 597 027c 03B0     		add	sp, sp, #12
+ 598              		@ sp needed for prologue
+ 599              	.LVL82:
+ 600              	.LVL83:
+ 601              	.LVL84:
+ 602              	.LVL85:
+ 603              	.LVL86:
+ 604              	.LVL87:
+ 605 027e 0CBC     		pop	{r2, r3}
+ 606 0280 9046     		mov	r8, r2
+ 607 0282 9A46     		mov	sl, r3
+ 608 0284 F0BC     		pop	{r4, r5, r6, r7}
+ 609 0286 02BC     		pop	{r1}
+ 610 0288 0847     		bx	r1
+ 611              	.L65:
+ 612 028a C046     		.align	2
+ 613              	.L64:
+ 614 028c 00000000 		.word	lwip_stats
+ 615              	.LFE5:
+ 617              		.align	2
+ 618              		.global	udp_sendto
+ 619              		.code	16
+ 620              		.thumb_func
+ 622              	udp_sendto:
+ 623              	.LFB4:
+ 624              		.loc 1 362 0
+ 625 0290 F0B5     		push	{r4, r5, r6, r7, lr}
+ 626              	.LCFI7:
+ 627              	.LVL88:
+ 628 0292 81B0     		sub	sp, sp, #4
+ 629              	.LCFI8:
+ 630 0294 061C     		mov	r6, r0
+ 631 0296 0F1C     		mov	r7, r1
+ 632 0298 141C     		mov	r4, r2
+ 633 029a 1B04     		lsl	r3, r3, #16
+ 634              	.LVL89:
+ 635 029c 1D0C     		lsr	r5, r3, #16
+ 636              	.LVL90:
+ 637              		.loc 1 371 0
+ 638 029e 101C     		mov	r0, r2
+ 639              	.LVL91:
+ 640 02a0 FFF7FEFF 		bl	ip_route
+ 641              	.LVL92:
+ 642              		.loc 1 375 0
+ 643 02a4 0028     		cmp	r0, #0
+ 644 02a6 06D1     		bne	.L67
+ 645              	.LVL93:
+ 646              		.loc 1 377 0
+ 647 02a8 0A49     		ldr	r1, .L70
+ 648 02aa 8622     		mov	r2, #134
+ 649 02ac 8B5A     		ldrh	r3, [r1, r2]
+ 650 02ae 0133     		add	r3, r3, #1
+ 651 02b0 8B52     		strh	r3, [r1, r2]
+ 652 02b2 FC20     		mov	r0, #252
+ 653              	.LVL94:
+ 654 02b4 08E0     		b	.L68
+ 655              	.LVL95:
+ 656              	.L67:
+ 657              		.loc 1 380 0
+ 658 02b6 0090     		str	r0, [sp]
+ 659 02b8 301C     		mov	r0, r6
+ 660              	.LVL96:
+ 661 02ba 391C     		mov	r1, r7
+ 662 02bc 221C     		mov	r2, r4
+ 663 02be 2B1C     		mov	r3, r5
+ 664 02c0 FFF7FEFF 		bl	udp_sendto_if
+ 665 02c4 0006     		lsl	r0, r0, #24
+ 666 02c6 000E     		lsr	r0, r0, #24
+ 667              	.L68:
+ 668 02c8 0006     		lsl	r0, r0, #24
+ 669 02ca 0016     		asr	r0, r0, #24
+ 670              		.loc 1 381 0
+ 671 02cc 01B0     		add	sp, sp, #4
+ 672              		@ sp needed for prologue
+ 673              	.LVL97:
+ 674              	.LVL98:
+ 675              	.LVL99:
+ 676              	.LVL100:
+ 677 02ce F0BC     		pop	{r4, r5, r6, r7}
+ 678 02d0 02BC     		pop	{r1}
+ 679 02d2 0847     		bx	r1
+ 680              	.L71:
+ 681              		.align	2
+ 682              	.L70:
+ 683 02d4 00000000 		.word	lwip_stats
+ 684              	.LFE4:
+ 686              		.align	2
+ 687              		.global	udp_send
+ 688              		.code	16
+ 689              		.thumb_func
+ 691              	udp_send:
+ 692              	.LFB3:
+ 693              		.loc 1 337 0
+ 694 02d8 00B5     		push	{lr}
+ 695              	.LCFI9:
+ 696              	.LVL101:
+ 697              		.loc 1 339 0
+ 698 02da 021D     		add	r2, r0, #4
+ 699 02dc 838A     		ldrh	r3, [r0, #20]
+ 700 02de FFF7FEFF 		bl	udp_sendto
+ 701              	.LVL102:
+ 702 02e2 0006     		lsl	r0, r0, #24
+ 703 02e4 0016     		asr	r0, r0, #24
+ 704              		.loc 1 340 0
+ 705              		@ sp needed for prologue
+ 706 02e6 02BC     		pop	{r1}
+ 707 02e8 0847     		bx	r1
+ 708              	.LFE3:
+ 710 02ea C046     		.align	2
+ 711              		.global	udp_input
+ 712              		.code	16
+ 713              		.thumb_func
+ 715              	udp_input:
+ 716              	.LFB2:
+ 717              		.loc 1 86 0
+ 718 02ec F0B5     		push	{r4, r5, r6, r7, lr}
+ 719              	.LCFI10:
+ 720 02ee 5F46     		mov	r7, fp
+ 721 02f0 5646     		mov	r6, sl
+ 722 02f2 4D46     		mov	r5, r9
+ 723 02f4 4446     		mov	r4, r8
+ 724 02f6 F0B4     		push	{r4, r5, r6, r7}
+ 725              	.LCFI11:
+ 726              	.LVL103:
+ 727 02f8 82B0     		sub	sp, sp, #8
+ 728              	.LCFI12:
+ 729 02fa 061C     		mov	r6, r0
+ 730 02fc 8846     		mov	r8, r1
+ 731              		.loc 1 97 0
+ 732 02fe 8C49     		ldr	r1, .L100
+ 733              	.LVL104:
+ 734 0300 7A22     		mov	r2, #122
+ 735 0302 8B5A     		ldrh	r3, [r1, r2]
+ 736 0304 0133     		add	r3, r3, #1
+ 737 0306 8B52     		strh	r3, [r1, r2]
+ 738              		.loc 1 99 0
+ 739 0308 4768     		ldr	r7, [r0, #4]
+ 740              	.LVL105:
+ 741              		.loc 1 103 0
+ 742 030a 0489     		ldrh	r4, [r0, #8]
+ 743 030c 3888     		ldrh	r0, [r7]
+ 744              	.LVL106:
+ 745 030e FFF7FEFF 		bl	ntohs
+ 746 0312 0005     		lsl	r0, r0, #20
+ 747 0314 000F     		lsr	r0, r0, #28
+ 748 0316 0230     		add	r0, r0, #2
+ 749 0318 8000     		lsl	r0, r0, #2
+ 750 031a 8442     		cmp	r4, r0
+ 751 031c 0CDB     		blt	.L75
+ 752 031e 3888     		ldrh	r0, [r7]
+ 753 0320 FFF7FEFF 		bl	ntohs
+ 754 0324 0105     		lsl	r1, r0, #20
+ 755 0326 090F     		lsr	r1, r1, #28
+ 756 0328 8904     		lsl	r1, r1, #18
+ 757 032a 4942     		neg	r1, r1
+ 758 032c 0914     		asr	r1, r1, #16
+ 759 032e 301C     		mov	r0, r6
+ 760 0330 FFF7FEFF 		bl	pbuf_header
+ 761 0334 0028     		cmp	r0, #0
+ 762 0336 0CD0     		beq	.L76
+ 763              	.L75:
+ 764              		.loc 1 107 0
+ 765 0338 7D4A     		ldr	r2, .L100
+ 766 033a 8221     		mov	r1, #130
+ 767 033c 535A     		ldrh	r3, [r2, r1]
+ 768 033e 0133     		add	r3, r3, #1
+ 769 0340 5352     		strh	r3, [r2, r1]
+ 770              		.loc 1 108 0
+ 771 0342 7E21     		mov	r1, #126
+ 772 0344 535A     		ldrh	r3, [r2, r1]
+ 773 0346 0133     		add	r3, r3, #1
+ 774 0348 5352     		strh	r3, [r2, r1]
+ 775              		.loc 1 110 0
+ 776 034a 301C     		mov	r0, r6
+ 777 034c FFF7FEFF 		bl	pbuf_free
+ 778 0350 E5E0     		b	.L98
+ 779              	.L76:
+ 780              		.loc 1 114 0
+ 781 0352 7268     		ldr	r2, [r6, #4]
+ 782 0354 9146     		mov	r9, r2
+ 783              	.LVL107:
+ 784              		.loc 1 117 0
+ 785 0356 3B1C     		mov	r3, r7
+ 786 0358 1033     		add	r3, r3, #16
+ 787 035a 0193     		str	r3, [sp, #4]
+ 788 035c 181C     		mov	r0, r3
+ 789 035e 4146     		mov	r1, r8
+ 790 0360 FFF7FEFF 		bl	ip_addr_isbroadcast
+ 791 0364 8346     		mov	fp, r0
+ 792              	.LVL108:
+ 793              		.loc 1 122 0
+ 794 0366 4A46     		mov	r2, r9
+ 795 0368 1088     		ldrh	r0, [r2]
+ 796 036a FFF7FEFF 		bl	ntohs
+ 797 036e 8246     		mov	sl, r0
+ 798              	.LVL109:
+ 799              		.loc 1 123 0
+ 800 0370 4B46     		mov	r3, r9
+ 801 0372 5888     		ldrh	r0, [r3, #2]
+ 802 0374 FFF7FEFF 		bl	ntohs
+ 803              		.loc 1 140 0
+ 804 0378 4428     		cmp	r0, #68
+ 805 037a 12D1     		bne	.L78
+ 806              	.LVL110:
+ 807              		.loc 1 142 0
+ 808 037c 5246     		mov	r2, sl
+ 809 037e 432A     		cmp	r2, #67
+ 810 0380 4ED1     		bne	.L79
+ 811              		.loc 1 143 0
+ 812 0382 4346     		mov	r3, r8
+ 813 0384 196A     		ldr	r1, [r3, #32]
+ 814 0386 0029     		cmp	r1, #0
+ 815 0388 4AD0     		beq	.L79
+ 816 038a 4C68     		ldr	r4, [r1, #4]
+ 817              	.LVL111:
+ 818 038c 002C     		cmp	r4, #0
+ 819 038e 48D0     		beq	.L80
+ 820              		.loc 1 147 0
+ 821 0390 221D     		add	r2, r4, #4
+ 822 0392 4BD0     		beq	.L81
+ 823 0394 6268     		ldr	r2, [r4, #4]
+ 824 0396 002A     		cmp	r2, #0
+ 825 0398 48D0     		beq	.L81
+ 826 039a FB68     		ldr	r3, [r7, #12]
+ 827 039c 9A42     		cmp	r2, r3
+ 828 039e 3FD1     		bne	.L79
+ 829 03a0 44E0     		b	.L81
+ 830              	.LVL112:
+ 831              	.L78:
+ 832              		.loc 1 163 0
+ 833 03a2 644B     		ldr	r3, .L100+4
+ 834 03a4 1C68     		ldr	r4, [r3]
+ 835              	.LVL113:
+ 836 03a6 002C     		cmp	r4, #0
+ 837 03a8 3BD0     		beq	.L80
+ 838 03aa 0025     		mov	r5, #0
+ 839              	.LVL114:
+ 840 03ac 0021     		mov	r1, #0
+ 841              	.LVL115:
+ 842              		.loc 1 187 0
+ 843 03ae 0423     		mov	r3, #4
+ 844 03b0 9C46     		mov	ip, r3
+ 845              	.LVL116:
+ 846              	.L89:
+ 847              		.loc 1 175 0
+ 848 03b2 638A     		ldrh	r3, [r4, #18]
+ 849 03b4 8342     		cmp	r3, r0
+ 850 03b6 2AD1     		bne	.L82
+ 851 03b8 5A46     		mov	r2, fp
+ 852 03ba 002A     		cmp	r2, #0
+ 853 03bc 07D1     		bne	.L83
+ 854 03be 002C     		cmp	r4, #0
+ 855 03c0 05D0     		beq	.L83
+ 856 03c2 2268     		ldr	r2, [r4]
+ 857 03c4 002A     		cmp	r2, #0
+ 858 03c6 02D0     		beq	.L83
+ 859 03c8 3B69     		ldr	r3, [r7, #16]
+ 860 03ca 9A42     		cmp	r2, r3
+ 861 03cc 1FD1     		bne	.L82
+ 862              	.L83:
+ 863              		.loc 1 187 0
+ 864 03ce 002D     		cmp	r5, #0
+ 865 03d0 00D0     		beq	.LCB837
+ 866 03d2 9AE0     		b	.L84	@long jump
+ 867              	.LCB837:
+ 868 03d4 237C     		ldrb	r3, [r4, #16]
+ 869 03d6 6246     		mov	r2, ip
+ 870 03d8 1342     		tst	r3, r2
+ 871 03da 00D1     		bne	.LCB842
+ 872 03dc 94E0     		b	.L85	@long jump
+ 873              	.LCB842:
+ 874 03de 94E0     		b	.L84
+ 875              	.L99:
+ 876              		.loc 1 194 0
+ 877 03e0 231D     		add	r3, r4, #4
+ 878 03e2 05D0     		beq	.L86
+ 879 03e4 6268     		ldr	r2, [r4, #4]
+ 880 03e6 002A     		cmp	r2, #0
+ 881 03e8 02D0     		beq	.L86
+ 882 03ea FB68     		ldr	r3, [r7, #12]
+ 883 03ec 9A42     		cmp	r2, r3
+ 884 03ee 0ED1     		bne	.L82
+ 885              	.L86:
+ 886              		.loc 1 199 0
+ 887 03f0 0029     		cmp	r1, #0
+ 888 03f2 06D0     		beq	.L87
+ 889              		.loc 1 202 0
+ 890 03f4 E368     		ldr	r3, [r4, #12]
+ 891 03f6 CB60     		str	r3, [r1, #12]
+ 892              		.loc 1 203 0
+ 893 03f8 4E4A     		ldr	r2, .L100+4
+ 894 03fa 1368     		ldr	r3, [r2]
+ 895 03fc E360     		str	r3, [r4, #12]
+ 896              		.loc 1 204 0
+ 897 03fe 1460     		str	r4, [r2]
+ 898 0400 14E0     		b	.L81
+ 899              	.L87:
+ 900              		.loc 1 206 0
+ 901 0402 4B49     		ldr	r1, .L100
+ 902              	.LVL117:
+ 903 0404 8E22     		mov	r2, #142
+ 904 0406 8B5A     		ldrh	r3, [r1, r2]
+ 905 0408 0133     		add	r3, r3, #1
+ 906 040a 8B52     		strh	r3, [r1, r2]
+ 907 040c 0EE0     		b	.L81
+ 908              	.LVL118:
+ 909              	.L82:
+ 910              		.loc 1 163 0
+ 911 040e E368     		ldr	r3, [r4, #12]
+ 912              	.LVL119:
+ 913 0410 002B     		cmp	r3, #0
+ 914 0412 00D1     		bne	.LCB884
+ 915 0414 7EE0     		b	.L88	@long jump
+ 916              	.LCB884:
+ 917 0416 211C     		mov	r1, r4
+ 918 0418 1C1C     		mov	r4, r3
+ 919 041a CAE7     		b	.L89
+ 920              	.LVL120:
+ 921              	.L97:
+ 922 041c 2C1C     		mov	r4, r5
+ 923              	.LVL121:
+ 924 041e 00E0     		b	.L80
+ 925              	.LVL122:
+ 926              	.L79:
+ 927 0420 0024     		mov	r4, #0
+ 928              	.LVL123:
+ 929              	.L80:
+ 930              		.loc 1 219 0
+ 931 0422 4346     		mov	r3, r8
+ 932 0424 5A68     		ldr	r2, [r3, #4]
+ 933 0426 3B69     		ldr	r3, [r7, #16]
+ 934 0428 9A42     		cmp	r2, r3
+ 935 042a 69D1     		bne	.L90
+ 936              	.L81:
+ 937              		.loc 1 257 0
+ 938 042c 4A46     		mov	r2, r9
+ 939 042e D388     		ldrh	r3, [r2, #6]
+ 940 0430 002B     		cmp	r3, #0
+ 941 0432 17D0     		beq	.L91
+ 942              		.loc 1 258 0
+ 943 0434 391C     		mov	r1, r7
+ 944              	.LVL124:
+ 945 0436 0C31     		add	r1, r1, #12
+ 946 0438 3389     		ldrh	r3, [r6, #8]
+ 947 043a 0093     		str	r3, [sp]
+ 948 043c 301C     		mov	r0, r6
+ 949              	.LVL125:
+ 950 043e 019A     		ldr	r2, [sp, #4]
+ 951 0440 1123     		mov	r3, #17
+ 952 0442 FFF7FEFF 		bl	inet_chksum_pseudo
+ 953 0446 0028     		cmp	r0, #0
+ 954 0448 0CD0     		beq	.L91
+ 955              		.loc 1 263 0
+ 956 044a 394A     		ldr	r2, .L100
+ 957 044c 8021     		mov	r1, #128
+ 958 044e 535A     		ldrh	r3, [r2, r1]
+ 959 0450 0133     		add	r3, r3, #1
+ 960 0452 5352     		strh	r3, [r2, r1]
+ 961              		.loc 1 264 0
+ 962 0454 7E21     		mov	r1, #126
+ 963 0456 535A     		ldrh	r3, [r2, r1]
+ 964 0458 0133     		add	r3, r3, #1
+ 965 045a 5352     		strh	r3, [r2, r1]
+ 966              		.loc 1 266 0
+ 967 045c 301C     		mov	r0, r6
+ 968 045e FFF7FEFF 		bl	pbuf_free
+ 969 0462 5CE0     		b	.L98
+ 970              	.LVL126:
+ 971              	.L91:
+ 972              		.loc 1 272 0
+ 973 0464 0821     		mov	r1, #8
+ 974              	.LVL127:
+ 975 0466 4942     		neg	r1, r1
+ 976 0468 301C     		mov	r0, r6
+ 977              	.LVL128:
+ 978 046a FFF7FEFF 		bl	pbuf_header
+ 979 046e 0028     		cmp	r0, #0
+ 980 0470 08D0     		beq	.L92
+ 981              		.loc 1 275 0
+ 982 0472 2F49     		ldr	r1, .L100
+ 983 0474 7E22     		mov	r2, #126
+ 984 0476 8B5A     		ldrh	r3, [r1, r2]
+ 985 0478 0133     		add	r3, r3, #1
+ 986 047a 8B52     		strh	r3, [r1, r2]
+ 987              		.loc 1 277 0
+ 988 047c 301C     		mov	r0, r6
+ 989 047e FFF7FEFF 		bl	pbuf_free
+ 990 0482 4CE0     		b	.L98
+ 991              	.L92:
+ 992              		.loc 1 280 0
+ 993 0484 002C     		cmp	r4, #0
+ 994 0486 10D0     		beq	.L93
+ 995              		.loc 1 283 0
+ 996 0488 A569     		ldr	r5, [r4, #24]
+ 997              	.LVL129:
+ 998 048a 002D     		cmp	r5, #0
+ 999 048c 09D0     		beq	.L94
+ 1000              		.loc 1 285 0
+ 1001 048e E069     		ldr	r0, [r4, #28]
+ 1002 0490 3B1C     		mov	r3, r7
+ 1003 0492 0C33     		add	r3, r3, #12
+ 1004 0494 5246     		mov	r2, sl
+ 1005 0496 0092     		str	r2, [sp]
+ 1006 0498 211C     		mov	r1, r4
+ 1007 049a 321C     		mov	r2, r6
+ 1008 049c 00F04CF8 		bl	.L102
+ 1009 04a0 3DE0     		b	.L98
+ 1010              	.L94:
+ 1011              		.loc 1 288 0
+ 1012 04a2 301C     		mov	r0, r6
+ 1013 04a4 FFF7FEFF 		bl	pbuf_free
+ 1014 04a8 39E0     		b	.L98
+ 1015              	.LVL130:
+ 1016              	.L93:
+ 1017              		.loc 1 297 0
+ 1018 04aa 5B46     		mov	r3, fp
+ 1019 04ac 002B     		cmp	r3, #0
+ 1020 04ae 1AD1     		bne	.L95
+ 1021 04b0 3D69     		ldr	r5, [r7, #16]
+ 1022              	.LVL131:
+ 1023 04b2 F020     		mov	r0, #240
+ 1024 04b4 0006     		lsl	r0, r0, #24
+ 1025 04b6 FFF7FEFF 		bl	ntohl
+ 1026 04ba 041C     		mov	r4, r0
+ 1027              	.LVL132:
+ 1028 04bc E020     		mov	r0, #224
+ 1029 04be 0006     		lsl	r0, r0, #24
+ 1030 04c0 FFF7FEFF 		bl	ntohl
+ 1031 04c4 2C40     		and	r4, r4, r5
+ 1032 04c6 8442     		cmp	r4, r0
+ 1033 04c8 0DD0     		beq	.L95
+ 1034              		.loc 1 300 0
+ 1035 04ca 3888     		ldrh	r0, [r7]
+ 1036 04cc FFF7FEFF 		bl	ntohs
+ 1037 04d0 0105     		lsl	r1, r0, #20
+ 1038 04d2 090F     		lsr	r1, r1, #28
+ 1039 04d4 0231     		add	r1, r1, #2
+ 1040 04d6 8900     		lsl	r1, r1, #2
+ 1041 04d8 301C     		mov	r0, r6
+ 1042 04da FFF7FEFF 		bl	pbuf_header
+ 1043              		.loc 1 302 0
+ 1044 04de 301C     		mov	r0, r6
+ 1045 04e0 0321     		mov	r1, #3
+ 1046 04e2 FFF7FEFF 		bl	icmp_dest_unreach
+ 1047              	.LVL133:
+ 1048              	.L95:
+ 1049              		.loc 1 305 0
+ 1050 04e6 124A     		ldr	r2, .L100
+ 1051 04e8 8821     		mov	r1, #136
+ 1052 04ea 535A     		ldrh	r3, [r2, r1]
+ 1053 04ec 0133     		add	r3, r3, #1
+ 1054 04ee 5352     		strh	r3, [r2, r1]
+ 1055              		.loc 1 306 0
+ 1056 04f0 7E21     		mov	r1, #126
+ 1057 04f2 535A     		ldrh	r3, [r2, r1]
+ 1058 04f4 0133     		add	r3, r3, #1
+ 1059 04f6 5352     		strh	r3, [r2, r1]
+ 1060              		.loc 1 308 0
+ 1061 04f8 301C     		mov	r0, r6
+ 1062 04fa FFF7FEFF 		bl	pbuf_free
+ 1063 04fe 0EE0     		b	.L98
+ 1064              	.LVL134:
+ 1065              	.L90:
+ 1066              		.loc 1 311 0
+ 1067 0500 301C     		mov	r0, r6
+ 1068              	.LVL135:
+ 1069 0502 FFF7FEFF 		bl	pbuf_free
+ 1070              	.LVL136:
+ 1071              	.L77:
+ 1072 0506 0AE0     		b	.L98
+ 1073              	.LVL137:
+ 1074              	.L85:
+ 1075              		.loc 1 315 0
+ 1076 0508 251C     		mov	r5, r4
+ 1077              	.L84:
+ 1078              		.loc 1 194 0
+ 1079 050a A38A     		ldrh	r3, [r4, #20]
+ 1080 050c 5345     		cmp	r3, sl
+ 1081 050e 00D0     		beq	.LCB1061
+ 1082 0510 7DE7     		b	.L82	@long jump
+ 1083              	.LCB1061:
+ 1084 0512 65E7     		b	.L99
+ 1085              	.LVL138:
+ 1086              	.L88:
+ 1087              		.loc 1 219 0
+ 1088 0514 002D     		cmp	r5, #0
+ 1089 0516 00D1     		bne	.LCB1068
+ 1090 0518 80E7     		b	.L97	@long jump
+ 1091              	.LCB1068:
+ 1092 051a 2C1C     		mov	r4, r5
+ 1093              	.LVL139:
+ 1094 051c 86E7     		b	.L81
+ 1095              	.LVL140:
+ 1096              	.L98:
+ 1097              		.loc 1 315 0
+ 1098 051e 02B0     		add	sp, sp, #8
+ 1099              		@ sp needed for prologue
+ 1100              	.LVL141:
+ 1101              	.LVL142:
+ 1102              	.LVL143:
+ 1103              	.LVL144:
+ 1104              	.LVL145:
+ 1105              	.LVL146:
+ 1106              	.LVL147:
+ 1107              	.LVL148:
+ 1108 0520 3CBC     		pop	{r2, r3, r4, r5}
+ 1109 0522 9046     		mov	r8, r2
+ 1110 0524 9946     		mov	r9, r3
+ 1111 0526 A246     		mov	sl, r4
+ 1112 0528 AB46     		mov	fp, r5
+ 1113 052a F0BC     		pop	{r4, r5, r6, r7}
+ 1114 052c 01BC     		pop	{r0}
+ 1115 052e 0047     		bx	r0
+ 1116              	.L101:
+ 1117              		.align	2
+ 1118              	.L100:
+ 1119 0530 00000000 		.word	lwip_stats
+ 1120 0534 00000000 		.word	udp_pcbs
+ 1121              	.LFE2:
+ 1123              		.comm	udp_pcbs,4,4
+ 1336              	.Letext0:
+ 4696              		.code 16
+ 4697              		.align	1
+ 4698              	.L102:
+ 4699 0538 2847C046 		bx	r5
+DEFINED SYMBOLS
+                            *ABS*:00000000 udp.c
+     /tmp/cckaKBti.s:1      .text:00000000 $t
+     /tmp/cckaKBti.s:16     .text:00000000 udp_bind
+     /tmp/cckaKBti.s:153    .text:0000008c $d
+                            *COM*:00000004 udp_pcbs
+     /tmp/cckaKBti.s:162    .text:00000094 udp_connect
+     /tmp/cckaKBti.s:159    .text:00000094 $t
+     /tmp/cckaKBti.s:262    .text:000000fc $d
+     /tmp/cckaKBti.s:270    .text:00000100 udp_disconnect
+     /tmp/cckaKBti.s:267    .text:00000100 $t
+     /tmp/cckaKBti.s:292    .text:00000114 $d
+     /tmp/cckaKBti.s:300    .text:00000118 udp_recv
+     /tmp/cckaKBti.s:297    .text:00000118 $t
+     /tmp/cckaKBti.s:318    .text:00000120 udp_new
+     /tmp/cckaKBti.s:358    .text:0000014c udp_remove
+     /tmp/cckaKBti.s:413    .text:00000184 $d
+     /tmp/cckaKBti.s:421    .text:00000188 udp_sendto_if
+     /tmp/cckaKBti.s:418    .text:00000188 $t
+     /tmp/cckaKBti.s:614    .text:0000028c $d
+     /tmp/cckaKBti.s:622    .text:00000290 udp_sendto
+     /tmp/cckaKBti.s:619    .text:00000290 $t
+     /tmp/cckaKBti.s:683    .text:000002d4 $d
+     /tmp/cckaKBti.s:691    .text:000002d8 udp_send
+     /tmp/cckaKBti.s:688    .text:000002d8 $t
+     /tmp/cckaKBti.s:715    .text:000002ec udp_input
+     /tmp/cckaKBti.s:1119   .text:00000530 $d
+     /tmp/cckaKBti.s:4696   .text:00000538 $t
+
+UNDEFINED SYMBOLS
+ip_addr_any
+memp_malloc
+memp_free
+pbuf_header
+pbuf_alloc
+pbuf_chain
+htons
+pbuf_free
+inet_chksum_pseudo
+ip_output_if
+lwip_stats
+ip_route
+ntohs
+ip_addr_isbroadcast
+ntohl
+icmp_dest_unreach
