@@ -42,9 +42,9 @@ int main(void)
 			(xTaskHandle *) NULL);
 	/* Start the scheduler. */
 
-//	xTaskCreate(vRs485Task, (const signed portCHAR * const ) "RS485",
-//			vRs485Task_STACK_SIZE, NULL, vRs485Task_PRIORITY,
-//			(xTaskHandle *) NULL);
+	xTaskCreate(vRs485Task, (const signed portCHAR * const ) "RS485",
+			vRs485Task_STACK_SIZE, NULL, vRs485Task_PRIORITY,
+			(xTaskHandle *) NULL);
 
 	/* Start the scheduler. */
 
@@ -60,60 +60,9 @@ void vApplicationIdleHook(void)
 {
 
 }
-int t1time, t1count;
-int t2time, t2count;
-int t1oldval, t2oldval;
-extern int T1, T2;
-
 void vApplicationTickHook(void)
 {
-/*
-	int t1val = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_8);
-	int t2val = GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_9);
-	//---------------------------------------------------------
-	if (t1val != t1oldval) // Wind Speed tester
-	{
-			t1count++;
-	}
-	//---------------------------------------------------------
-	if (t2val != t2oldval)
-	{
-		t2count++;
-	}
-	//---------------------------------------------------------
-	if (t1count >= 20)
-	{
 
-		T1 = 4000000 / t1time; // 100 hz - 40000 mm/sec wind speed
-		t1count = 0;
-		t1time = 0;
-	}
-	if (t2count >= 2)
-	{
-		T2 = 60000000 / t2time; // generator rotations per 10 min
-		t2count = 0;
-		t2time = 0;
-	}
-
-
-
-	//---------------------------------------------------------
-	if(t2time>60000)
-	  {
-		 T2 = 0;
-	   }
-	if(t1time>60000)
-		  {
-			 T1 = 0;
-		  }
-
-
-	t2time++;
-	t1time++;
-	t1oldval = t1val;
-	t2oldval = t2val;
-*/
-	//---------------------------------------------------------
 }
 void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 		signed portCHAR *pcTaskName)
@@ -126,11 +75,12 @@ void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 void GPIO_Configuration(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
+	/* Enable GPIOA clock */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 	/* Enable GPIOC clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-	/* Enable GPIOC clock */
-		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-
+	/* Enable GPIOB clock */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
 	/* Configure PC.4 as Output push-pull */
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
@@ -138,19 +88,11 @@ void GPIO_Configuration(void)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	/* Configure PC.4 as Output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-		GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-
-
-	/* GPIOC Configuration:TIM8 Channel3-4 in Input */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	/* Configure  as Output push-pull */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 }
-
 

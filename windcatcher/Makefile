@@ -12,9 +12,9 @@ OPT = 0
 # - BOARD just passed as define (optional)
 MCU         = cortex-m3
 CHIP        = STM32F10x_256k_48k
-CPUFAMILY   = STM32F10X_MD
+CPUFAMILY   = STM32F10X_HD
 BOARD       = WINDCATCHER
-F_XTAL      = 16000000
+F_XTAL      = 8000000
 SYSCLOCK_CL = SYSCLK_FREQ_72MHz=72000000
 ## Output format. (can be ihex or binary or both)
 LOADFORMAT = both
@@ -45,7 +45,7 @@ RTOS_MEM_DIR =  $(RTOS_SRC_DIR)/portable/MemMang
 SRC += $(CMSISDIR)/core_cm3.c
 #SRC += $(CMSISDIR)/system_stm32f10x.c
 ## compiler-specific sources
-SRC += $(STMLIBDIR)/startup_stm32f10x_md_mthomas.c
+SRC += $(STMLIBDIR)/startup_stm32f10x_hd_mthomas.c
 SRC += $(STMLIBDIR)/syscalls.c 
 SRC += $(STMLIBDIR)/hwinit.c 
 
@@ -71,6 +71,8 @@ SRC += $(STMSPDSRCDIR)/misc.c
 ## perepherial library source
 SRC += $(STMLIBDIR)/adc.c
 SRC += $(STMLIBDIR)/uart.c
+SRC += $(STMLIBDIR)/pwmcapture.c
+
 
 ## Main Application
 SRC += main.c 

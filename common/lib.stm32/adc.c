@@ -25,7 +25,7 @@ uint32_t adcb[3];
 uint32_t adca[3];
 
 
-#define ACC_TO_MV(adc) ((adc-1900)*100)/1275  //
+#define ACC_TO_MV(adc) ((adc-1900)*100)/1303  //
 
 
 

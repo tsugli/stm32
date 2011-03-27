@@ -19,14 +19,6 @@ typedef struct
 
 UART_FIFO_STR u1Fifo;
 
-/*
- void __attribute__((interrupt, no_auto_psv))
- _DMA4Interrupt(void)
- {
- uart2TxTask();
- IFS2bits.DMA4IF = 0; // Clear the DMA0 Interrupt Flag;
- }
- */
 
 void uartTxDMAConfiguration(USART_TypeDef *uart, DMA_Channel_TypeDef *dmatx,
 		uint8_t *txBuf, uint32_t len, bool ie)
@@ -209,7 +201,7 @@ void uart1TxTask()
 		if (cnt > 0)
 		{
 			uartTxDMAConfiguration(USART1, USART1_TX_DMA, u1Fifo.txBuf, cnt,
-					true);
+					1);
 		}
 	}
 }
@@ -336,6 +328,6 @@ void DMA1_Channel4_IRQHandler(void)
 }
 void USART1_IRQHandler(void)
 {
-	u1Fifo.rxBuf[0] = '$';
+	//u1Fifo.rxBuf[0] = '$';
 
 }

@@ -3,7 +3,7 @@ OUTDIR = $(RUN_MODE)
 
 # Toolchain prefix (i.e arm-elf- -> arm-elf-gcc.exe)
 TCHAIN_PREFIX = arm-none-eabi-
-
+#TCHAIN_PREFIX = arm-linux-gnueabi-
 
 
 # YES enables -mthumb option to flags for source-files listed 
@@ -164,7 +164,7 @@ endif
 # Define programs and commands.
 # Define programs and commands.
 SHELL = sh
-LD      =$(TCHAIN_PREFIX)gcc -v --Xlinker
+LD      =$(TCHAIN_PREFIX)ld -v 
 CC = $(TCHAIN_PREFIX)gcc
 CPP = $(TCHAIN_PREFIX)g++
 OBJCOPY = $(TCHAIN_PREFIX)objcopy

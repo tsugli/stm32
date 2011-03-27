@@ -23,111 +23,132 @@
 							<builder id="org.eclipse.cdt.build.core.settings.default.builder.777254354" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.504394911" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.514887450" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
-								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.546656027" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.546656027" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/portable/GCC/ARM_CM3"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/drivers"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/fat_sd"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/fat_sd"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/src"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/CMSIS/Core/CM3"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/fat_sd"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/portable/GCC/ARM_CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/usb"/>
+									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/portable/GCC/ARM_CM3"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1716148371" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/lib/gcc/arm-none-eabi/4.4.1/include"/>
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
-								</option>
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1716148371" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.105021032" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.299483408" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder">
-								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.837583107" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.837583107" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/portable/GCC/ARM_CM3"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/drivers"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/fat_sd"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/fat_sd"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/src"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/CMSIS/Core/CM3"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/fat_sd"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/portable/GCC/ARM_CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/usb"/>
+									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/portable/GCC/ARM_CM3"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.551470984" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/lib/gcc/arm-none-eabi/4.4.1/include"/>
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
-								</option>
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.551470984" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.844440873" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.1837851911" name="GNU C" superClass="org.eclipse.cdt.build.core.settings.holder">
-								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.1996199579" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.1996199579" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths" valueType="undefIncludePath">
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/portable/GCC/ARM_CM3"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/drivers"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/fat_sd"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/fat_sd"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/rtos/include"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/src"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/stm32/common/lib.stm32/STM32_USB-FS-Device_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/Libraries/CMSIS/Core/CM3"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
-									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/common/utils"/>
+									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/STM32F10x_StdPeriph_Driver/inc"/>
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/tasks"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/fat_sd"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/lib.stm32/CMSIS/Core/CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/rtos/portable/GCC/ARM_CM3"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/windcatcher/usb"/>
+									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
 									<listOptionValue builtIn="false" value="/home/baron/Projects/kvandis/common/rtos/portable/GCC/ARM_CM3"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1264968552" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/lib/gcc/arm-none-eabi/4.4.1/include"/>
-									<listOptionValue builtIn="false" value="/home/baron/tools/sourcery/arm-none-eabi/include"/>
-								</option>
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1264968552" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.568935312" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 						</toolChain>

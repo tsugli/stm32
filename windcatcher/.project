@@ -78,7 +78,7 @@
 		<link>
 			<name>common</name>
 			<type>2</type>
-			<location>/home/baron/Projects/kvandis/common</location>
+			<location>/home/baron/Projects/kvandis/stm32/common</location>
 		</link>
 	</linkedResources>
 </projectDescription>
